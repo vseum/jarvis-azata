@@ -251,11 +251,6 @@ try{
   if(k){localStorage.setItem('fajr-witr-key',k);u.searchParams.delete('k');history.replaceState(null,'',u.pathname+u.search+u.hash);}
   KEY=localStorage.getItem('fajr-witr-key')||'';
 }catch(e){}
-function api(path,opts){
-  opts=opts||{};
-  opts.headers=Object.assign({'Content-Type':'application/json','X-Key':KEY},opts.headers||{});
-  return fetch(path,opts).then(r=>{if(r.status===401)throw {auth:true};if(!r.ok)throw new Error(r.status);return r.json();});
-}
 function authMsg(){setStatus('Нужен ключ доступа: открой ссылку вида рахмат.рус/?k=КЛЮЧ один раз на этом устройстве',true);}
 
 // Local copy keeps the page instant and survives a weak signal; the server is the shared copy.
@@ -264,30 +259,44 @@ try{unsynced=JSON.parse(localStorage.getItem('fajr-witr-unsynced')||'{}');}catch
 function lsLoad(){try{const raw=localStorage.getItem('fajr-witr-days');if(raw)Object.assign(state,JSON.parse(raw));}catch(e){}}
 function lsSave(){try{localStorage.setItem('fajr-witr-days',JSON.stringify(state));localStorage.setItem('fajr-witr-unsynced',JSON.stringify(unsynced));}catch(e){}}
 
+// Every tap is written to the device first (survives closing the app, no signal, reboot),
+// then sent to the server in the background until it gets through.
 function mutate(date,fn){
   const v=state[date]||(state[date]={});
   fn(v);
-  render();
-  pending.add(date);
-  clearTimeout(timer);
-  timer=setTimeout(flush,450);
-}
-function flush(){
-  for(const d of pending)unsynced[d]=true;
-  pending.clear();
+  unsynced[date]=true;
   lsSave();
-  push();
+  render();
+  clearTimeout(timer);
+  timer=setTimeout(push,450);
+}
+function unsentCount(){return Object.keys(unsynced).length;}
+function offlineMsg(){
+  const n=unsentCount();
+  setStatus(n?`Нет интернета · сохранено на устройстве, отправлю при связи (${n} ${n===1?'день':n<5?'дня':'дней'})`:'Нет интернета · показываю сохранённое на устройстве',true);
+}
+function api(path,opts){
+  opts=opts||{};
+  opts.headers=Object.assign({'Content-Type':'application/json','X-Key':KEY},opts.headers||{});
+  const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),12000); // a dead network must not hang the queue
+  opts.signal=ctl.signal;
+  return fetch(path,opts).then(r=>{clearTimeout(t);if(r.status===401)throw {auth:true};if(!r.ok)throw new Error(r.status);return r.json();},e=>{clearTimeout(t);throw e;});
 }
 let pushing=false;
 function push(){
   if(pushing)return;
-  const d=Object.keys(unsynced)[0];
+  const d=Object.keys(unsynced).sort()[0];
   if(!d){setStatus('Сохранено');return;}
   pushing=true;setStatus('Сохраняю…');
   const v=state[d]||{};const s=dayScore(v);
+  const sent=JSON.stringify(v);
   api('/api/days/'+d,{method:'PUT',body:JSON.stringify({v,score:Math.round(s*100)/100,pct:Math.round(s/TOTAL*100)})})
-    .then(()=>{pushing=false;delete unsynced[d];lsSave();push();})
-    .catch(e=>{pushing=false;if(e&&e.auth)authMsg();else setStatus('Нет связи. Отметки сохранены на устройстве и уйдут при следующем открытии',true);});
+    .then(()=>{
+      pushing=false;
+      if(JSON.stringify(state[d]||{})===sent)delete unsynced[d]; // edited meanwhile — send again
+      lsSave();push();
+    })
+    .catch(e=>{pushing=false;if(e&&e.auth)authMsg();else offlineMsg();});
 }
 function pull(){
   api('/api/days')
@@ -297,10 +306,15 @@ function pull(){
       // server lost a day this device still has (e.g. after a redeploy) — send it back
       for(const k in state)if(!all[k]&&Object.keys(state[k]||{}).length)unsynced[k]=true;
       lsSave();render();
-      if(Object.keys(unsynced).length)push();else setStatus('Синхронизировано');
+      if(unsentCount())push();else setStatus('Синхронизировано');
     })
-    .catch(e=>{if(e&&e.auth)authMsg();else setStatus('Нет связи с сервером. Показываю то, что сохранено на устройстве',true);});
+    .catch(e=>{if(e&&e.auth)authMsg();else offlineMsg();});
 }
+// retry as soon as the connection is back, and every 20 s while something is waiting
+window.addEventListener('online',()=>{if(unsentCount())push();else pull();});
+window.addEventListener('offline',()=>offlineMsg());
+setInterval(()=>{if(unsentCount()&&!pushing)push();},20000);
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
 
 // ---------- day view
 function el(tag,attrs,html){const e=document.createElement(tag);if(attrs)for(const k in attrs){if(k==='class')e.className=attrs[k];else e.setAttribute(k,attrs[k]);}if(html!=null)e.innerHTML=html;return e;}
@@ -376,9 +390,10 @@ let noteTimer=null;
 function saveNote(date,text){
   const v=state[date]||(state[date]={});
   if(text.trim())v._note=text;else delete v._note;
-  pending.add(date);
+  unsynced[date]=true;
+  lsSave();
   clearTimeout(noteTimer);
-  noteTimer=setTimeout(()=>{pending.delete(date);unsynced[date]=true;lsSave();push();},800);
+  noteTimer=setTimeout(push,800);
 }
 
 function toast(text,undo){
@@ -502,7 +517,7 @@ $('next').onclick=()=>go(1);
 $('tab-day').onclick=()=>switchTab('day');
 $('tab-stats').onclick=()=>switchTab('stats');
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState!=='visible')return;
+  if(document.visibilityState!=='visible'){lsSave();return;}
   const now=key(new Date());
   if(now!==today){if(viewDate===today)viewDate=now;today=now;render();}
   pull(); // pick up marks made on the other device

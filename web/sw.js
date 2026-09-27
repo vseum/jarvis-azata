@@ -1,5 +1,5 @@
 // Офлайн-оболочка: страница открывается без сети, отметки ждут в localStorage до связи.
-const CACHE = 'shell-v16';
+const CACHE = 'shell-v17';
 const SHELL = [
   '/',
   '/manifest.webmanifest',

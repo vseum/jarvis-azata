@@ -28,7 +28,7 @@
   --bg:#FFFFFF; --fill:#F5F5F5; --line:#EEEEEE;
   --ink:#111111; --ink-2:#6B6B6B; --ink-3:#A6A6A6;
   --on:#111111; --on-ink:#FFFFFF;
-  --warn:#C0392B;
+  --warn:#C0392B; --miss:#E03E2F;
   --h0:#F2F2F2; --h1:#D9D9D9; --h2:#ADADAD; --h3:#6F6F6F; --h4:#111111;
   --f:"Montserrat",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -86,6 +86,18 @@ button.row[aria-pressed="true"] .chk{background:var(--on);border-color:var(--on)
 button.row[aria-pressed="true"] .chk svg{opacity:1}
 button.row[aria-pressed="true"] .n{color:var(--ink-3)}
 
+.row.tri{gap:2px}
+.row.tri .lab{text-align:left;align-self:stretch;display:flex;flex-direction:column;justify-content:center}
+.mark{width:44px;height:44px;margin:-5px 0;display:grid;place-items:center;flex:none;border-radius:50%}
+.mark svg{width:28px;height:28px;padding:7px;border-radius:50%;border:1.5px solid #D4D4D4;box-sizing:border-box;transition:background .15s,border-color .15s}
+.mark path{stroke:#C4C4C4;transition:stroke .15s}
+.mark.yes[aria-pressed="true"] svg{background:var(--on);border-color:var(--on)}
+.mark.yes[aria-pressed="true"] path{stroke:#fff}
+.mark.no[aria-pressed="true"] svg{background:var(--miss);border-color:var(--miss)}
+.mark.no[aria-pressed="true"] path{stroke:#fff}
+.row.done .n{color:var(--ink-3)}
+.row.miss .n{color:var(--miss)}
+.dots i.x{background:#F3C9C4}
 .step{display:flex;align-items:center;gap:2px;flex:none}
 .step button{width:36px;height:36px;border-radius:50%;font-size:18px;font-weight:500;color:var(--ink-2);border:1.5px solid var(--line)}
 .step button:active{background:var(--fill)}
@@ -176,6 +188,8 @@ button,textarea{touch-action:manipulation}
 (function(){
 const CHECK='<svg viewBox="0 0 14 14"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+const MINUS='<svg viewBox="0 0 14 14"><path d="M3.5 7h7" fill="none" stroke-width="2.2" stroke-linecap="round"/></svg>';
+
 const BLOCKS=[
  {id:'night',name:'Прошлая ночь',hint:'от Иша до Фаджра',items:[
   {id:'sleep_isha',n:'Сон после Иша'},
@@ -219,7 +233,7 @@ const TOTAL=ALL.length;
 function score(h,raw){
   if(h.type==='hours') return raw?Math.min(raw/h.target,1):0;
   if(h.type==='multi') return Array.isArray(raw)?raw.length/h.opts.length:0;
-  return raw?1:0;
+  return raw===true?1:0; // false = explicitly not done
 }
 function dayScore(v){v=v||{};let s=0;for(const h of ALL)s+=score(h,v[h.id]);return s;}
 
@@ -328,10 +342,11 @@ function renderDay(){
     let got=0;for(const h of b.items)got+=score(h,v[h.id]);
     const full=got>=b.items.length-1e-9;
     const ok=openState[viewDate+':'+b.id];
-    const isOpen=ok===undefined?!full:ok; // finished blocks fold into one line
+    const resolved=full||b.items.every(h=>!h.type&&v[h.id]!==undefined); // every item answered yes or no
+    const isOpen=ok===undefined?!resolved:ok; // answered blocks fold into one line
     const sec=el('section',{class:'block'+(full?' full':'')+(isOpen?' open':'')});
     const bools=b.items.filter(h=>!h.type);
-    const allOn=bools.length&&bools.every(h=>v[h.id]);
+    const allOn=bools.length&&bools.every(h=>v[h.id]===true);
     const gotTxt=Number.isInteger(got)?got:got.toFixed(1).replace('.',',');
     const bh=el('button',{class:'bh','aria-expanded':String(isOpen)},`<div class="t"><h2>${esc(b.name)}</h2><span class="hint">${esc(b.hint)}</span></div><span class="cnt num">${full?'Готово':gotTxt+'/'+b.items.length}</span><svg class="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
     bh.onclick=()=>{openState[viewDate+':'+b.id]=!isOpen;render();};
@@ -342,7 +357,7 @@ function renderDay(){
       all.onclick=()=>{
         const date=viewDate,before={};for(const h of bools)before[h.id]=state[date]&&state[date][h.id];
         mutate(date,v=>{for(const h of bools){if(allOn)delete v[h.id];else v[h.id]=true;}});
-        toast((allOn?'Снято: ':'Отмечено: ')+bools.length,()=>mutate(date,v=>{for(const id in before){if(before[id])v[id]=before[id];else delete v[id];}}));
+        toast((allOn?'Снято: ':'Отмечено: ')+bools.length,()=>mutate(date,v=>{for(const id in before){if(before[id]!==undefined)v[id]=before[id];else delete v[id];}}));
       };
       sec.appendChild(all);
     }
@@ -350,10 +365,14 @@ function renderDay(){
     for(const h of b.items){
       const note=h.note?`<div class="note">${esc(h.note)}</div>`:'';
       if(!h.type){
-        const on=!!v[h.id];
-        const r=el('button',{class:'row','aria-pressed':String(on),id:'h-'+h.id},`<div class="lab"><div class="n">${esc(h.n)}</div>${note}</div><span class="chk">${CHECK}</span>`);
-        r.onclick=()=>mutate(viewDate,v=>{if(v[h.id])delete v[h.id];else v[h.id]=true;});
-        body.appendChild(r);
+        const st=v[h.id]===true?'done':v[h.id]===false?'miss':'';
+        const r=el('div',{class:'row tri'+(st?' '+st:''),id:'h-'+h.id});
+        const lab=el('button',{class:'lab'},`<div class="n">${esc(h.n)}</div>${note}`);
+        const no=el('button',{class:'mark no','aria-pressed':String(st==='miss'),'aria-label':'Не сделал'},MINUS);
+        const yes=el('button',{class:'mark yes','aria-pressed':String(st==='done'),'aria-label':'Сделал'},CHECK);
+        const set=val=>mutate(viewDate,v=>{if(v[h.id]===val)delete v[h.id];else v[h.id]=val;});
+        lab.onclick=()=>set(true);yes.onclick=()=>set(true);no.onclick=()=>set(false);
+        r.append(lab,no,yes);body.appendChild(r);
       }else if(h.type==='hours'){
         const val=+v[h.id]||0;
         const r=el('div',{class:'row'},`<div class="lab"><div class="n">${esc(h.n)}</div>${note}</div>`);
@@ -483,7 +502,7 @@ function renderStats(){
     g.appendChild(el('div',{class:'hl hl-head'},'<span style="text-align:left"></span><span>14 дней</span><span>30д</span><span>серия</span>'));
     for(const h of b.items){
       let dots='';
-      for(let i=13;i>=0;i--){const d=addDays(today,-i);const s=score(h,(state[d]||{})[h.id]);dots+=`<i class="${s>=1?'d':s>0?'p':''}"></i>`;}
+      for(let i=13;i>=0;i--){const d=addDays(today,-i);const s=score(h,(state[d]||{})[h.id]);const raw=(state[d]||{})[h.id];dots+=`<i class="${s>=1?'d':s>0?'p':raw===false?'x':''}"></i>`;}
       g.appendChild(el('div',{class:'hl'},`<span class="nm">${esc(h.n)}${h.note&&/раз|стр|мин/.test(h.note)?' <span style="color:var(--ink-3)">'+esc(h.note.replace(' раз',''))+'</span>':''}</span><span class="dots">${dots}</span><span class="pc num">${pctWindow(h,30)}%</span><span class="sk num">${streak(h)}</span>`));
     }
     list.appendChild(g);

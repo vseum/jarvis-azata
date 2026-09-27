@@ -384,6 +384,7 @@ const BLOCKS=[
   {id:'fajr_masjid',n:'Фаджр в мечети'},
   {id:'am_azkar',n:'Азкары утра'},
   {id:'quran',n:'Коран',note:'5 страниц'},
+  {id:'arabic',n:'Арабский',note:'урок или повторение во вкладке «Слова»'},
   {id:'walk',n:'Прогулка',note:'30 минут'},
   {id:'duha',n:'Духа намаз'},
   {id:'breakfast',n:'Завтрак с семьёй',note:'или попутно'},
@@ -825,6 +826,8 @@ function finishSession(box){
     if(S.kind==='lesson'&&!(v._done||[]).includes(S.li))(v._done=v._done||[]).push(S.li);
     v._xp=v._xp||{};v._xp[today]=(v._xp[today]||0)+xp;
   });
+  // пройденный урок или повторение сам отмечает «Арабский» в трекере (не трогает явный минус)
+  if(!(state[today]&&state[today].arabic!==undefined))mutate(today,v=>{v.arabic=true;});
   const acc=S.answered?Math.round(S.correct/S.answered*100):100;
   const body=el('div',{class:'lx-body fin'},`<div class="lx-kind">${S.kind==='lesson'?'Урок пройден':'Повторение готово'}</div>
     <div class="fin-row"><div><b class="num">+${xp}</b><span>XP</span></div><div><b class="num">${acc}%</b><span>точность</span></div><div><b class="num">${learnStreak()}</b><span>дней подряд</span></div></div>

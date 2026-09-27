@@ -94,8 +94,13 @@ for (s,a,w),segs in morph.items():
 QCOV=[[list(k),v] for k,v in cov.items() if -1 not in k]
 total=sum(cov.values())
 W2=W+new
+# подсветка в переводе (поле 11): ручная привязка «индекс → слово в переводе Кулиева», ru_hl.json
+HL=json.load(open(__file__.rsplit('/',1)[0]+'/ru_hl.json',encoding='utf8'))
+for i,w in enumerate(W2):
+    m=re.search(r'(?<![А-Яа-яЁё])'+re.escape(HL[str(i)])+r'(?![А-Яа-яЁё])',w[4]);assert m,(i,HL[str(i)])
+    w[11:]=[[m.start(),m.end()]]
 out=js[:mW.start(1)]+json.dumps(W2,ensure_ascii=False,separators=(',',':'))+js[mW.end(1):]
-out=re.sub(r'\nwindow\.QNAMAZ=.*?;\n|\nwindow\.QCOV=.*?;\n','\n',out,flags=re.S)
+out='\n'.join(l for l in out.split('\n') if not l.startswith(('window.QNAMAZ=','window.QCOV=')))
 out=out.rstrip('\n')+'\nwindow.QNAMAZ='+json.dumps(NAMAZ,ensure_ascii=False,separators=(',',':'))+';\n'
 out+='window.QCOV={total:'+str(total)+',g:'+json.dumps(QCOV,separators=(',',':'))+'};\n'
 open(DATA,'w',encoding='utf8').write(out)

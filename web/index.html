@@ -83,6 +83,7 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radi
 [lang="ar"]{text-rendering:optimizeLegibility;font-variant-ligatures:normal;font-feature-settings:normal}
 .wexr{font-size:12px;color:var(--ink-2);margin-top:0}
 .hlw{color:#D93025}
+.lx-er .hlw,.lx-note .hlw,.wexr .hlw,.lx-q .hlw{font-weight:600}
 .word{cursor:pointer}
 .word:active{background:var(--fill)}
 .wx{font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
@@ -595,6 +596,7 @@ function arHl(t,hl){ // аят с изучаемым словом красным
   let k=-1;
   return t.split(' ').map(x=>{if(MARKRE.test(x))return esc(x);k++;return k===hl?`<span class="hlw">${esc(x)}</span>`:esc(x);}).join(' ').replace(/\s+([\u06D6-\u06DC])/g,'\u2060\u200A\u2060$1');
 }
+function ruHl(i){const w=WORDS[i],r=w[4],h=w[11];if(!h)return esc(r);return esc(r.slice(0,h[0]))+`<span class="hlw">${esc(r.slice(h[0],h[1]))}</span>`+esc(r.slice(h[1]));} // перевод с тем же словом красным
 const arText=t=>t.replace(/\s+([\u06D6-\u06DC])/g,'\u2060\u200A\u2060$1');
 function wordFor(date){if(!WORDS.length)return [0,['','','','','',0]];const n=Math.round((parse(date)-parse(WORDS_START))/864e5);const i=((n%MAIN_N)+MAIN_N)%MAIN_N;return [i,WORDS[i]];}
 // ---------- планы: фокус дня, дела, развлечения (в документе дня), цели недели и месяца (свои документы)
@@ -930,7 +932,7 @@ function drawStep(){
   const W=i=>WORDS[i];
   if(st.t==='intro'){
     const [a,tr,m,ea,er,hl,,,,kind,expl]=W(st.i);
-    body.innerHTML=`<div class="lx-kind">Новое слово</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-mean">${esc(m)}</div><div class="lx-tr">${esc(kind||'')} · читается «${esc(tr)}»</div>${expl?`<div class="lx-expl">${explHtml(expl)}</div>`:''}<div class="lx-ayah">${ayahHtml(st.i)}<div class="lx-er">${esc(er)}</div></div>`;
+    body.innerHTML=`<div class="lx-kind">Новое слово</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-mean">${esc(m)}</div><div class="lx-tr">${esc(kind||'')} · читается «${esc(tr)}»</div>${expl?`<div class="lx-expl">${explHtml(expl)}</div>`:''}<div class="lx-ayah">${ayahHtml(st.i)}<div class="lx-er">${ruHl(st.i)}</div></div>`;
     footer(box,null,'Понятно');return;
   }
   if(st.t==='match')return drawMatch(body,box,st);
@@ -943,7 +945,7 @@ function drawStep(){
   else if(st.t==='ru2ar'){prompt=`<div class="lx-kind">Выбери слово</div><div class="lx-q">${esc(m)}</div>`;
     opts=shuffle([a,...distract(3,i,0)]);right=a;isAr=true;}
   else if(st.t==='inayah'){prompt=`<div class="lx-kind">Что означает <span class="hlw">выделенное</span> слово?</div><div class="lx-ayah solo">${ayahHtml(i)}</div>`;
-    opts=shuffle([m,...distract(3,i,2)]);right=m;note=er;}
+    opts=shuffle([m,...distract(3,i,2)]);right=m;note={html:ruHl(i)};}
   else if(st.t==='root'){const sib=WORDS[rnd(rootSib(i))];
     prompt=`<div class="lx-kind">Какое слово от того же корня?</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-tr">${esc(m)}</div>`;
     const others=shuffle(WORDS.filter(w=>w[6]&&w[6]!==WORDS[i][6])).slice(0,3).map(w=>w[0]);
@@ -971,7 +973,7 @@ function ayahHtml(i){const w=WORDS[i];return `<span class="ar ay" lang="ar" dir=
 function drawBuild(body,box,st){ // «собери аят»: слова по порядку, как в Duolingo
   const i=st.i,[a,,m,ea,er]=WORDS[i];
   const tk=tokensOf(ea);
-  body.innerHTML=`<div class="lx-kind">Собери аят</div><div class="lx-q small">${esc(er)}</div>`;
+  body.innerHTML=`<div class="lx-kind">Собери аят</div><div class="lx-q small">${ruHl(i)}</div>`;
   const ans=el('div',{class:'bl-ans',dir:'rtl'}),pool=el('div',{class:'bl-pool',dir:'rtl'});
   body.append(ans,pool);
   const order=shuffle(tk.map((t,k)=>k));let picked=[];
@@ -1013,7 +1015,7 @@ function grade(i,ok,fromMatch){
 }
 function footer(box,res,label){
   const f=el('div',{class:'lx-foot'+(res?res.ok?' ok':' bad':'')});
-  if(res)f.appendChild(el('div',{class:'lx-res'},(res.ok?'<b>Верно!</b>':`<b>Правильно:</b> ${res.right}`)+(res.note?`<div class="lx-note">${explHtml(res.note)}</div>`:'')));
+  if(res)f.appendChild(el('div',{class:'lx-res'},(res.ok?'<b>Верно!</b>':`<b>Правильно:</b> ${res.right}`)+(res.note?`<div class="lx-note">${res.note.html||explHtml(res.note)}</div>`:'')));
   const b=el('button',{class:'lbtn'},label);b.onclick=()=>{S.pos++;drawStep();};
   f.appendChild(b);box.appendChild(f);b.focus();
 }
@@ -1061,7 +1063,7 @@ function renderDay(){
   const [wi,[wa,wt,wm,ea,er,ehl,,,,wk,wx]]=wordFor(viewDate);
   if(WORDS.length)root.appendChild(wordCard=el('section',{class:'word',role:'button',title:'Открыть «Слова»'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${MAIN_N}</span></div>
     <div class="wmain"><div class="wtr"><b>${esc(wm)}</b><span>${esc(wk||'')} · ${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
-    <div class="wex"><div class="wexa" lang="ar" dir="rtl">${arHl(ea,ehl)}</div><div class="wexr">${esc(er)}</div></div>${wx?`<div class="wx">${explHtml(wx)}</div>`:''}`));
+    <div class="wex"><div class="wexa" lang="ar" dir="rtl">${arHl(ea,ehl)}</div><div class="wexr">${ruHl(wi)}</div></div>${wx?`<div class="wx">${explHtml(wx)}</div>`:''}`));
   if(wordCard){wordCard.onclick=()=>switchTab('learn');wordCard=null;}
   const nowOpen=new Set();
   trackerPlan(root,viewDate,nowOpen);

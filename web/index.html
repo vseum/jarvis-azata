@@ -116,6 +116,8 @@ button.row[aria-pressed="true"] .n{color:var(--ink-3)}
 .mark.no[aria-pressed="true"] svg{background:var(--miss);border-color:var(--miss)}
 .mark.no[aria-pressed="true"] path{stroke:#fff}
 .row.done .n{color:var(--ink-3)}
+.pf{font-weight:700}
+.row .go{font-size:20px;color:var(--ink-3);padding:0 10px}
 .grp{display:flex;align-items:center;justify-content:space-between;padding:14px 0 4px;min-height:44px}
 .grp .n{font-weight:500;font-size:15px}
 .grp .cnt{font-size:12.5px;font-weight:600;color:var(--ink-3);padding-right:8px}
@@ -218,6 +220,7 @@ button,textarea{touch-action:manipulation}
 .sep{display:flex;align-items:center;gap:12px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:6px 0 -6px}
 .sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--line)}
 .plan{display:flex;flex-direction:column;gap:30px;margin-top:10px}
+.plan-day{display:flex;flex-direction:column;gap:26px;padding-bottom:30px;border-bottom:1px solid var(--line)}
 @media (max-width:380px){.dots i{width:5px}.tile .v{font-size:20px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -525,6 +528,7 @@ function renderDayPlans(root,k){
 let planWeek=null,planMonth=null;
 function renderPlan(){
   const root=$('view-plan');root.innerHTML='';
+  const dayBox=el('div',{class:'plan-day'});renderDayPlans(dayBox,viewDate);root.appendChild(dayBox);
   if(!planWeek)planWeek=weekStart(today);
   if(!planMonth)planMonth=today.slice(0,7);
   // неделя
@@ -550,6 +554,39 @@ function renderPlan(){
   ms.appendChild(mh);ms.appendChild(listUI(planMonth,'_goals',null,'Добавить цель месяца'));root.appendChild(ms);
   doRefocus();
 }
+// план дня в трекере: только отметки, заполнение — во вкладке «План»
+function trackerPlan(root,k,nowOpen){
+  const v=state[k]||{};
+  const rows=[];
+  if(v._focus&&(v._focus.t||'').trim())rows.push({kind:'focus',t:v._focus.t,done:!!v._focus.done});
+  for(const g of ['c','v'])for(const x of v._tasks||[])if(!x.moved&&x.g===g)rows.push({kind:'_tasks',id:x.id,t:x.t,done:!!x.done,tag:g==='c'?'главное':''});
+  for(const x of v._fun||[])rows.push({kind:'_fun',id:x.id,t:x.t,done:!!x.done,tag:'радость'});
+  const done=rows.filter(r=>r.done).length,full=rows.length&&done===rows.length;
+  const key=k+':plan',ok=openState[key];
+  const isOpen=ok!==undefined?ok:(!full||shownOpen.has(key));
+  if(isOpen)nowOpen.add(key);
+  const sec=el('section',{class:'block'+(full?' full':'')+(isOpen?' open':'')});
+  const bh=el('button',{class:'bh','aria-expanded':String(isOpen)},`<div class="t"><h2>План дня</h2><span class="hint">${rows.length?'фокус, дела, радости':'не заполнен'}</span></div><span class="cnt num">${full?'Готово':rows.length?done+'/'+rows.length:''}</span><svg class="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
+  bh.onclick=()=>{openState[key]=!isOpen;render();};
+  sec.appendChild(bh);
+  if(isOpen){
+    const body=el('div',{class:'body'});
+    if(!rows.length){
+      const go=el('button',{class:'row tri'},'<div class="lab"><div class="n">Заполнить план на день</div><div class="note">фокус, сливки, вишенки, развлечения</div></div><span class="go">→</span>');
+      go.onclick=()=>switchTab('plan');body.appendChild(go);
+    }
+    for(const r of rows){
+      const row=el('div',{class:'row tri'+(r.done?' done':'')+(r.kind==='focus'?' pfocus':'')});
+      const lab=el('button',{class:'lab'},`<div class="n">${r.kind==='focus'?'<span class="pf">Фокус · </span>':''}${esc(r.t)}</div>${r.tag?`<div class="note">${r.tag}</div>`:''}`);
+      const yes=el('button',{class:'mark yes','aria-pressed':String(r.done),'aria-label':'Сделал'},CHECK);
+      const toggle=()=>mutate(k,v=>{if(r.kind==='focus'){v._focus=Object.assign({},v._focus,{done:!r.done});}else{const x=(v[r.kind]||[]).find(x=>x.id===r.id);if(x)x.done=!x.done;}});
+      lab.onclick=toggle;yes.onclick=toggle;
+      row.append(lab,yes);body.appendChild(row);
+    }
+    sec.appendChild(body);
+  }
+  root.appendChild(sec);
+}
 function doRefocus(){if(refocus){const e=$(refocus);refocus=null;if(e)e.focus();}}
 const openState={};
 let shownOpen=new Set(); // blocks open on screen right now
@@ -562,9 +599,8 @@ function renderDay(){
   root.appendChild(el('section',{class:'word'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${WORDS.length}</span></div>
     <div class="wmain"><div class="wtr"><b>${esc(wm)}</b><span>${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
     <div class="wex"><div class="wexa" lang="ar" dir="rtl">${esc(arText(ea))}</div><div class="wexr">${esc(er)}</div></div>`));
-  renderDayPlans(root,viewDate);
-  root.appendChild(el('div',{class:'sep'},'<span>Привычки</span>'));
   const nowOpen=new Set();
+  trackerPlan(root,viewDate,nowOpen);
   for(const b of BLOCKS){
     let got=0;for(const h of b.items)got+=sc(h,v);
     const full=got>=b.items.length-1e-9;
@@ -769,7 +805,7 @@ let calMonth=key(new Date()).slice(0,7);
 function switchTab(t){
   tab=t;
   for(const x of ['day','plan','stats']){$('tab-'+x).setAttribute('aria-selected',String(t===x));$('view-'+x).hidden=t!==x;}
-  $('datebar').hidden=t!=='day';$('progrow').hidden=t!=='day';$('planrow').hidden=t!=='day';
+  $('datebar').hidden=t==='stats';$('progrow').hidden=t!=='day';$('planrow').hidden=t!=='plan';
   try{localStorage.setItem('fajr-witr-tab',t);}catch(e){}
   render();window.scrollTo(0,0);
 }
@@ -789,7 +825,7 @@ $('next').onclick=()=>go(1);
 $('tab-day').onclick=()=>switchTab('day');
 $('tab-stats').onclick=()=>switchTab('stats');
 $('tab-plan').onclick=()=>switchTab('plan');
-$('planrow').onclick=()=>{const f=document.querySelector('.pblock.focus');if(f)window.scrollTo({top:f.getBoundingClientRect().top+window.scrollY-$('datebar').closest('.top').offsetHeight-8,behavior:'smooth'});};
+$('planrow').onclick=()=>{if(tab!=='plan')switchTab('plan');};
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState!=='visible'){lsSave();return;}
   const now=key(new Date());

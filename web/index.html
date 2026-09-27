@@ -807,7 +807,7 @@ let calMonth=key(new Date()).slice(0,7);
 function switchTab(t){
   tab=t;
   for(const x of ['day','plan','stats']){$('tab-'+x).setAttribute('aria-selected',String(t===x));$('view-'+x).hidden=t!==x;}
-  $('datebar').hidden=t==='stats';$('progrow').hidden=t!=='day';$('planrow').hidden=t!=='plan';
+  $('datebar').hidden=t==='stats';$('progrow').hidden=t!=='day';$('planrow').hidden=t==='stats';
   try{localStorage.setItem('fajr-witr-tab',t);}catch(e){}
   render();window.scrollTo(0,0);
 }

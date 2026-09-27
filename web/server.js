@@ -149,6 +149,7 @@ const server = http.createServer(async (req, res) => {
   const p = url.pathname;
 
   if (p === '/healthz') return send(res, 200, { ok: true });
+  if (p === '/robots.txt') return send(res, 200, 'User-agent: *\nDisallow: /\n', 'text/plain; charset=utf-8');
 
   if (STATIC[p] && req.method === 'GET') {
     const [file, type] = STATIC[p];

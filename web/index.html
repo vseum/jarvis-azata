@@ -44,22 +44,21 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radi
 .wrap{max-width:520px;margin:0 auto;padding:0 20px 56px}
 
 /* header */
-.top{position:sticky;top:0;z-index:5;background:var(--bg);margin:0 -20px;padding:14px 20px 12px}
-.tabs{display:flex;gap:22px;margin-bottom:18px}
+.top{position:sticky;top:0;z-index:5;background:var(--bg);margin:0 -20px;padding:10px 20px 10px}
+.tabs{display:flex;gap:22px;margin-bottom:10px}
 .tabs button{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);padding:4px 0;border-bottom:2px solid transparent}
 .tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--ink)}
 .datebar{display:flex;align-items:center;gap:6px}
-.datebar .nav{width:40px;height:40px;display:grid;place-items:center;font-size:22px;font-weight:400;color:var(--ink-2);flex:none;border-radius:50%}
+.datebar .nav{width:34px;height:34px;display:grid;place-items:center;font-size:22px;font-weight:400;color:var(--ink-2);flex:none;border-radius:50%}
 .datebar .nav:active{background:var(--fill)}
 .datebar .nav:disabled{opacity:.25;cursor:default}
 .dt{flex:1;min-width:0;text-align:center}
 .dt h1{margin:0;font-weight:600;font-size:20px;letter-spacing:-.01em;text-wrap:balance}
-.dt .hijri{font-size:12px;color:var(--ink-3);margin-top:2px}
-.prog{margin-top:14px;display:flex;align-items:center;gap:12px}
+.prog{margin-top:8px;display:flex;align-items:center;gap:12px}
 .bar{flex:1;height:3px;background:var(--fill);border-radius:3px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--ink);transition:width .25s ease}
 .prog .pl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);width:74px;flex:none;text-align:left}
-.prog.p2{margin-top:8px;width:100%;padding:0}
+.prog.p2{margin-top:6px;width:100%;padding:0}
 .prog.p2 .bar i{background:var(--ink-2)}
 .from-week{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
 .fw-l{font-size:12px;color:var(--ink-3);width:100%}
@@ -240,7 +239,6 @@ button,textarea{touch-action:manipulation}
       <button class="nav" id="prev" aria-label="Предыдущий день">‹</button>
       <div class="dt">
         <h1 id="dtitle" title="К сегодняшнему дню">—</h1>
-        <div class="hijri" id="hijri"></div>
       </div>
       <button class="nav" id="next" aria-label="Следующий день">›</button>
     </div>
@@ -692,7 +690,6 @@ function renderHeader(){
   const d=parse(viewDate);
   let t=fmtDay.format(d);t=t.charAt(0).toUpperCase()+t.slice(1);
   $('dtitle').textContent=viewDate===today?'Сегодня, '+t.split(', ').slice(1).join(', '):t;
-  $('hijri').textContent=fmtHijri?fmtHijri.format(d):'';
   $('next').disabled=viewDate>=today;
   const s=dayScore(state[viewDate]);
   $('barfill').style.width=(s/TOTAL*100).toFixed(1)+'%';

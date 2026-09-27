@@ -58,6 +58,12 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radi
 .prog{margin-top:14px;display:flex;align-items:center;gap:12px}
 .bar{flex:1;height:3px;background:var(--fill);border-radius:3px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--ink);transition:width .25s ease}
+.prog .pl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);width:74px;flex:none;text-align:left}
+.prog.p2{margin-top:8px;width:100%;padding:0}
+.prog.p2 .bar i{background:var(--ink-2)}
+.from-week{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.fw-l{font-size:12px;color:var(--ink-3);width:100%}
+.fw{font-size:13px;font-weight:500;padding:7px 12px;border-radius:999px;border:1.5px dashed #CFCFCF;color:var(--ink-2);text-align:left}
 .prog b{font-size:12.5px;font-weight:600;color:var(--ink-2);white-space:nowrap}
 .status{font-size:11.5px;line-height:16px;height:16px;color:var(--ink-3);margin-top:8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .status.err{color:var(--warn)}
@@ -178,6 +184,40 @@ button,textarea{touch-action:manipulation}
 .weak{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:14px;font-weight:500}
 .weak .blk{font-size:12px;color:var(--ink-3);font-weight:500;margin-left:4px}
 .weak b{font-weight:600}
+.pblock{display:flex;flex-direction:column}
+.ph{display:flex;align-items:center;gap:10px;padding:6px 0 10px}
+.ph .t,.ph-c{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.ph-c{flex-direction:column;align-items:center;gap:2px}
+.ph h2,.ph-c h2{margin:0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.ph .hint,.ph-c .hint{font-size:12px;color:var(--ink-3)}
+.ph .cnt{font-size:12.5px;color:var(--ink-3);font-weight:600}
+.frow{display:flex;align-items:flex-start;gap:12px}
+.frow textarea{flex:1;font:inherit;font-size:16px;font-weight:500;color:var(--ink);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;resize:none;min-height:56px;background:var(--bg)}
+.frow textarea:focus{outline:none;border-color:var(--ink)}
+.focus.done textarea{color:var(--ink-3);text-decoration:line-through}
+.ck{width:24px;height:24px;border-radius:50%;border:1.5px solid #D4D4D4;flex:none;display:grid;place-items:center;padding:0}
+.ck svg{width:12px;height:12px}
+.ck path{stroke:#C4C4C4}
+.ck[aria-pressed="true"]{background:var(--on);border-color:var(--on)}
+.ck[aria-pressed="true"] path{stroke:#fff}
+.ck.big{width:44px;height:44px;margin-top:6px}
+.ck.big svg{width:18px;height:18px}
+.list{border-top:1px solid var(--line)}
+.item{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);min-height:50px}
+.item input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;color:var(--ink);padding:12px 0}
+.item input:focus{outline:none}
+.item input::placeholder{color:var(--ink-3)}
+.item.done input{color:var(--ink-3);text-decoration:line-through}
+.item.moved input{color:var(--ink-3)}
+.item .mv{font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.item .del{width:32px;height:32px;font-size:20px;color:#C4C4C4;flex:none}
+.item.add .plus{width:24px;text-align:center;color:var(--ink-3);font-size:20px;flex:none}
+.sub-h{font-size:12px;font-weight:600;color:var(--ink-2);margin:14px 0 4px}
+.sub-h:first-of-type{margin-top:0}
+.carry{align-self:flex-start;font-size:13px;font-weight:600;padding:8px 14px;border-radius:999px;border:1.5px solid var(--ink);margin-bottom:12px}
+.sep{display:flex;align-items:center;gap:12px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:6px 0 -6px}
+.sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--line)}
+.plan{display:flex;flex-direction:column;gap:30px;margin-top:10px}
 @media (max-width:380px){.dots i{width:5px}.tile .v{font-size:20px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -188,6 +228,7 @@ button,textarea{touch-action:manipulation}
   <div class="top">
     <div class="tabs" role="tablist">
       <button id="tab-day" role="tab" aria-selected="true">День</button>
+      <button id="tab-plan" role="tab" aria-selected="false">План</button>
       <button id="tab-stats" role="tab" aria-selected="false">Статистика</button>
     </div>
     <div class="datebar" id="datebar">
@@ -199,13 +240,20 @@ button,textarea{touch-action:manipulation}
       <button class="nav" id="next" aria-label="Следующий день">›</button>
     </div>
     <div class="prog" id="progrow">
+      <span class="pl">Привычки</span>
       <div class="bar"><i id="barfill" style="width:0"></i></div>
       <b class="num" id="progtxt">0 из 30</b>
     </div>
+    <button class="prog p2" id="planrow" type="button">
+      <span class="pl">План дня</span>
+      <div class="bar"><i id="planfill" style="width:0"></i></div>
+      <b class="num" id="plantxt">не заполнен</b>
+    </button>
     <div class="status" id="status">Загружаю отметки…</div>
   </div>
 
   <main id="view-day" class="blocks"></main>
+  <main id="view-plan" class="plan" hidden></main>
   <main id="view-stats" hidden></main>
   <div class="toast" id="toast" role="status" hidden></div>
 </div>
@@ -238,7 +286,8 @@ const BLOCKS=[
   {id:'quran',n:'Коран',note:'5 страниц'},
   {id:'walk',n:'Прогулка',note:'30 минут'},
   {id:'duha',n:'Духа намаз'},
-  {id:'breakfast',n:'Завтрак с семьёй',note:'или попутно'}]},
+  {id:'breakfast',n:'Завтрак с семьёй',note:'или попутно'},
+  {id:'diary',n:'Заполнить ежедневник',note:'фокус дня, дела, развлечения'}]},
  {id:'day',name:'День',hint:'работа и намазы',items:[
   {id:'work',n:'Работа',note:'цель 4–5 часов',type:'hours',target:4,max:10},
   {id:'jamaat',n:'Намазы в джамаате',type:'multi',opts:['Зухр','Аср','Магриб','Иша']}]},
@@ -313,6 +362,7 @@ function lsSave(){try{localStorage.setItem('fajr-witr-days',JSON.stringify(state
 function mutate(date,fn){
   const v=state[date]||(state[date]={});
   fn(v);
+  if(typeof autoDiary==='function')autoDiary(date);
   unsynced[date]=true;
   lsSave();
   render();
@@ -387,6 +437,120 @@ const WORDS=[["مِنْ", "мин", "из, от", "مِنْ شَرِّ مَا خ
 const WORDS_START='2026-09-27';
 const arText=t=>t.replace(/\s+([\u06D6-\u06DC])/g,'\u2060\u200A\u2060$1');
 function wordFor(date){const n=Math.round((parse(date)-parse(WORDS_START))/864e5);const i=((n%WORDS.length)+WORDS.length)%WORDS.length;return [i,WORDS[i]];}
+// ---------- планы: фокус дня, дела, развлечения (в документе дня), цели недели и месяца (свои документы)
+const isDay=k=>/^\d{4}-\d{2}-\d{2}$/.test(k);
+function hasMarks(v){return !!v&&Object.keys(v).some(k=>k[0]!=='_');} // habit marks, not plans or notes
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function docOf(k){return state[k]||(state[k]={});}
+function autoDiary(k){const v=state[k];if(!isDay(k)||!v||v.diary!==undefined)return;if(((v._focus||{}).t||'').trim()&&(v._tasks||[]).length)v.diary=true;}
+function touch(k){autoDiary(k);unsynced[k]=true;lsSave();clearTimeout(timer);timer=setTimeout(push,800);} // typing: save without redraw
+function isoWeek(k){const d=parse(k);const th=new Date(d);th.setDate(d.getDate()-(d.getDay()+6)%7+3);const y=th.getFullYear();const j=new Date(y,0,4);return y+'-W'+pad(1+Math.round(((th-j)/864e5-3+(j.getDay()+6)%7)/7));}
+function weekStart(k){return addDays(k,-((parse(k).getDay()+6)%7));}
+let refocus=null;
+
+function listUI(k,field,g,placeholder){
+  const wrap=el('div',{class:'list'});
+  const all=docOf(k)[field]||[];
+  for(const it of all.filter(x=>!g||x.g===g)){
+    const row=el('div',{class:'item'+(it.done?' done':'')+(it.moved?' moved':'')});
+    const ck=el('button',{class:'ck','aria-pressed':String(!!it.done),'aria-label':'Сделано'},CHECK);
+    ck.onclick=()=>mutate(k,v=>{const x=(v[field]||[]).find(x=>x.id===it.id);if(x){x.done=!x.done;delete x.moved;}});
+    const inp=el('input',{type:'text',value:'','aria-label':'Текст'});inp.value=it.t;
+    inp.oninput=()=>{it.t=inp.value;touch(k);};
+    const del=el('button',{class:'del','aria-label':'Удалить'},'×');
+    del.onclick=()=>{const before=(docOf(k)[field]||[]).slice();mutate(k,v=>{v[field]=(v[field]||[]).filter(x=>x.id!==it.id);});toast('Удалено',()=>mutate(k,v=>{v[field]=before;}));};
+    row.append(ck,inp);
+    if(it.moved)row.appendChild(el('span',{class:'mv'},'→ завтра'));
+    row.appendChild(del);wrap.appendChild(row);
+  }
+  const addId='add-'+k+'-'+field+'-'+(g||'');
+  const add=el('div',{class:'item add'});
+  const ai=el('input',{type:'text',id:addId,placeholder:placeholder,enterkeyhint:'done'});
+  const commit=()=>{const t=ai.value.trim();if(!t)return;ai.value='';refocus=addId;mutate(k,v=>{(v[field]=v[field]||[]).push(Object.assign({id:uid(),t,done:false},g?{g}:{}));});};
+  ai.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit();}};
+  ai.onblur=()=>{if(ai.value.trim())commit();};
+  add.append(el('span',{class:'plus'},'+'),ai);wrap.appendChild(add);
+  return wrap;
+}
+function countDone(arr){arr=arr||[];return `${arr.filter(x=>x.done).length}/${arr.length}`;}
+function planHead(title,hint,cnt){return el('div',{class:'ph'},`<div class="t"><h2>${esc(title)}</h2>${hint?`<span class="hint">${esc(hint)}</span>`:''}</div>${cnt?`<span class="cnt num">${cnt}</span>`:''}`);}
+
+function renderDayPlans(root,k){
+  const v=docOf(k);
+  // фокус дня
+  const f=v._focus||{};
+  const fs=el('section',{class:'pblock focus'+(f.done?' done':'')});
+  fs.appendChild(planHead('Фокус дня','что порадует и прибавит сил'));
+  const fr=el('div',{class:'frow'});
+  const ta=el('textarea',{id:'focus-'+k,rows:'2',placeholder:'Одно главное дело на сегодня'});ta.value=f.t||'';
+  ta.oninput=()=>{docOf(k)._focus=Object.assign({},docOf(k)._focus,{t:ta.value});touch(k);};
+  const fb=el('button',{class:'ck big','aria-pressed':String(!!f.done),'aria-label':'Фокус выполнен'},CHECK);
+  fb.onclick=()=>mutate(k,v=>{v._focus=Object.assign({},v._focus,{done:!(v._focus&&v._focus.done)});});
+  fr.append(ta,fb);fs.appendChild(fr);root.appendChild(fs);
+
+  // дела
+  const tasks=v._tasks||[];
+  const ts=el('section',{class:'pblock'});
+  ts.appendChild(planHead('Дела','',tasks.length?countDone(tasks):''));
+  const y=addDays(k,-1),yv=state[y]||{};
+  const left=(yv._tasks||[]).filter(x=>!x.done&&!x.moved);
+  if(k===today&&left.length){
+    const mb=el('button',{class:'carry'},`Перенести несделанное со вчера (${left.length})`);
+    mb.onclick=()=>{
+      mutate(y,v=>{for(const x of v._tasks||[])if(!x.done&&!x.moved)x.moved=true;});
+      mutate(k,v=>{v._tasks=(v._tasks||[]).concat(left.map(x=>({id:uid(),t:x.t,g:x.g,done:false})));});
+    };
+    ts.appendChild(mb);
+  }
+  const wg=((state[isoWeek(k)]||{})._goals||[]).filter(g=>!g.done&&!tasks.some(t=>t.t===g.t));
+  if(wg.length){
+    const box=el('div',{class:'from-week'},'<span class="fw-l">Из плана недели</span>');
+    for(const g of wg){const c=el('button',{class:'fw'},'+ '+esc(g.t));c.onclick=()=>mutate(k,v=>{(v._tasks=v._tasks||[]).push({id:uid(),t:g.t,g:'c',done:false});});box.appendChild(c);}
+    ts.appendChild(box);
+  }
+  ts.appendChild(el('div',{class:'sub-h'},'Сливки · главное'));
+  ts.appendChild(listUI(k,'_tasks','c','Добавить главное дело'));
+  ts.appendChild(el('div',{class:'sub-h'},'Вишенки · если успею'));
+  ts.appendChild(listUI(k,'_tasks','v','Добавить дело'));
+  root.appendChild(ts);
+
+  // развлечения
+  const fun=v._fun||[];
+  const us=el('section',{class:'pblock'});
+  us.appendChild(planHead('Развлечения','маленькие радости дня',fun.length?countDone(fun):''));
+  us.appendChild(listUI(k,'_fun',null,'Добавить'));
+  root.appendChild(us);
+}
+
+let planWeek=null,planMonth=null;
+function renderPlan(){
+  const root=$('view-plan');root.innerHTML='';
+  if(!planWeek)planWeek=weekStart(today);
+  if(!planMonth)planMonth=today.slice(0,7);
+  // неделя
+  const wk=isoWeek(planWeek),we=addDays(planWeek,6);
+  const f1=new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long'});
+  const wl=parse(planWeek).getMonth()===parse(we).getMonth()?`${parse(planWeek).getDate()}–${f1.format(parse(we))}`:`${f1.format(parse(planWeek))} – ${f1.format(parse(we))}`;
+  const ws=el('section',{class:'pblock'});
+  const wh=el('div',{class:'cal-hd'});
+  const wp=el('button',{class:'cal-nav','aria-label':'Прошлая неделя'},'‹'),wn=el('button',{class:'cal-nav','aria-label':'Следующая неделя'},'›');
+  wp.onclick=()=>{planWeek=addDays(planWeek,-7);renderPlan();};wn.onclick=()=>{planWeek=addDays(planWeek,7);renderPlan();};
+  const goalsW=(state[wk]||{})._goals||[];
+  wh.append(wp,el('div',{class:'ph-c'},`<h2>План на неделю</h2><span class="hint">${esc(wl)}${goalsW.length?' · '+countDone(goalsW):''}</span>`),wn);
+  ws.appendChild(wh);ws.appendChild(listUI(wk,'_goals',null,'Добавить цель недели'));root.appendChild(ws);
+  // месяц
+  const [py,pm]=planMonth.split('-').map(Number);
+  let mname=new Date(py,pm-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'}).replace(' г.','');mname=mname.charAt(0).toUpperCase()+mname.slice(1);
+  const ms=el('section',{class:'pblock'});
+  const mh=el('div',{class:'cal-hd'});
+  const mp=el('button',{class:'cal-nav','aria-label':'Прошлый месяц'},'‹'),mn=el('button',{class:'cal-nav','aria-label':'Следующий месяц'},'›');
+  mp.onclick=()=>{planMonth=key(new Date(py,pm-2,1)).slice(0,7);renderPlan();};mn.onclick=()=>{planMonth=key(new Date(py,pm,1)).slice(0,7);renderPlan();};
+  const goalsM=(state[planMonth]||{})._goals||[];
+  mh.append(mp,el('div',{class:'ph-c'},`<h2>План на месяц</h2><span class="hint">${esc(mname)}${goalsM.length?' · '+countDone(goalsM):''}</span>`),mn);
+  ms.appendChild(mh);ms.appendChild(listUI(planMonth,'_goals',null,'Добавить цель месяца'));root.appendChild(ms);
+  doRefocus();
+}
+function doRefocus(){if(refocus){const e=$(refocus);refocus=null;if(e)e.focus();}}
 const openState={};
 let shownOpen=new Set(); // blocks open on screen right now
 function renderDay(){
@@ -398,6 +562,8 @@ function renderDay(){
   root.appendChild(el('section',{class:'word'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${WORDS.length}</span></div>
     <div class="wmain"><div class="wtr"><b>${esc(wm)}</b><span>${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
     <div class="wex"><div class="wexa" lang="ar" dir="rtl">${esc(arText(ea))}</div><div class="wexr">${esc(er)}</div></div>`));
+  renderDayPlans(root,viewDate);
+  root.appendChild(el('div',{class:'sep'},'<span>Привычки</span>'));
   const nowOpen=new Set();
   for(const b of BLOCKS){
     let got=0;for(const h of b.items)got+=sc(h,v);
@@ -460,6 +626,7 @@ function renderDay(){
     root.appendChild(sec);
   }
   shownOpen=nowOpen;
+  setTimeout(doRefocus,0);
   const nb=el('section',{class:'note-block'},'<label class="note-lab" for="day-note">Заметка дня</label>');
   const ta=el('textarea',{id:'day-note',rows:'2',placeholder:'Что помешало или помогло — одной строкой'});
   ta.value=v._note||'';
@@ -493,10 +660,20 @@ function renderHeader(){
   $('barfill').style.width=(s/TOTAL*100).toFixed(1)+'%';
   const sTxt=Number.isInteger(s)?s:s.toFixed(1).replace('.',',');
   $('progtxt').textContent=s>=TOTAL-1e-9?'Всё выполнено':`${sTxt} из ${TOTAL} · ${Math.round(s/TOTAL*100)}%`;
+  const ps=planStats(state[viewDate]);
+  $('planfill').style.width=(ps.n?ps.done/ps.n*100:0).toFixed(1)+'%';
+  $('plantxt').textContent=!ps.n?'не заполнен':ps.done===ps.n?'Всё выполнено':`${ps.done} из ${ps.n}`;
+}
+function planStats(v){ // what was planned for the day: focus, tasks (not moved on), small joys
+  v=v||{};const items=[];
+  if(v._focus&&(v._focus.t||'').trim())items.push(!!v._focus.done);
+  for(const x of v._tasks||[])if(!x.moved)items.push(!!x.done);
+  for(const x of v._fun||[])items.push(!!x.done);
+  return {n:items.length,done:items.filter(Boolean).length};
 }
 
 // ---------- stats
-function firstDate(){const ks=Object.keys(state).filter(k=>Object.keys(state[k]||{}).length).sort();return ks[0]||today;}
+function firstDate(){const ks=Object.keys(state).filter(k=>isDay(k)&&hasMarks(state[k])).sort();return ks[0]||today;}
 function streak(h){
   let d=today,n=0;
   if(sc(h,state[d])<1)d=addDays(d,-1);
@@ -529,7 +706,7 @@ function renderStats(){
   root.appendChild(tiles);
 
   // weak spots: lowest completion over the last 14 days
-  const tracked=Object.keys(state).filter(k=>k>=addDays(today,-13)&&Object.keys(state[k]||{}).length).length;
+  const tracked=Object.keys(state).filter(k=>isDay(k)&&k>=addDays(today,-13)&&hasMarks(state[k])).length;
   if(tracked>=3){
     const weak=ALL.map(h=>({h,p:pctWindow(h,14)})).filter(x=>x.p<80).sort((a,b)=>a.p-b.p).slice(0,3);
     const w=el('div',{class:'card'},'<h3>Слабые места · 14 дней</h3>');
@@ -559,7 +736,7 @@ function renderStats(){
   let sum=0,cnt=0,good=0;
   for(let day=1;day<=dim;day++){
     const d=calMonth+'-'+pad(day);
-    const v=state[d];const has=v&&Object.keys(v).length;
+    const v=state[d];const has=hasMarks(v);
     const p=has?Math.round(dayScore(v)/TOTAL*100):null;
     if(p!==null){sum+=p;cnt++;if(p>=90)good++;}
     const lv=p===null?'':p>=90?'l4':p>=70?'l3':p>=40?'l2':'l1';
@@ -591,14 +768,12 @@ let tab='day';
 let calMonth=key(new Date()).slice(0,7);
 function switchTab(t){
   tab=t;
-  $('tab-day').setAttribute('aria-selected',String(t==='day'));
-  $('tab-stats').setAttribute('aria-selected',String(t==='stats'));
-  $('view-day').hidden=t!=='day';$('view-stats').hidden=t!=='stats';
-  $('datebar').hidden=t!=='day';$('progrow').hidden=t!=='day';
+  for(const x of ['day','plan','stats']){$('tab-'+x).setAttribute('aria-selected',String(t===x));$('view-'+x).hidden=t!==x;}
+  $('datebar').hidden=t!=='day';$('progrow').hidden=t!=='day';$('planrow').hidden=t!=='day';
   try{localStorage.setItem('fajr-witr-tab',t);}catch(e){}
   render();window.scrollTo(0,0);
 }
-function render(){renderHeader();if(tab==='day')renderDay();else renderStats();}
+function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else renderStats();}
 
 function go(n){const d=addDays(viewDate,n);if(d>today)return;viewDate=d;render();}
 $('prev').onclick=()=>go(-1);
@@ -606,12 +781,15 @@ $('dtitle').onclick=()=>{if(viewDate!==today){viewDate=today;render();}};
 let tx=0,ty=0,tt=0;
 $('view-day').addEventListener('touchstart',e=>{const t=e.touches[0];tx=t.clientX;ty=t.clientY;tt=Date.now();},{passive:true});
 $('view-day').addEventListener('touchend',e=>{
+  if(/^(INPUT|TEXTAREA)$/.test(e.target.tagName))return;
   const t=e.changedTouches[0],dx=t.clientX-tx,dy=t.clientY-ty;
   if(Date.now()-tt<600&&Math.abs(dx)>70&&Math.abs(dy)<40)go(dx>0?-1:1);
 },{passive:true});
 $('next').onclick=()=>go(1);
 $('tab-day').onclick=()=>switchTab('day');
 $('tab-stats').onclick=()=>switchTab('stats');
+$('tab-plan').onclick=()=>switchTab('plan');
+$('planrow').onclick=()=>{const f=document.querySelector('.pblock.focus');if(f)window.scrollTo({top:f.getBoundingClientRect().top+window.scrollY-$('datebar').closest('.top').offsetHeight-8,behavior:'smooth'});};
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState!=='visible'){lsSave();return;}
   const now=key(new Date());
@@ -619,7 +797,7 @@ document.addEventListener('visibilitychange',()=>{
   pull(); // pick up marks made on the other device
 });
 
-try{if(localStorage.getItem('fajr-witr-tab')==='stats')tab='stats';}catch(e){}
+try{const t=localStorage.getItem('fajr-witr-tab');if(t==='stats'||t==='plan')tab=t;}catch(e){}
 lsLoad();
 switchTab(tab);
 setStatus('Загружаю…');pull();

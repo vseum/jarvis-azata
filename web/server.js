@@ -180,7 +180,8 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, { days: Object.keys(days).length, github: !!GH_TOKEN, branch: GH_BRANCH, pending: changed.size, lastSync, lastError });
     }
 
-    const m = p.match(/^\/api\/days\/(\d{4}-\d{2}-\d{2})$/);
+    // day YYYY-MM-DD, week plan YYYY-Www, month plan YYYY-MM
+    const m = p.match(/^\/api\/days\/(\d{4}-\d{2}-\d{2}|\d{4}-W\d{2}|\d{4}-\d{2})$/);
     if (m && req.method === 'PUT') {
       let body;
       try { body = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'bad json' }); }

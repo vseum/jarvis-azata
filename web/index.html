@@ -63,6 +63,9 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radi
 
 /* blocks */
 .blocks{display:flex;flex-direction:column;gap:26px;margin-top:10px}
+.hadith{margin:4px 0 0;padding:14px 16px;background:var(--fill);border-radius:14px}
+.hadith blockquote{margin:0;font-size:14px;line-height:1.5;font-weight:500;color:var(--ink);text-wrap:pretty}
+.hadith figcaption{margin-top:6px;font-size:11.5px;color:var(--ink-3)}
 .bh{display:flex;align-items:center;gap:10px;padding:6px 0 10px;width:100%;text-align:left}
 .bh .t{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .bh h2{margin:0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
@@ -96,6 +99,11 @@ button.row[aria-pressed="true"] .n{color:var(--ink-3)}
 .mark.no[aria-pressed="true"] svg{background:var(--miss);border-color:var(--miss)}
 .mark.no[aria-pressed="true"] path{stroke:#fff}
 .row.done .n{color:var(--ink-3)}
+.grp{display:flex;align-items:center;justify-content:space-between;padding:14px 0 4px;min-height:44px}
+.grp .n{font-weight:500;font-size:15px}
+.grp .cnt{font-size:12.5px;font-weight:600;color:var(--ink-3);padding-right:8px}
+.row.sub{padding-left:16px;min-height:48px;padding-top:8px;padding-bottom:8px}
+.row.sub .n{font-size:14px}
 .row.miss .n{color:var(--miss)}
 .dots i.x{background:#F3C9C4}
 .step{display:flex;align-items:center;gap:2px;flex:none}
@@ -205,7 +213,7 @@ const BLOCKS=[
   {id:'am_pull',n:'Подтягивания',note:'10 раз'},
   {id:'am_shower',n:'Душ'},
   {id:'am_minox',n:'Миноксидил'},
-  {id:'am_vit',n:'Витамины'}]},
+  {id:'am_vit',n:'Витамины',type:'group',subs:[{id:'am_vit_mg',n:'Магний'},{id:'am_vit_zn',n:'Цинк'},{id:'am_vit_cr',n:'Креатин'}]}]},
  {id:'morning',name:'Утро',hint:'после Фаджра',items:[
   {id:'fajr_masjid',n:'Фаджр в мечети'},
   {id:'am_azkar',n:'Азкары утра'},
@@ -218,7 +226,7 @@ const BLOCKS=[
   {id:'jamaat',n:'Намазы в джамаате',type:'multi',opts:['Зухр','Аср','Магриб','Иша']}]},
  {id:'evening',name:'Вечер',hint:'после Асра',items:[
   {id:'pm_azkar',n:'Азкары вечера'},
-  {id:'pm_vit',n:'Витамины'},
+  {id:'pm_vit',n:'Витамины',type:'group',subs:[{id:'pm_vit_mg',n:'Магний'},{id:'pm_vit_zn',n:'Цинк'},{id:'pm_vit_cr',n:'Креатин'}]},
   {id:'pm_squat',n:'Приседания',note:'15 раз'},
   {id:'pm_push',n:'Отжимания',note:'15 раз'},
   {id:'pm_abs',n:'Пресс',note:'30 раз'},
@@ -235,7 +243,17 @@ function score(h,raw){
   if(h.type==='multi') return Array.isArray(raw)?raw.length/h.opts.length:0;
   return raw===true?1:0; // false = explicitly not done
 }
-function dayScore(v){v=v||{};let s=0;for(const h of ALL)s+=score(h,v[h.id]);return s;}
+function sc(h,v){ // score of one item within a day's values
+  v=v||{};
+  if(h.type==='group'){
+    if(v[h.id]===true)return 1; // days logged before the sub-items existed
+    let n=0;for(const x of h.subs)if(v[x.id]===true)n++;return n/h.subs.length;
+  }
+  return score(h,v[h.id]);
+}
+function missed(h,v){v=v||{};return h.type==='group'?h.subs.every(x=>v[x.id]===false):v[h.id]===false;}
+function toggles(h){return h.type==='group'?h.subs.map(x=>x.id):!h.type?[h.id]:[];} // ids a tri-state button sets
+function dayScore(v){v=v||{};let s=0;for(const h of ALL)s+=sc(h,v);return s;}
 
 // dates
 const pad=n=>String(n).padStart(2,'0');
@@ -334,23 +352,38 @@ try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}c
 function el(tag,attrs,html){const e=document.createElement(tag);if(attrs)for(const k in attrs){if(k==='class')e.className=attrs[k];else e.setAttribute(k,attrs[k]);}if(html!=null)e.innerHTML=html;return e;}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
+function triRow(v,id,name,note,cls){
+  const st=v[id]===true?'done':v[id]===false?'miss':'';
+  const r=el('div',{class:'row tri'+(cls?' '+cls:'')+(st?' '+st:''),id:'h-'+id});
+  const lab=el('button',{class:'lab'},`<div class="n">${esc(name)}</div>${note}`);
+  const no=el('button',{class:'mark no','aria-pressed':String(st==='miss'),'aria-label':'Не сделал'},MINUS);
+  const yes=el('button',{class:'mark yes','aria-pressed':String(st==='done'),'aria-label':'Сделал'},CHECK);
+  const set=val=>mutate(viewDate,v=>{if(v[id]===val)delete v[id];else v[id]=val;});
+  lab.onclick=()=>set(true);yes.onclick=()=>set(true);no.onclick=()=>set(false);
+  r.append(lab,no,yes);return r;
+}
+// Хадис дня: один на дату, по кругу. Только известные достоверные хадисы с источником.
+const HADITHS=[["Самые любимые Аллахом дела — постоянные, даже если их немного.", "аль-Бухари 6464, Муслим 783"], ["Поистине, дела оцениваются по намерениям.", "аль-Бухари 1, Муслим 1907"], ["Сильный верующий лучше и любимее Аллахом, чем слабый верующий, но в каждом из них есть благо.", "Муслим 2664"], ["Кто совершил утреннюю молитву, тот под защитой Аллаха.", "Муслим 657"], ["Лучшая молитва после обязательной — ночная молитва.", "Муслим 1163"], ["Молитва в джамаате превосходит молитву в одиночку на двадцать семь степеней.", "аль-Бухари 645, Муслим 650"], ["Две милости, в которых многие люди обмануты: здоровье и свободное время.", "аль-Бухари 6412"], ["Читайте Коран, ибо в Судный день он придёт заступником за своих читателей.", "Муслим 804"], ["О Аллах, благослови мою общину в её ранних часах.", "Абу Дауд 2606, ат-Тирмизи 1212"], ["Никто никогда не ел пищи лучше той, что заработал своими руками.", "аль-Бухари 2072"], ["Каждое утро за каждый сустав любого из вас полагается садака — и всё это заменяют два раката Духа.", "Муслим 720"], ["Придерживайтесь правильного, будьте умеренны и радуйтесь.", "аль-Бухари 6463"], ["Не гневайся.", "аль-Бухари 6116"], ["Кто верует в Аллаха и в Последний день, пусть говорит благое или молчит.", "аль-Бухари 6018, Муслим 47"], ["Пять молитв подобны реке у дверей одного из вас, в которой он омывается пять раз в день.", "аль-Бухари 528, Муслим 667"], ["Аллах — Витр и любит нечётное.", "аль-Бухари 6410, Муслим 2677"], ["Поистине, у твоего тела есть право на тебя.", "аль-Бухари 1975"], ["Воспользуйся пятью прежде пяти: молодостью до старости, здоровьем до болезни, богатством до бедности, досугом до занятости и жизнью до смерти.", "аль-Хаким, сахих"]];
+function hadithFor(date){const n=Math.floor(parse(date).getTime()/864e5);return HADITHS[((n%HADITHS.length)+HADITHS.length)%HADITHS.length];}
 const openState={};
 let shownOpen=new Set(); // blocks open on screen right now
 function renderDay(){
   const v=state[viewDate]||{};
   const root=$('view-day');root.innerHTML='';
+  const [ht,hs]=hadithFor(viewDate);
+  root.appendChild(el('figure',{class:'hadith'},`<blockquote>«${esc(ht)}»</blockquote><figcaption>Хадис дня · ${esc(hs)}</figcaption>`));
   const nowOpen=new Set();
   for(const b of BLOCKS){
-    let got=0;for(const h of b.items)got+=score(h,v[h.id]);
+    let got=0;for(const h of b.items)got+=sc(h,v);
     const full=got>=b.items.length-1e-9;
     const ok=openState[viewDate+':'+b.id];
-    const resolved=full||b.items.every(h=>!h.type&&v[h.id]!==undefined); // every item answered yes or no
+    const resolved=full||b.items.every(h=>toggles(h).length&&toggles(h).every(id=>v[id]!==undefined)); // every item answered yes or no
     const k=viewDate+':'+b.id;
     const isOpen=ok!==undefined?ok:(!resolved||shownOpen.has(k)); // answered blocks fold on next open, not mid-tap
     if(isOpen)nowOpen.add(k);
     const sec=el('section',{class:'block'+(full?' full':'')+(isOpen?' open':'')});
-    const bools=b.items.filter(h=>!h.type);
-    const allOn=bools.length&&bools.every(h=>v[h.id]===true);
+    const bools=b.items.flatMap(toggles); // ids
+    const allOn=bools.length&&bools.every(id=>v[id]===true);
     const gotTxt=Number.isInteger(got)?got:got.toFixed(1).replace('.',',');
     const bh=el('button',{class:'bh','aria-expanded':String(isOpen)},`<div class="t"><h2>${esc(b.name)}</h2><span class="hint">${esc(b.hint)}</span></div><span class="cnt num">${full?'Готово':gotTxt+'/'+b.items.length}</span><svg class="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
     bh.onclick=()=>{openState[viewDate+':'+b.id]=!isOpen;render();};
@@ -359,8 +392,8 @@ function renderDay(){
     if(bools.length>1){
       const all=el('button',{class:'all'},allOn?'Снять всё':'Отметить всё');
       all.onclick=()=>{
-        const date=viewDate,before={};for(const h of bools)before[h.id]=state[date]&&state[date][h.id];
-        mutate(date,v=>{for(const h of bools){if(allOn)delete v[h.id];else v[h.id]=true;}});
+        const date=viewDate,before={};for(const id of bools)before[id]=state[date]&&state[date][id];
+        mutate(date,v=>{for(const id of bools){if(allOn)delete v[id];else v[id]=true;}});
         toast((allOn?'Снято: ':'Отмечено: ')+bools.length,()=>mutate(date,v=>{for(const id in before){if(before[id]!==undefined)v[id]=before[id];else delete v[id];}}));
       };
       sec.appendChild(all);
@@ -369,14 +402,11 @@ function renderDay(){
     for(const h of b.items){
       const note=h.note?`<div class="note">${esc(h.note)}</div>`:'';
       if(!h.type){
-        const st=v[h.id]===true?'done':v[h.id]===false?'miss':'';
-        const r=el('div',{class:'row tri'+(st?' '+st:''),id:'h-'+h.id});
-        const lab=el('button',{class:'lab'},`<div class="n">${esc(h.n)}</div>${note}`);
-        const no=el('button',{class:'mark no','aria-pressed':String(st==='miss'),'aria-label':'Не сделал'},MINUS);
-        const yes=el('button',{class:'mark yes','aria-pressed':String(st==='done'),'aria-label':'Сделал'},CHECK);
-        const set=val=>mutate(viewDate,v=>{if(v[h.id]===val)delete v[h.id];else v[h.id]=val;});
-        lab.onclick=()=>set(true);yes.onclick=()=>set(true);no.onclick=()=>set(false);
-        r.append(lab,no,yes);body.appendChild(r);
+        body.appendChild(triRow(v,h.id,h.n,note,''));
+      }else if(h.type==='group'){
+        const n=h.subs.filter(x=>v[x.id]===true).length;
+        body.appendChild(el('div',{class:'grp'},`<span class="n">${esc(h.n)}</span><span class="cnt num">${n}/${h.subs.length}</span>`));
+        for(const x of h.subs)body.appendChild(triRow(v,x.id,x.n,'','sub'));
       }else if(h.type==='hours'){
         const val=+v[h.id]||0;
         const r=el('div',{class:'row'},`<div class="lab"><div class="n">${esc(h.n)}</div>${note}</div>`);
@@ -443,13 +473,13 @@ function renderHeader(){
 function firstDate(){const ks=Object.keys(state).filter(k=>Object.keys(state[k]||{}).length).sort();return ks[0]||today;}
 function streak(h){
   let d=today,n=0;
-  if(score(h,(state[d]||{})[h.id])<1)d=addDays(d,-1);
-  while(score(h,(state[d]||{})[h.id])>=1){n++;d=addDays(d,-1);}
+  if(sc(h,state[d])<1)d=addDays(d,-1);
+  while(sc(h,state[d])>=1){n++;d=addDays(d,-1);}
   return n;
 }
 function pctWindow(h,days){
   const start=firstDate();let done=0,cnt=0;
-  for(let i=0;i<days;i++){const d=addDays(today,-i);if(d<start)break;cnt++;done+=score(h,(state[d]||{})[h.id]);}
+  for(let i=0;i<days;i++){const d=addDays(today,-i);if(d<start)break;cnt++;done+=sc(h,state[d]);}
   return cnt?Math.round(done/cnt*100):0;
 }
 function avgPrev(fn){ // days 8..14 back; null when the log is younger than that
@@ -507,7 +537,7 @@ function renderStats(){
     g.appendChild(el('div',{class:'hl hl-head'},'<span style="text-align:left"></span><span>14 дней</span><span>30д</span><span>серия</span>'));
     for(const h of b.items){
       let dots='';
-      for(let i=13;i>=0;i--){const d=addDays(today,-i);const s=score(h,(state[d]||{})[h.id]);const raw=(state[d]||{})[h.id];dots+=`<i class="${s>=1?'d':s>0?'p':raw===false?'x':''}"></i>`;}
+      for(let i=13;i>=0;i--){const d=addDays(today,-i);const s=sc(h,state[d]);dots+=`<i class="${s>=1?'d':s>0?'p':missed(h,state[d])?'x':''}"></i>`;}
       g.appendChild(el('div',{class:'hl'},`<span class="nm">${esc(h.n)}${h.note&&/раз|стр|мин/.test(h.note)?' <span style="color:var(--ink-3)">'+esc(h.note.replace(' раз',''))+'</span>':''}</span><span class="dots">${dots}</span><span class="pc num">${pctWindow(h,30)}%</span><span class="sk num">${streak(h)}</span>`));
     }
     list.appendChild(g);

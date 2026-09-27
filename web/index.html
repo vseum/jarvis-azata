@@ -58,7 +58,7 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radi
 .bar{flex:1;height:3px;background:var(--fill);border-radius:3px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--ink);transition:width .25s ease}
 .prog b{font-size:12.5px;font-weight:600;color:var(--ink-2);white-space:nowrap}
-.status{font-size:11.5px;color:var(--ink-3);margin-top:8px;text-align:center;min-height:1em}
+.status{font-size:11.5px;line-height:16px;height:16px;color:var(--ink-3);margin-top:8px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .status.err{color:var(--warn)}
 
 /* blocks */
@@ -287,7 +287,7 @@ function mutate(date,fn){
 function unsentCount(){return Object.keys(unsynced).length;}
 function offlineMsg(){
   const n=unsentCount();
-  setStatus(n?`Нет интернета · сохранено на устройстве, отправлю при связи (${n} ${n===1?'день':n<5?'дня':'дней'})`:'Нет интернета · показываю сохранённое на устройстве',true);
+  setStatus(n?`Нет сети · сохранено на телефоне, отправлю позже (${n})`:'Нет сети · показываю сохранённое на телефоне',true);
 }
 function api(path,opts){
   opts=opts||{};
@@ -335,15 +335,19 @@ function el(tag,attrs,html){const e=document.createElement(tag);if(attrs)for(con
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 const openState={};
+let shownOpen=new Set(); // blocks open on screen right now
 function renderDay(){
   const v=state[viewDate]||{};
   const root=$('view-day');root.innerHTML='';
+  const nowOpen=new Set();
   for(const b of BLOCKS){
     let got=0;for(const h of b.items)got+=score(h,v[h.id]);
     const full=got>=b.items.length-1e-9;
     const ok=openState[viewDate+':'+b.id];
     const resolved=full||b.items.every(h=>!h.type&&v[h.id]!==undefined); // every item answered yes or no
-    const isOpen=ok===undefined?!resolved:ok; // answered blocks fold into one line
+    const k=viewDate+':'+b.id;
+    const isOpen=ok!==undefined?ok:(!resolved||shownOpen.has(k)); // answered blocks fold on next open, not mid-tap
+    if(isOpen)nowOpen.add(k);
     const sec=el('section',{class:'block'+(full?' full':'')+(isOpen?' open':'')});
     const bools=b.items.filter(h=>!h.type);
     const allOn=bools.length&&bools.every(h=>v[h.id]===true);
@@ -352,7 +356,7 @@ function renderDay(){
     bh.onclick=()=>{openState[viewDate+':'+b.id]=!isOpen;render();};
     sec.appendChild(bh);
     if(!isOpen){root.appendChild(sec);continue;}
-    if(bools.length>1&&!full){
+    if(bools.length>1){
       const all=el('button',{class:'all'},allOn?'Снять всё':'Отметить всё');
       all.onclick=()=>{
         const date=viewDate,before={};for(const h of bools)before[h.id]=state[date]&&state[date][h.id];
@@ -399,6 +403,7 @@ function renderDay(){
     }
     root.appendChild(sec);
   }
+  shownOpen=nowOpen;
   const nb=el('section',{class:'note-block'},'<label class="note-lab" for="day-note">Заметка дня</label>');
   const ta=el('textarea',{id:'day-note',rows:'2',placeholder:'Что помешало или помогло — одной строкой'});
   ta.value=v._note||'';

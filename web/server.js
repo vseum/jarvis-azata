@@ -124,6 +124,8 @@ const STATIC = {
   '/index.html': ['index.html', 'text/html; charset=utf-8'],
   '/icon.svg': ['icon.svg', 'image/svg+xml'],
   '/apple-touch-icon.png': ['apple-touch-icon.png', 'image/png'],
+  '/favicon-32.png': ['favicon-32.png', 'image/png'],
+  '/favicon.ico': ['favicon-32.png', 'image/png'],
 };
 
 function send(res, status, body, type) {

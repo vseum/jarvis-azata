@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-27T15:06:41.066Z",
+ "updatedAt": "2026-09-27T15:07:17.503Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -44,11 +44,28 @@
       "done": false,
       "g": "c"
      }
+    ],
+    "_fun": [
+     {
+      "id": "mujyc3gm54fg",
+      "t": "Прогулка",
+      "done": false
+     },
+     {
+      "id": "mujyc723lm5g",
+      "t": "кофе",
+      "done": false
+     },
+     {
+      "id": "mujycdlslghn",
+      "t": "ранний подьем",
+      "done": false
+     }
     ]
    },
    "score": 21.25,
    "pct": 69,
-   "updatedAt": "2026-09-27T15:06:26.058Z"
+   "updatedAt": "2026-09-27T15:07:02.493Z"
   },
   "2026-09": {
    "v": {

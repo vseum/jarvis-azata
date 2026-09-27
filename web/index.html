@@ -494,7 +494,7 @@ function api(path,opts){
   opts.signal=ctl.signal;
   return fetch(path,opts).then(r=>{clearTimeout(t);if(r.status===401)throw {auth:true};if(!r.ok)throw new Error(r.status);return r.json();},e=>{clearTimeout(t);throw e;});
 }
-let pushing=false;
+let pushing=false;const pushedAt={};
 function push(){
   if(pushing)return;
   const d=Object.keys(unsynced).sort()[0];
@@ -503,18 +503,24 @@ function push(){
   const v=state[d]||{};const s=dayScore(v);
   const sent=JSON.stringify(v);
   api('/api/days/'+d,{method:'PUT',body:JSON.stringify({v,score:Math.round(s*100)/100,pct:Math.round(s/TOTAL*100)})})
-    .then(()=>{
-      pushing=false;
-      if(JSON.stringify(state[d]||{})===sent)delete unsynced[d]; // edited meanwhile — send again
+    .then(r=>{
+      pushing=false;pushedAt[d]=Date.now();
+      if(JSON.stringify(state[d]||{})===sent){ // edited meanwhile — send again
+        delete unsynced[d];
+        // сервер слил с другим устройством (заметки, дела, цели) — берём объединённую версию
+        if(r&&r.v&&JSON.stringify(r.v)!==sent){state[d]=r.v;if(!/^(INPUT|TEXTAREA)$/.test((document.activeElement||{}).tagName||''))render();else if(tab==='notes')renderNoteList();}
+      }
       lsSave();push();
     })
     .catch(e=>{pushing=false;if(e&&e.auth)authMsg();else offlineMsg();});
 }
 function pull(){
+  const t0=Date.now();
   api('/api/days')
     .then(res=>{
       const all=res.days||{};
-      for(const k in all)if(!unsynced[k]&&!pending.has(k))state[k]=all[k].v||{};
+      // ответ мог уйти с сервера раньше, чем туда дошло нажатие, — такие дни не трогаем
+      for(const k in all)if(!unsynced[k]&&!pending.has(k)&&!((pushedAt[k]||0)>t0))state[k]=all[k].v||{};
       // server lost a day this device still has (e.g. after a redeploy) — send it back
       for(const k in state)if(!all[k]&&Object.keys(state[k]||{}).length)unsynced[k]=true;
       migrateNotes();migrateLearn();
@@ -545,7 +551,7 @@ function triRow(v,id,name,note,cls){
 }
 // Хадис дня: один на дату, по кругу. Только известные достоверные хадисы, с оценкой (сахих/хасан).
 const HADITHS=window.QHADITHS||[];
-function hadithFor(date){const n=Math.floor(parse(date).getTime()/864e5);return HADITHS[((n%HADITHS.length)+HADITHS.length)%HADITHS.length];}
+function hadithFor(date){if(!HADITHS.length)return ['',''];const n=Math.floor(parse(date).getTime()/864e5);return HADITHS[((n%HADITHS.length)+HADITHS.length)%HADITHS.length];}
 // Слово дня: частые слова Корана по порядку, с 27.09.2026 по одному в день, потом по кругу.
 const WORDS=window.QWORDS||[]; // [ар, транслит, значение, аят, перевод, № слова в аяте, корень, частота, ссылка]
 const WORDS_START='2026-09-27';
@@ -555,13 +561,15 @@ function arHl(t,hl){ // аят с изучаемым словом красным
   return t.split(' ').map(x=>{if(MARKRE.test(x))return esc(x);k++;return k===hl?`<span class="hlw">${esc(x)}</span>`:esc(x);}).join(' ').replace(/\s+([\u06D6-\u06DC])/g,'\u2060\u200A\u2060$1');
 }
 const arText=t=>t.replace(/\s+([\u06D6-\u06DC])/g,'\u2060\u200A\u2060$1');
-function wordFor(date){const n=Math.round((parse(date)-parse(WORDS_START))/864e5);const i=((n%WORDS.length)+WORDS.length)%WORDS.length;return [i,WORDS[i]];}
+function wordFor(date){if(!WORDS.length)return [0,['','','','','',0]];const n=Math.round((parse(date)-parse(WORDS_START))/864e5);const i=((n%WORDS.length)+WORDS.length)%WORDS.length;return [i,WORDS[i]];}
 // ---------- планы: фокус дня, дела, развлечения (в документе дня), цели недели и месяца (свои документы)
 const isDay=k=>/^\d{4}-\d{2}-\d{2}$/.test(k);
 function hasMarks(v){return !!v&&Object.keys(v).some(k=>k[0]!=='_');} // habit marks, not plans or notes
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 function docOf(k){return state[k]||(state[k]={});}
-function autoDiary(k){const v=state[k];if(!isDay(k)||!v||v.diary!==undefined)return;if(((v._focus||{}).t||'').trim()&&(v._tasks||[]).length)v.diary=true;}
+function markGone(v,id){v._gone=(v._gone||[]).filter(x=>x!==id).concat(id).slice(-500);} // удаление не «воскреснет» при слиянии с другим устройством
+function unGone(v,ids){if(v._gone)v._gone=v._gone.filter(x=>!ids.includes(x));}
+function autoDiary(k){const v=state[k];if(!isDay(k)||!v||v._da||v.diary!==undefined)return;if(((v._focus||{}).t||'').trim()&&(v._tasks||[]).length){v.diary=true;v._da=true;}}
 function touch(k){autoDiary(k);unsynced[k]=true;lsSave();clearTimeout(timer);timer=setTimeout(push,800);} // typing: save without redraw
 function isoWeek(k){const d=parse(k);const th=new Date(d);th.setDate(d.getDate()-(d.getDay()+6)%7+3);const y=th.getFullYear();const j=new Date(y,0,4);return y+'-W'+pad(1+Math.round(((th-j)/864e5-3+(j.getDay()+6)%7)/7));}
 function weekStart(k){return addDays(k,-((parse(k).getDay()+6)%7));}
@@ -570,14 +578,14 @@ let refocus=null;
 function listUI(k,field,g,placeholder){
   const wrap=el('div',{class:'list'});
   const all=docOf(k)[field]||[];
-  for(const it of all.filter(x=>!g||x.g===g)){
+  for(const it of all.filter(x=>!g||(x.g||'v')===g)){
     const row=el('div',{class:'item'+(it.done?' done':'')+(it.moved?' moved':'')});
     const ck=el('button',{class:'ck','aria-pressed':String(!!it.done),'aria-label':'Сделано'},CHECK);
-    ck.onclick=()=>mutate(k,v=>{const x=(v[field]||[]).find(x=>x.id===it.id);if(x){x.done=!x.done;delete x.moved;}});
+    ck.onclick=()=>mutate(k,v=>{const x=(v[field]||[]).find(x=>x.id===it.id);if(x){x.done=!x.done;delete x.moved;x.up=new Date().toISOString();}});
     const inp=el('input',{type:'text',value:'','aria-label':'Текст'});inp.value=it.t;
-    inp.oninput=()=>{it.t=inp.value;touch(k);};
+    inp.oninput=()=>{it.t=inp.value;it.up=new Date().toISOString();touch(k);};
     const del=el('button',{class:'del','aria-label':'Удалить'},'×');
-    del.onclick=()=>{const before=(docOf(k)[field]||[]).slice();mutate(k,v=>{v[field]=(v[field]||[]).filter(x=>x.id!==it.id);});toast('Удалено',()=>mutate(k,v=>{v[field]=before;}));};
+    del.onclick=()=>{const before=(docOf(k)[field]||[]).slice();mutate(k,v=>{v[field]=(v[field]||[]).filter(x=>x.id!==it.id);markGone(v,it.id);});toast('Удалено',()=>mutate(k,v=>{v[field]=before;unGone(v,[it.id]);}));};
     row.append(ck,inp);
     if(it.moved)row.appendChild(el('span',{class:'mv'},'→ завтра'));
     row.appendChild(del);wrap.appendChild(row);
@@ -616,8 +624,8 @@ function renderDayPlans(root,k){
   if(k===today&&left.length){
     const mb=el('button',{class:'carry'},`Перенести несделанное со вчера (${left.length})`);
     mb.onclick=()=>{
-      mutate(y,v=>{for(const x of v._tasks||[])if(!x.done&&!x.moved)x.moved=true;});
-      mutate(k,v=>{v._tasks=(v._tasks||[]).concat(left.map(x=>({id:uid(),t:x.t,g:x.g,done:false})));});
+      mutate(y,v=>{for(const x of v._tasks||[])if(!x.done&&!x.moved){x.moved=true;x.up=new Date().toISOString();}});
+      mutate(k,v=>{v._tasks=(v._tasks||[]).concat(left.map(x=>({id:uid(),t:x.t,g:x.g||'v',done:false})));});
     };
     ts.appendChild(mb);
   }
@@ -675,7 +683,7 @@ function trackerPlan(root,k,nowOpen){
   const v=state[k]||{};
   const rows=[];
   if(v._focus&&(v._focus.t||'').trim())rows.push({kind:'focus',t:v._focus.t,done:!!v._focus.done});
-  for(const g of ['c','v'])for(const x of v._tasks||[])if(!x.moved&&x.g===g)rows.push({kind:'_tasks',id:x.id,t:x.t,done:!!x.done,tag:g==='c'?'главное':''});
+  for(const g of ['c','v'])for(const x of v._tasks||[])if(!x.moved&&(x.g||'v')===g)rows.push({kind:'_tasks',id:x.id,t:x.t,done:!!x.done,tag:g==='c'?'главное':''});
   for(const x of v._fun||[])rows.push({kind:'_fun',id:x.id,t:x.t,done:!!x.done,tag:'радость'});
   const done=rows.filter(r=>r.done).length,full=rows.length&&done===rows.length;
   const key=k+':plan',ok=openState[key];
@@ -695,7 +703,7 @@ function trackerPlan(root,k,nowOpen){
       const row=el('div',{class:'row tri'+(r.done?' done':'')+(r.kind==='focus'?' pfocus':'')});
       const lab=el('button',{class:'lab'},`<div class="n">${r.kind==='focus'?'<span class="pf">Фокус · </span>':''}${esc(r.t)}</div>${r.tag?`<div class="note">${r.tag}</div>`:''}`);
       const yes=el('button',{class:'mark yes','aria-pressed':String(r.done),'aria-label':'Сделал'},CHECK);
-      const toggle=()=>mutate(k,v=>{if(r.kind==='focus'){v._focus=Object.assign({},v._focus,{done:!r.done});}else{const x=(v[r.kind]||[]).find(x=>x.id===r.id);if(x)x.done=!x.done;}});
+      const toggle=()=>mutate(k,v=>{if(r.kind==='focus'){v._focus=Object.assign({},v._focus,{done:!r.done});}else{const x=(v[r.kind]||[]).find(x=>x.id===r.id);if(x){x.done=!x.done;x.up=new Date().toISOString();}}});
       lab.onclick=toggle;yes.onclick=toggle;
       row.append(lab,yes);body.appendChild(row);
     }
@@ -918,7 +926,7 @@ function finishSession(box){
     }
     if(S.kind==='lesson'&&!(v._done||[]).includes(S.li))(v._done=v._done||[]).push(S.li);
     if(S.kind==='exam'){v._exams=v._exams||{};v._exams[S.unit.e]=Math.max(v._exams[S.unit.e]||0,acc);}
-    v._xp=v._xp||{};v._xp[today]=(v._xp[today]||0)+xp;
+    v._v=2;v._xp=v._xp||{};v._xp[today]=(v._xp[today]||0)+xp;
   });
   // пройденный урок или повторение сам отмечает «Арабский» в трекере (не трогает явный минус)
   if(!(state[today]&&state[today].arabic!==undefined))mutate(today,v=>{v.arabic=true;});
@@ -938,9 +946,9 @@ function renderDay(){
   const v=state[viewDate]||{};
   const root=$('view-day');root.innerHTML='';
   const [ht,hs]=hadithFor(viewDate);
-  root.appendChild(el('figure',{class:'hadith'},`<blockquote>«${esc(ht)}»</blockquote><figcaption>Хадис дня · ${esc(hs)}</figcaption>`));
+  if(ht)root.appendChild(el('figure',{class:'hadith'},`<blockquote>«${esc(ht)}»</blockquote><figcaption>Хадис дня · ${esc(hs)}</figcaption>`));
   const [wi,[wa,wt,wm,ea,er,ehl]]=wordFor(viewDate);
-  root.appendChild(el('section',{class:'word'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${WORDS.length}</span></div>
+  if(WORDS.length)root.appendChild(el('section',{class:'word'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${WORDS.length}</span></div>
     <div class="wmain"><div class="wtr"><b>${esc(wm)}</b><span>${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
     <div class="wex"><div class="wexa" lang="ar" dir="rtl">${arHl(ea,ehl)}</div><div class="wexr">${esc(er)}</div></div>`));
   const nowOpen=new Set();
@@ -1088,7 +1096,7 @@ function renderNoteList(){
     if(editing===n.id){
       const ta=el('textarea',{class:'nedit'});ta.value=n.t;
       const done=()=>{editing=null;const t=ta.value.trim();
-        if(!t)mutate(mk,v=>{v._notes=(v._notes||[]).filter(x=>x.id!==n.id);});
+        if(!t)mutate(mk,v=>{v._notes=(v._notes||[]).filter(x=>x.id!==n.id);markGone(v,n.id);});
         else if(t!==n.t)mutate(mk,v=>{const x=(v._notes||[]).find(x=>x.id===n.id);if(x){x.t=t;x.up=new Date().toISOString();}});
         else renderNoteList();};
       ta.onblur=done;card.appendChild(ta);box.appendChild(card);
@@ -1099,9 +1107,9 @@ function renderNoteList(){
     txt.onclick=()=>{editing=n.id;renderNoteList();};
     const meta=el('div',{class:'nmeta'},`<span>${n.pin?f.format(parse(d))+' · ':''}${noteTimeTxt(n)}</span>`);
     const pin=el('button',null,n.pin?'Открепить':'Закрепить');
-    pin.onclick=()=>mutate(mk,v=>{const x=(v._notes||[]).find(x=>x.id===n.id);if(x)x.pin=!x.pin;});
+    pin.onclick=()=>mutate(mk,v=>{const x=(v._notes||[]).find(x=>x.id===n.id);if(x){x.pin=!x.pin;x.up=new Date().toISOString();}});
     const del=el('button',null,'Удалить');
-    del.onclick=()=>{const before=(docOf(mk)._notes||[]).slice();mutate(mk,v=>{v._notes=(v._notes||[]).filter(x=>x.id!==n.id);});toast('Заметка удалена',()=>mutate(mk,v=>{v._notes=before;}));};
+    del.onclick=()=>{const before=(docOf(mk)._notes||[]).slice();mutate(mk,v=>{v._notes=(v._notes||[]).filter(x=>x.id!==n.id);markGone(v,n.id);});toast('Заметка удалена',()=>mutate(mk,v=>{v._notes=before;unGone(v,[n.id]);}));};
     meta.append(pin,del);
     card.append(txt,meta);box.appendChild(card);
   }
@@ -1157,7 +1165,7 @@ const fmt1=n=>n.toFixed(1).replace('.',',');
 
 function renderStats(){
   const root=$('view-stats');root.innerHTML='';
-  const dayPct=avg(v=>dayScore(v)/TOTAL,7)*100, dayPrev=avgPrev(v=>dayScore(v)/TOTAL)*100;
+  const dayPct=avg(v=>dayScore(v)/TOTAL,7)*100, dayPrev=(p=>p===null?null:p*100)(avgPrev(v=>dayScore(v)/TOTAL));
   const work=avg(v=>+v.work||0,7), workPrev=avgPrev(v=>+v.work||0);
   const jam=avg(v=>Array.isArray(v.jamaat)?v.jamaat.length:0,7), jamPrev=avgPrev(v=>Array.isArray(v.jamaat)?v.jamaat.length:0);
   const delta=(a,b,f,unit)=>{if(b===null)return '';const d=a-b;if(Math.abs(d)<0.05)return '<div class="dl">как на прошлой</div>';return `<div class="dl ${d>0?'up':'down'}">${d>0?'+':'−'}${f(Math.abs(d))}${unit} к прошлой</div>`;};
@@ -1267,8 +1275,6 @@ document.addEventListener('visibilitychange',()=>{
 try{const t=localStorage.getItem('fajr-witr-tab');if(['stats','plan','notes','learn'].includes(t))tab=t;}catch(e){}
 if(location.hash==='#notes')tab='notes';
 lsLoad();
-migrateNotes();
-migrateLearn();
 switchTab(tab);
 setStatus('Загружаю…');pull();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});

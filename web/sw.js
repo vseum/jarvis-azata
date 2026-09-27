@@ -1,5 +1,5 @@
 // Офлайн-оболочка: страница открывается без сети, отметки ждут в localStorage до связи.
-const CACHE = 'shell-v21';
+const CACHE = 'shell-v22';
 const SHELL = [
   '/',
   '/data.js',
@@ -35,8 +35,9 @@ self.addEventListener('fetch', e => {
   if (e.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/data.js') {
     const k = url.pathname === '/data.js' ? '/data.js' : '/';
     e.respondWith(fetch(e.request).then(r => {
+      if (!r.ok) return caches.match(k).then(c => c || r);   // 502 во время деплоя — отдаём сохранённое
       const copy = r.clone();
-      if (r.ok) caches.open(CACHE).then(c => c.put(k, copy));
+      caches.open(CACHE).then(c => c.put(k, copy));
       return r;
     }).catch(() => caches.match(k)));
     return;

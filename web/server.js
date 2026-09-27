@@ -124,6 +124,38 @@ function sync() {
   return syncing;
 }
 
+// ---------- слияние: телефон и Mac не перетирают заметки, цели, дела и прогресс друг друга
+const ARR = ['_notes', '_goals', '_tasks', '_fun'];
+const byId = a => { const m = new Map(); for (const x of a || []) if (x && x.id) m.set(x.id, x); return m; };
+const stamp = x => x.up || x.at || '';
+function mergeV(key, old, inc) {
+  if (!old) return inc;
+  if (key === 'learn' && inc._v && !old._v) return inc;           // старый формат словаря не смешиваем
+  const out = Object.assign({}, inc);
+  const gone = new Set([...(old._gone || []), ...(inc._gone || [])]);
+  if (gone.size) out._gone = [...gone].slice(-500);
+  for (const f of ARR) {
+    if (!Array.isArray(old[f]) && !Array.isArray(inc[f])) continue;
+    const o = byId(old[f]), n = byId(inc[f]), res = [];
+    for (const x of inc[f] || []) {
+      if (!x || !x.id) { res.push(x); continue; }
+      if (gone.has(x.id)) continue;
+      const y = o.get(x.id);
+      res.push(y && stamp(y) > stamp(x) ? y : x);
+    }
+    for (const x of old[f] || []) if (x && x.id && !n.has(x.id) && !gone.has(x.id)) res.push(x);
+    out[f] = res;
+  }
+  if (key === 'learn') {
+    out._w = Object.assign({}, old._w);
+    for (const k in inc._w || {}) { const a = out._w[k], b = inc._w[k]; out._w[k] = !a || (b.ok || 0) + (b.bad || 0) >= (a.ok || 0) + (a.bad || 0) ? b : a; }
+    out._done = [...new Set([...(old._done || []), ...(inc._done || [])])];
+    for (const f of ['_exams', '_xp']) { out[f] = Object.assign({}, old[f]); for (const k in inc[f] || {}) out[f][k] = Math.max(out[f][k] || 0, inc[f][k]); }
+    if (old._v || inc._v) out._v = Math.max(old._v || 0, inc._v || 0);
+  }
+  return out;
+}
+
 // ---------- HTTP
 const STATIC = {
   '/': ['index.html', 'text/html; charset=utf-8'],
@@ -155,7 +187,14 @@ function readBody(req) {
   });
 }
 
-const server = http.createServer(async (req, res) => {
+const server = http.createServer((req, res) => {
+  handle(req, res).catch(e => {
+    console.error('request failed:', e && e.message);
+    try { if (!res.headersSent) send(res, 400, { error: 'bad request' }); else res.end(); } catch (x) {}
+  });
+});
+
+async function handle(req, res) {
   const url = new URL(req.url, 'http://x');
   const p = url.pathname;
 
@@ -193,17 +232,20 @@ const server = http.createServer(async (req, res) => {
       let body;
       try { body = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'bad json' }); }
       if (!body || typeof body.v !== 'object' || Array.isArray(body.v)) return send(res, 400, { error: 'v must be an object' });
-      days[m[1]] = { v: body.v, score: +body.score || 0, pct: +body.pct || 0, updatedAt: new Date().toISOString() };
+      const merged = mergeV(m[1], days[m[1]] && days[m[1]].v, body.v);
+      days[m[1]] = { v: merged, score: +body.score || 0, pct: +body.pct || 0, updatedAt: new Date().toISOString() };
       changed.add(m[1]);
       saveLocal();
       scheduleSync();
-      return send(res, 200, { ok: true });
+      return send(res, 200, { ok: true, v: merged });
     }
     return send(res, 404, { error: 'not found' });
   }
 
   send(res, 404, 'Not found', 'text/plain; charset=utf-8');
-});
+}
+process.on('unhandledRejection', e => console.error('unhandled:', e && e.message));
+process.on('uncaughtException', e => console.error('uncaught:', e && e.message));
 
 async function start() {
   try { days = JSON.parse(fs.readFileSync(LOCAL, 'utf8')); } catch (e) {}
@@ -217,9 +259,12 @@ async function start() {
   }
   if (!KEY) console.warn('TRACKER_KEY not set: anyone with the address can read and write');
   server.listen(PORT, '0.0.0.0', () => console.log('listening on ' + PORT));
+  // при деплое старый контейнер может досохранить последние отметки уже после нашего старта — перечитываем
+  if (GH_TOKEN) for (const t of [30000, 120000]) setTimeout(() => { syncing = syncing.then(() => readRemote()).catch(e => console.error('re-read failed:', e.message)); }, t).unref();
 }
 
 function shutdown() {
+  server.close();
   clearTimeout(flushTimer);
   const done = () => process.exit(0);
   sync().then(done, done);

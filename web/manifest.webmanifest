@@ -1,0 +1,14 @@
+{
+  "name": "От Фаджра до Витра",
+  "short_name": "Фаджр–Витр",
+  "lang": "ru",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFFFFF",
+  "icons": [
+    { "src": "/apple-touch-icon.png?v=2", "sizes": "180x180", "type": "image/png" },
+    { "src": "/icon.svg?v=2", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

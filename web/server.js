@@ -126,6 +126,8 @@ const STATIC = {
   '/apple-touch-icon.png': ['apple-touch-icon.png', 'image/png'],
   '/favicon-32.png': ['favicon-32.png', 'image/png'],
   '/favicon.ico': ['favicon-32.png', 'image/png'],
+  '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json; charset=utf-8'],
+  '/sw.js': ['sw.js', 'text/javascript; charset=utf-8'],
 };
 
 function send(res, status, body, type) {

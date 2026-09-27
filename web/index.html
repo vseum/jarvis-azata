@@ -11,6 +11,7 @@
 <link rel="icon" href="/icon.svg?v=2" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png?v=2" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+<link rel="manifest" href="/manifest.webmanifest">
 <title>От Фаджра до Витра</title>
 <link rel="preload" href="/fonts/montserrat-cyrillic-500-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -125,6 +126,20 @@ button.row[aria-pressed="true"] .n{color:var(--ink-3)}
 .hl-head{font-size:11px;color:var(--ink-3);border-top:0;padding-top:0}
 .hl-head span{text-align:right}
 .foot{font-size:11.5px;color:var(--ink-3);margin-top:22px;line-height:1.5}
+button,textarea{touch-action:manipulation}
+.dt h1{cursor:pointer}
+.note-block{display:flex;flex-direction:column;gap:8px}
+.note-lab{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.note-block textarea{font:inherit;font-size:16px;color:var(--ink);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;resize:vertical;min-height:52px;background:var(--bg)}
+.note-block textarea:focus{outline:none;border-color:var(--ink)}
+.note-block textarea::placeholder{color:var(--ink-3)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:10;display:flex;align-items:center;gap:18px;background:var(--ink);color:#fff;padding:12px 18px;border-radius:999px;font-size:13.5px;font-weight:500;box-shadow:0 6px 24px rgba(0,0,0,.18);white-space:nowrap}
+.toast button{font-weight:700;color:#fff;text-decoration:underline;text-underline-offset:3px}
+.dl{font-size:11px;font-weight:600;color:var(--ink-3);margin-top:4px}
+.dl.up{color:#1E7F4F}.dl.down{color:var(--warn)}
+.weak{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:14px;font-weight:500}
+.weak .blk{font-size:12px;color:var(--ink-3);font-weight:500;margin-left:4px}
+.weak b{font-weight:600}
 @media (max-width:380px){.dots i{width:5px}.tile .v{font-size:20px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -140,7 +155,7 @@ button.row[aria-pressed="true"] .n{color:var(--ink-3)}
     <div class="datebar" id="datebar">
       <button class="nav" id="prev" aria-label="Предыдущий день">‹</button>
       <div class="dt">
-        <h1 id="dtitle">—</h1>
+        <h1 id="dtitle" title="К сегодняшнему дню">—</h1>
         <div class="hijri" id="hijri"></div>
       </div>
       <button class="nav" id="next" aria-label="Следующий день">›</button>
@@ -154,6 +169,7 @@ button.row[aria-pressed="true"] .n{color:var(--ink-3)}
 
   <main id="view-day" class="blocks"></main>
   <main id="view-stats" hidden></main>
+  <div class="toast" id="toast" role="status" hidden></div>
 </div>
 
 <script>
@@ -161,6 +177,11 @@ button.row[aria-pressed="true"] .n{color:var(--ink-3)}
 const CHECK='<svg viewBox="0 0 14 14"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 const BLOCKS=[
+ {id:'night',name:'Прошлая ночь',hint:'от Иша до Фаджра',items:[
+  {id:'sleep_isha',n:'Сон после Иша'},
+  {id:'tahajjud',n:'Подъём на тахаджуд'},
+  {id:'witr',n:'Витр'},
+  {id:'sleep_back',n:'Сон до подъёма на Фаджр'}]},
  {id:'dawn',name:'До Фаджра',hint:'подъём за час до азана',items:[
   {id:'wake_fajr',n:'Подъём на Фаджр',note:'за 1 час до азана'},
   {id:'am_squat',n:'Приседания',note:'15 раз'},
@@ -190,12 +211,7 @@ const BLOCKS=[
   {id:'pm_back',n:'Поясница'},
   {id:'pm_pull',n:'Подтягивания',note:'10 раз'},
   {id:'pm_shower',n:'Душ'},
-  {id:'pm_minox',n:'Миноксидил'}]},
- {id:'night',name:'Ночь',hint:'после Иша',items:[
-  {id:'sleep_isha',n:'Сон после Иша'},
-  {id:'tahajjud',n:'Подъём на тахаджуд'},
-  {id:'witr',n:'Витр'},
-  {id:'sleep_back',n:'Сон до подъёма на Фаджр'}]}
+  {id:'pm_minox',n:'Миноксидил'}]}
 ];
 const ALL=BLOCKS.flatMap(b=>b.items.map(h=>Object.assign({block:b.id},h)));
 const TOTAL=ALL.length;
@@ -222,7 +238,12 @@ try{fmtHijri=new Intl.DateTimeFormat('ru-RU-u-ca-islamic-umalqura',{day:'numeric
 const state={}; // date -> values
 const pending=new Set(); let timer=null;
 const $=id=>document.getElementById(id);
-function setStatus(t,err){const s=$('status');s.textContent=t;s.classList.toggle('err',!!err);}
+let statusTimer=null;
+function setStatus(t,err){
+  const s=$('status');s.textContent=t;s.classList.toggle('err',!!err);
+  clearTimeout(statusTimer);
+  if(!err&&/^(Сохранено|Синхронизировано)$/.test(t))statusTimer=setTimeout(()=>{s.textContent='';},1500);
+}
 // Access key: open the site once as /?k=KEY, it is remembered on this device.
 let KEY='';
 try{
@@ -298,13 +319,17 @@ function renderDay(){
     const bools=b.items.filter(h=>!h.type);
     const allOn=bools.length&&bools.every(h=>v[h.id]);
     const gotTxt=Number.isInteger(got)?got:got.toFixed(1).replace('.',',');
-    const bh=el('button',{class:'bh','aria-expanded':String(isOpen)},`<div class="t"><h2>${esc(b.name)}</h2><span class="hint">${esc(b.hint)}</span></div><span class="cnt num">${full?'Готово · ':''}${gotTxt}/${b.items.length}</span><svg class="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
+    const bh=el('button',{class:'bh','aria-expanded':String(isOpen)},`<div class="t"><h2>${esc(b.name)}</h2><span class="hint">${esc(b.hint)}</span></div><span class="cnt num">${full?'Готово':gotTxt+'/'+b.items.length}</span><svg class="chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`);
     bh.onclick=()=>{openState[viewDate+':'+b.id]=!isOpen;render();};
     sec.appendChild(bh);
     if(!isOpen){root.appendChild(sec);continue;}
     if(bools.length>1&&!full){
       const all=el('button',{class:'all'},allOn?'Снять всё':'Отметить всё');
-      all.onclick=()=>mutate(viewDate,v=>{for(const h of bools){if(allOn)delete v[h.id];else v[h.id]=true;}});
+      all.onclick=()=>{
+        const date=viewDate,before={};for(const h of bools)before[h.id]=state[date]&&state[date][h.id];
+        mutate(date,v=>{for(const h of bools){if(allOn)delete v[h.id];else v[h.id]=true;}});
+        toast((allOn?'Снято: ':'Отмечено: ')+bools.length,()=>mutate(date,v=>{for(const id in before){if(before[id])v[id]=before[id];else delete v[id];}}));
+      };
       sec.appendChild(all);
     }
     const body=el('div',{class:'body'});sec.appendChild(body);
@@ -341,6 +366,26 @@ function renderDay(){
     }
     root.appendChild(sec);
   }
+  const nb=el('section',{class:'note-block'},'<label class="note-lab" for="day-note">Заметка дня</label>');
+  const ta=el('textarea',{id:'day-note',rows:'2',placeholder:'Что помешало или помогло — одной строкой'});
+  ta.value=v._note||'';
+  ta.oninput=()=>saveNote(viewDate,ta.value);
+  nb.appendChild(ta);root.appendChild(nb);
+}
+let noteTimer=null;
+function saveNote(date,text){
+  const v=state[date]||(state[date]={});
+  if(text.trim())v._note=text;else delete v._note;
+  pending.add(date);
+  clearTimeout(noteTimer);
+  noteTimer=setTimeout(()=>{pending.delete(date);unsynced[date]=true;lsSave();push();},800);
+}
+
+function toast(text,undo){
+  const t=$('toast');clearTimeout(t._h);
+  t.innerHTML='';t.appendChild(el('span',null,esc(text)));
+  if(undo){const b=el('button',null,'Отменить');b.onclick=()=>{t.hidden=true;undo();};t.appendChild(b);}
+  t.hidden=false;t._h=setTimeout(()=>{t.hidden=true;},5000);
 }
 
 function renderHeader(){
@@ -352,7 +397,7 @@ function renderHeader(){
   const s=dayScore(state[viewDate]);
   $('barfill').style.width=(s/TOTAL*100).toFixed(1)+'%';
   const sTxt=Number.isInteger(s)?s:s.toFixed(1).replace('.',',');
-  $('progtxt').textContent=`${sTxt} из ${TOTAL} · ${Math.round(s/TOTAL*100)}%`;
+  $('progtxt').textContent=s>=TOTAL-1e-9?'Всё выполнено':`${sTxt} из ${TOTAL} · ${Math.round(s/TOTAL*100)}%`;
 }
 
 // ---------- stats
@@ -368,20 +413,35 @@ function pctWindow(h,days){
   for(let i=0;i<days;i++){const d=addDays(today,-i);if(d<start)break;cnt++;done+=score(h,(state[d]||{})[h.id]);}
   return cnt?Math.round(done/cnt*100):0;
 }
+function avgPrev(fn){ // days 8..14 back; null when the log is younger than that
+  const start=firstDate();if(addDays(today,-7)<start)return null;
+  let s=0,c=0;for(let i=7;i<14;i++){const d=addDays(today,-i);if(d<start)break;c++;s+=fn(state[d]||{});}return c?s/c:null;
+}
 function avg(fn,days){const start=firstDate();let s=0,c=0;for(let i=0;i<days;i++){const d=addDays(today,-i);if(d<start)break;c++;s+=fn(state[d]||{});}return c?s/c:0;}
 const fmt1=n=>n.toFixed(1).replace('.',',');
 
 function renderStats(){
   const root=$('view-stats');root.innerHTML='';
-  const dayPct=avg(v=>dayScore(v)/TOTAL,7)*100;
-  const work=avg(v=>+v.work||0,7);
-  const jam=avg(v=>Array.isArray(v.jamaat)?v.jamaat.length:0,7);
+  const dayPct=avg(v=>dayScore(v)/TOTAL,7)*100, dayPrev=avgPrev(v=>dayScore(v)/TOTAL)*100;
+  const work=avg(v=>+v.work||0,7), workPrev=avgPrev(v=>+v.work||0);
+  const jam=avg(v=>Array.isArray(v.jamaat)?v.jamaat.length:0,7), jamPrev=avgPrev(v=>Array.isArray(v.jamaat)?v.jamaat.length:0);
+  const delta=(a,b,f,unit)=>{if(b===null)return '';const d=a-b;if(Math.abs(d)<0.05)return '<div class="dl">как на прошлой</div>';return `<div class="dl ${d>0?'up':'down'}">${d>0?'+':'−'}${f(Math.abs(d))}${unit} к прошлой</div>`;};
   root.appendChild(el('h3',{class:'wk'},'Последние 7 дней'));
   const tiles=el('div',{class:'tiles'});
-  tiles.innerHTML=`<div class="tile"><div class="v num">${Math.round(dayPct)}%</div><div class="k">день в среднем</div></div>
-  <div class="tile"><div class="v num">${fmt1(work)} ч</div><div class="k">работа в день</div></div>
-  <div class="tile"><div class="v num">${fmt1(jam)}/4</div><div class="k">джамаат в день</div></div>`;
+  tiles.innerHTML=`<div class="tile"><div class="v num">${Math.round(dayPct)}%</div><div class="k">день в среднем</div>${delta(dayPct,dayPrev,x=>Math.round(x),' п.')}</div>
+  <div class="tile"><div class="v num">${fmt1(work)} ч</div><div class="k">работа в день</div>${delta(work,workPrev,fmt1,' ч')}</div>
+  <div class="tile"><div class="v num">${fmt1(jam)}/4</div><div class="k">джамаат в день</div>${delta(jam,jamPrev,fmt1,'')}</div>`;
   root.appendChild(tiles);
+
+  // weak spots: lowest completion over the last 14 days
+  const tracked=Object.keys(state).filter(k=>k>=addDays(today,-13)&&Object.keys(state[k]||{}).length).length;
+  if(tracked>=3){
+    const weak=ALL.map(h=>({h,p:pctWindow(h,14)})).filter(x=>x.p<80).sort((a,b)=>a.p-b.p).slice(0,3);
+    const w=el('div',{class:'card'},'<h3>Слабые места · 14 дней</h3>');
+    if(weak.length)for(const x of weak)w.appendChild(el('div',{class:'weak'},`<span>${esc(x.h.n)} <span class="blk">${esc(BLOCKS.find(b=>b.id===x.h.block).name.toLowerCase())}</span></span><b class="num">${x.p}%</b>`));
+    else w.appendChild(el('div',{class:'weak'},'<span>Всё выше 80% — держится</span>'));
+    root.appendChild(w);
+  }
 
   // heatmap: 15 weeks, Mon-first columns
   const card=el('div',{class:'card'},'<h3>Последние 15 недель</h3>');
@@ -414,7 +474,7 @@ function renderStats(){
     list.appendChild(g);
   }
   root.appendChild(list);
-  root.appendChild(el('div',{class:'foot'},'Серия — сколько дней подряд выполнено, считая сегодня или вчера. Проценты считаются с первого дня отметок.'));
+  root.appendChild(el('div',{class:'foot'},'Серия — сколько дней подряд выполнено, считая сегодня или вчера. Проценты — с первого дня отметок. Свайп влево-вправо на экране дня листает дни, тап по дате — вернуться к сегодня.'));
 }
 
 let tab='day';
@@ -429,8 +489,16 @@ function switchTab(t){
 }
 function render(){renderHeader();if(tab==='day')renderDay();else renderStats();}
 
-$('prev').onclick=()=>{viewDate=addDays(viewDate,-1);render();};
-$('next').onclick=()=>{if(viewDate<today){viewDate=addDays(viewDate,1);render();}};
+function go(n){const d=addDays(viewDate,n);if(d>today)return;viewDate=d;render();}
+$('prev').onclick=()=>go(-1);
+$('dtitle').onclick=()=>{if(viewDate!==today){viewDate=today;render();}};
+let tx=0,ty=0,tt=0;
+$('view-day').addEventListener('touchstart',e=>{const t=e.touches[0];tx=t.clientX;ty=t.clientY;tt=Date.now();},{passive:true});
+$('view-day').addEventListener('touchend',e=>{
+  const t=e.changedTouches[0],dx=t.clientX-tx,dy=t.clientY-ty;
+  if(Date.now()-tt<600&&Math.abs(dx)>70&&Math.abs(dy)<40)go(dx>0?-1:1);
+},{passive:true});
+$('next').onclick=()=>go(1);
 $('tab-day').onclick=()=>switchTab('day');
 $('tab-stats').onclick=()=>switchTab('stats');
 document.addEventListener('visibilitychange',()=>{
@@ -444,6 +512,7 @@ try{if(localStorage.getItem('fajr-witr-tab')==='stats')tab='stats';}catch(e){}
 lsLoad();
 switchTab(tab);
 setStatus('Загружаю…');pull();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 })();
 </script>
 </body>

@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-27T15:06:06.703Z",
+ "updatedAt": "2026-09-27T15:06:41.066Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -32,11 +32,23 @@
     ],
     "pm_azkar": true,
     "pm_vit_mg": true,
-    "pm_vit_zn": true
+    "pm_vit_zn": true,
+    "_focus": {
+     "t": "Очки посмотреть для видео сьемки",
+     "done": true
+    },
+    "_tasks": [
+     {
+      "id": "mujyblhycpmq",
+      "t": "Аренда Руслану оплатить",
+      "done": false,
+      "g": "c"
+     }
+    ]
    },
    "score": 21.25,
    "pct": 69,
-   "updatedAt": "2026-09-27T15:05:51.693Z"
+   "updatedAt": "2026-09-27T15:06:26.058Z"
   },
   "2026-09": {
    "v": {

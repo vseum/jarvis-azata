@@ -82,6 +82,7 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radi
 .wexa{font-family:"KFGQPC Hafs","Geeza Pro",serif;font-size:25px;line-height:2.15;text-align:right}
 [lang="ar"]{text-rendering:optimizeLegibility;font-variant-ligatures:normal;font-feature-settings:normal}
 .wexr{font-size:12px;color:var(--ink-2);margin-top:0}
+.hlw{color:#D93025}
 .hadith{margin:4px 0 0;padding:14px 16px;background:var(--fill);border-radius:14px}
 .hadith blockquote{margin:0;font-size:14px;line-height:1.5;font-weight:500;color:var(--ink);text-wrap:pretty}
 .hadith figcaption{margin-top:6px;font-size:11.5px;color:var(--ink-3)}
@@ -312,7 +313,14 @@ button,textarea{touch-action:manipulation}
 .lx-foot.ok{background:#E8F6EE}.lx-foot.ok .lbtn{background:#1E7F4F}
 .lx-foot.bad{background:#FDECEA}.lx-foot.bad .lbtn{background:#C0392B}
 .lx-res{font-size:15px}.lx-foot.ok .lx-res{color:#14532D}.lx-foot.bad .lx-res{color:#8A1C12}
-.lx-res .ar{font-size:26px;line-height:1.6}
+.lx-res .ar{font-size:26px;line-height:1.8}
+.lx-note{font-size:13px;margin-top:4px;opacity:.85}
+.lx-q.small{font-size:16px;font-weight:500;padding:8px 0;text-align:left;line-height:1.45}
+.bl-ans{min-height:76px;border-bottom:2px solid var(--line);display:flex;flex-wrap:wrap;gap:8px;padding:8px 0;align-content:flex-start}
+.bl-pool{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:auto;padding-top:16px}
+.bl-t{padding:2px 12px;border-radius:12px;border:2px solid var(--line);border-bottom-width:4px;background:var(--bg)}
+.bl-t .ar{font-size:26px;line-height:1.9}
+.bl-t.used{opacity:.2}
 .fin{justify-content:center;text-align:center}
 .fin-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0}
 .fin-row b{display:block;font-size:30px;font-weight:700}
@@ -361,6 +369,7 @@ button,textarea{touch-action:manipulation}
   <div class="toast" id="toast" role="status" hidden></div>
 </div>
 
+<script src="/data.js"></script>
 <script>
 (function(){
 const CHECK='<svg viewBox="0 0 14 14"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -508,7 +517,7 @@ function pull(){
       for(const k in all)if(!unsynced[k]&&!pending.has(k))state[k]=all[k].v||{};
       // server lost a day this device still has (e.g. after a redeploy) — send it back
       for(const k in state)if(!all[k]&&Object.keys(state[k]||{}).length)unsynced[k]=true;
-      migrateNotes();
+      migrateNotes();migrateLearn();
       lsSave();render();
       if(unsentCount())push();else setStatus('Синхронизировано');
     })
@@ -535,11 +544,16 @@ function triRow(v,id,name,note,cls){
   r.append(lab,no,yes);return r;
 }
 // Хадис дня: один на дату, по кругу. Только известные достоверные хадисы, с оценкой (сахих/хасан).
-const HADITHS=[["Самые любимые Аллахом дела — постоянные, даже если их немного.", "сахих"], ["Поистине, дела оцениваются по намерениям.", "сахих"], ["Сильный верующий лучше и любимее Аллахом, чем слабый верующий, но в каждом из них есть благо.", "сахих"], ["Кто совершил утреннюю молитву, тот под защитой Аллаха.", "сахих"], ["Лучшая молитва после обязательной — ночная молитва.", "сахих"], ["Молитва в джамаате превосходит молитву в одиночку на двадцать семь степеней.", "сахих"], ["Две милости, в которых многие люди обмануты: здоровье и свободное время.", "сахих"], ["Читайте Коран, ибо в Судный день он придёт заступником за своих читателей.", "сахих"], ["О Аллах, благослови мою общину в её ранних часах.", "хасан"], ["Никто никогда не ел пищи лучше той, что заработал своими руками.", "сахих"], ["Каждое утро за каждый сустав любого из вас полагается садака — и всё это заменяют два раката Духа.", "сахих"], ["Придерживайтесь правильного, будьте умеренны и радуйтесь.", "сахих"], ["Не гневайся.", "сахих"], ["Кто верует в Аллаха и в Последний день, пусть говорит благое или молчит.", "сахих"], ["Пять молитв подобны реке у дверей одного из вас, в которой он омывается пять раз в день.", "сахих"], ["Аллах — Витр и любит нечётное.", "сахих"], ["Поистине, у твоего тела есть право на тебя.", "сахих"], ["Воспользуйся пятью прежде пяти: молодостью до старости, здоровьем до болезни, богатством до бедности, досугом до занятости и жизнью до смерти.", "сахих"]];
+const HADITHS=window.QHADITHS||[];
 function hadithFor(date){const n=Math.floor(parse(date).getTime()/864e5);return HADITHS[((n%HADITHS.length)+HADITHS.length)%HADITHS.length];}
 // Слово дня: частые слова Корана по порядку, с 27.09.2026 по одному в день, потом по кругу.
-const WORDS=[["مِنْ", "мин", "из, от", "مِنْ شَرِّ مَا خَلَقَ", "от зла того, что Он сотворил"], ["اللَّه", "Аллах", "Аллах", "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", "Именем Аллаха, Милостивого, Милосердного"], ["فِي", "фи", "в", "الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ", "который наущает в груди людей"], ["مَا", "ма", "что; не", "وَمَا أَدْرَاكَ مَا الْقَارِعَةُ", "и что даст тебе знать, что такое Великое бедствие?"], ["لَا", "ля", "нет, не", "لَا إِلَٰهَ إِلَّا اللَّهُ", "нет божества, кроме Аллаха"], ["الَّذِي", "аллязи", "который", "الَّذِي خَلَقَ الْمَوْتَ وَالْحَيَاةَ", "Который сотворил смерть и жизнь"], ["إِنَّ", "инна", "поистине", "إِنَّ مَعَ الْعُسْرِ يُسْرًا", "поистине, с тягостью — облегчение"], ["عَلَىٰ", "аля", "на, над", "إِنَّ اللَّهَ عَلَىٰ كُلِّ شَيْءٍ قَدِيرٌ", "поистине, Аллах над всякой вещью мощен"], ["قَالَ", "каля", "сказал", "قَالَ رَبِّ اشْرَحْ لِي صَدْرِي", "сказал: Господи, раскрой мне грудь"], ["إِلَىٰ", "иля", "к", "وَإِلَىٰ رَبِّكَ فَارْغَبْ", "и к своему Господу устремляйся"], ["رَبّ", "рабб", "Господь", "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", "хвала Аллаху, Господу миров"], ["كَانَ", "кана", "был", "وَكَانَ اللَّهُ غَفُورًا رَحِيمًا", "и Аллах — Прощающий, Милосердный"], ["هُوَ", "хува", "он", "قُلْ هُوَ اللَّهُ أَحَدٌ", "скажи: Он — Аллах Единый"], ["قُلْ", "куль", "скажи", "قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ", "скажи: прибегаю к Господу рассвета"], ["يَوْم", "яум", "день", "مَالِكِ يَوْمِ الدِّينِ", "Властелину Дня воздаяния"], ["آمَنُوا", "аману", "уверовали", "إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ", "кроме тех, которые уверовали и совершали праведные дела"], ["أَرْض", "ард", "земля", "لَهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۗ", "Ему принадлежит то, что на небесах, и то, что на земле"], ["كُلّ", "кулль", "каждый, весь", "كُلُّ نَفْسٍ ذَائِقَةُ الْمَوْتِ", "каждая душа вкусит смерть"], ["نَاس", "нас", "люди", "قُلْ أَعُوذُ بِرَبِّ النَّاسِ", "скажи: прибегаю к Господу людей"], ["إِلَٰه", "илях", "божество", "لَا إِلَٰهَ إِلَّا اللَّهُ", "нет божества, кроме Аллаха"], ["يَا", "йа", "о! (обращение)", "يَا أَيُّهَا الَّذِينَ آمَنُوا", "о те, которые уверовали!"], ["ثُمَّ", "сумма", "затем", "ثُمَّ لَتُسْأَلُنَّ يَوْمَئِذٍ عَنِ النَّعِيمِ", "затем в тот день вы будете спрошены о благах"], ["إِذَا", "иза", "когда", "إِذَا جَاءَ نَصْرُ اللَّهِ وَالْفَتْحُ", "когда придёт помощь Аллаха и победа"], ["شَيْء", "шайъ", "вещь", "لَيْسَ كَمِثْلِهِ شَيْءٌ", "нет ничего подобного Ему"], ["قَوْم", "каум", "народ", "يَا قَوْمِ اعْبُدُوا اللَّهَ", "о мой народ! Поклоняйтесь Аллаху"], ["عِلْم", "ильм", "знание", "وَقُلْ رَبِّ زِدْنِي عِلْمًا", "и скажи: Господи, прибавь мне знания"], ["جَعَلَ", "джаъаля", "сделал", "وَجَعَلْنَا النَّهَارَ مَعَاشًا", "и сделали Мы день временем для заработка"], ["كِتَاب", "китаб", "Писание, книга", "ذَٰلِكَ الْكِتَابُ لَا رَيْبَ", "это Писание, в котором нет сомнения"], ["عَذَاب", "ъазаб", "наказание", "وَقِنَا عَذَابَ النَّارِ", "и защити нас от наказания Огнём"], ["آيَة", "аят", "знамение, аят", "إِنَّ فِي ذَٰلِكَ لَآيَةً لِقَوْمٍ يَتَفَكَّرُونَ", "поистине, в этом — знамение для людей размышляющих"], ["رَسُول", "расуль", "посланник", "مُحَمَّدٌ رَسُولُ اللَّهِ", "Мухаммад — посланник Аллаха"], ["نَفْس", "нафс", "душа", "كُلُّ نَفْسٍ ذَائِقَةُ الْمَوْتِ", "каждая душа вкусит смерть"], ["سَمَاء", "сама", "небо", "وَالسَّمَاءِ ذَاتِ الْبُرُوجِ", "клянусь небом с созвездиями"], ["عَمِلَ", "ъамиля", "делал, трудился", "فَمَنْ يَعْمَلْ مِثْقَالَ ذَرَّةٍ خَيْرًا يَرَهُ", "кто сделал добро весом в пылинку, увидит его"], ["كَفَرَ", "кафара", "не уверовал", "قُلْ يَا أَيُّهَا الْكَافِرُونَ", "скажи: о неверующие!"], ["هُدًى", "худа", "верное руководство", "هُدًى لِلْمُتَّقِينَ", "руководство для богобоязненных"], ["ظَلَمَ", "заляма", "поступил несправедливо", "رَبَّنَا ظَلَمْنَا أَنْفُسَنَا", "Господь наш! Мы поступили несправедливо с собой"], ["خَيْر", "хайр", "благо, лучше", "وَالْآخِرَةُ خَيْرٌ وَأَبْقَىٰ", "а последняя жизнь — лучше и долговечнее"], ["حَقّ", "хакк", "истина", "وَقُلْ جَاءَ الْحَقُّ وَزَهَقَ الْبَاطِلُ", "и скажи: пришла истина, и сгинула ложь"], ["رَحْمَة", "рахма", "милость", "وَرَحْمَتِي وَسِعَتْ كُلَّ شَيْءٍ", "а милость Моя объемлет всякую вещь"], ["ذِكْر", "зикр", "поминание", "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ", "воистину, поминанием Аллаха утешаются сердца"], ["عَبَدَ", "ъабада", "поклонялся", "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", "Тебе одному мы поклоняемся и Тебя одного молим о помощи"], ["غَفَرَ", "гафара", "простил", "رَبِّ اغْفِرْ لِي وَلِوَالِدَيَّ", "Господи, прости меня и моих родителей"], ["نَار", "нар", "огонь", "وَقِنَا عَذَابَ النَّارِ", "и защити нас от наказания Огнём"], ["جَنَّة", "джанна", "рай, сад", "وَادْخُلِي جَنَّتِي", "и войди в Мой рай"], ["آخِرَة", "ахира", "последняя жизнь", "وَلَلْآخِرَةُ خَيْرٌ لَكَ مِنَ الْأُولَىٰ", "последняя жизнь для тебя лучше первой"], ["دُنْيَا", "дунья", "ближний мир", "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً", "Господь наш! Даруй нам в этом мире благо"], ["قَلْب", "кальб", "сердце", "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ", "воистину, поминанием Аллаха утешаются сердца"], ["صَلَاة", "саля", "молитва", "إِنَّ الصَّلَاةَ تَنْهَىٰ عَنِ الْفَحْشَاءِ وَالْمُنْكَرِ", "поистине, молитва удерживает от мерзкого и предосудительного"], ["صَبَرَ", "сабара", "терпел", "إِنَّ اللَّهَ مَعَ الصَّابِرِينَ", "поистине, Аллах — с терпеливыми"], ["شَكَرَ", "шакара", "благодарил", "لَئِنْ شَكَرْتُمْ لَأَزِيدَنَّكُمْ", "если вы будете благодарны, Я непременно дам вам больше"], ["مَعَ", "маъа", "с, вместе с", "إِنَّ مَعَ الْعُسْرِ يُسْرًا", "поистине, с тягостью — облегчение"]];
+const WORDS=window.QWORDS||[]; // [ар, транслит, значение, аят, перевод, № слова в аяте, корень, частота, ссылка]
 const WORDS_START='2026-09-27';
+const MARKRE=/^[\u06D6-\u06ED]+$/;
+function arHl(t,hl){ // аят с изучаемым словом красным; знаки паузы приклеены к слову
+  let k=-1;
+  return t.split(' ').map(x=>{if(MARKRE.test(x))return esc(x);k++;return k===hl?`<span class="hlw">${esc(x)}</span>`:esc(x);}).join(' ').replace(/\s+([\u06D6-\u06DC])/g,'\u2060\u200A\u2060$1');
+}
 const arText=t=>t.replace(/\s+([\u06D6-\u06DC])/g,'\u2060\u200A\u2060$1');
 function wordFor(date){const n=Math.round((parse(date)-parse(WORDS_START))/864e5);const i=((n%WORDS.length)+WORDS.length)%WORDS.length;return [i,WORDS[i]];}
 // ---------- планы: фокус дня, дела, развлечения (в документе дня), цели недели и месяца (свои документы)
@@ -707,6 +721,23 @@ function nextUnit(){return units().find(x=>!unitDone(x))||null;}
 function unitLabel(x){const a=x.t==='lesson'?lessonIds(x.li):x.ids;return `слова ${a[0]+1}–${a[a.length-1]+1}`;}
 function startUnit(x){if(x.t==='lesson')startSession('lesson',x.li);else startSession('exam',undefined,x);}
 function L(){return docOf('learn');}
+const bareAr=x=>x.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي');
+const OLD_HEADS=["مِنْ", "اللَّه", "فِي", "مَا", "لَا", "الَّذِي", "إِنَّ", "عَلَىٰ", "قَالَ", "إِلَىٰ", "رَبّ", "كَانَ", "هُوَ", "قُلْ", "يَوْم", "آمَنُوا", "أَرْض", "كُلّ", "نَاس", "إِلَٰه", "يَا", "ثُمَّ", "إِذَا", "شَيْء", "قَوْم", "عِلْم", "جَعَلَ", "كِتَاب", "عَذَاب", "آيَة", "رَسُول", "نَفْس", "سَمَاء", "عَمِلَ", "كَفَرَ", "هُدًى", "ظَلَمَ", "خَيْر", "حَقّ", "رَحْمَة", "ذِكْر", "عَبَدَ", "غَفَرَ", "نَار", "جَنَّة", "آخِرَة", "دُنْيَا", "قَلْب", "صَلَاة", "صَبَرَ", "شَكَرَ", "مَعَ"]; // первый словарь (52 слова): переносим прогресс на новый список
+function migrateLearn(){
+  const v=state.learn;if(!v||v._v===2)return;
+  const map={};OLD_HEADS.forEach((h,i)=>{const j=WORDS.findIndex(w=>bareAr(w[0])===bareAr(h));if(j>=0)map[i]=j;});
+  const w={};for(const k in v._w||{})if(map[k]!==undefined)w[map[k]]=v._w[k];
+  v._w=w;v._done=[...Array(lessonsN).keys()].filter(li=>lessonIds(li).every(i=>w[i]));v._exams={};v._v=2;
+  unsynced.learn=true;
+}
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+function tokensOf(t){return t.split(' ').filter(x=>!MARKRE.test(x));}
+function buildOk(i){const n=tokensOf(WORDS[i][3]).length;return n>=3&&n<=7;}
+function rootSib(i){const r=WORDS[i][6];return r?WORDS.map((w,j)=>j).filter(j=>j!==i&&WORDS[j][6]===r&&bareAr(WORDS[j][0])!==bareAr(WORDS[i][0])):[];}
+function qTypes(i,exam){const t=['ar2ru','ru2ar','inayah','ayah'];if(buildOk(i)&&!exam)t.push('build');if(rootSib(i).length)t.push('root');return t;}
+function distract(n,i,field){ // варианты без двусмысленности: другое слово и другое значение
+  const a=WORDS[i];return shuffle(WORDS.filter((w,j)=>j!==i&&bareAr(w[0])!==bareAr(a[0])&&w[2]!==a[2]&&w[field]!==a[field])).slice(0,n).map(w=>w[field]);
+}
 function wstat(i){return (L()._w||{})[i];}
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function pick(n,pool,not){return shuffle(pool.filter(x=>!not.includes(x))).slice(0,n);}
@@ -754,6 +785,7 @@ function renderLearn(){
 
 // сессия
 let S=null;
+function uniqPairs(ids){const seenA=new Set(),seenM=new Set(),out=[];for(const i of shuffle(ids)){const a=bareAr(WORDS[i][0]),m=WORDS[i][2];if(seenA.has(a)||seenM.has(m))continue;seenA.add(a);seenM.add(m);out.push(i);}return out;}
 function startSession(kind,li,unit){
   const w=L()._w||{};
   const ids=kind==='exam'?unit.ids.slice():li!==undefined?lessonIds(li)
@@ -762,14 +794,14 @@ function startSession(kind,li,unit){
   const q=[];
   if(kind==='exam'){ // по вопросу на каждое слово + 2 случайных, без подсказок и повторов
     const pool=shuffle(ids).concat(shuffle(ids).slice(0,2));
-    for(const i of pool)q.push({t:['ar2ru','ru2ar','ayah'][Math.floor(Math.random()*3)],i});
+    for(const i of pool)q.push({t:rnd(qTypes(i,true)),i});
   }else if(kind==='lesson'){
     for(const i of ids){if(!wstat(i))q.push({t:'intro',i});q.push({t:'ar2ru',i});}
-    if(ids.length>=3)q.push({t:'match',ids});
-    for(const i of shuffle(ids))q.push({t:Math.random()<.5?'ru2ar':'ayah',i});
+    const mids=uniqPairs(ids);if(mids.length>=3)q.push({t:'match',ids:mids});
+    for(const i of shuffle(ids))q.push({t:rnd(qTypes(i).filter(t=>t!=='ar2ru')),i});
   }else{
-    for(const i of shuffle(ids))q.push({t:['ar2ru','ru2ar','ayah'][Math.floor(Math.random()*3)],i});
-    if(ids.length>=4)q.splice(Math.min(3,q.length),0,{t:'match',ids:shuffle(ids).slice(0,4)});
+    for(const i of shuffle(ids))q.push({t:rnd(qTypes(i)),i});
+    const mids=uniqPairs(ids);if(mids.length>=4)q.splice(Math.min(3,q.length),0,{t:'match',ids:mids.slice(0,4)});
   }
   S={kind,li,unit,ids,q,pos:0,total:q.length,firstBad:new Set(),retry:{},seen:new Set(),xp:0,correct:0,answered:0};
   $('lx').hidden=false;document.body.style.overflow='hidden';
@@ -786,19 +818,26 @@ function drawStep(){
   const st=S.q[S.pos],body=el('div',{class:'lx-body'});box.appendChild(body);
   const W=i=>WORDS[i];
   if(st.t==='intro'){
-    const [a,tr,m,ea,er]=W(st.i);
-    body.innerHTML=`<div class="lx-kind">Новое слово</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-mean">${esc(m)}</div><div class="lx-tr">${esc(tr)}</div><div class="lx-ayah">${arSpan(ea,'ay')}<div class="lx-er">${esc(er)}</div></div>`;
+    const [a,tr,m,ea,er,hl]=W(st.i);
+    body.innerHTML=`<div class="lx-kind">Новое слово</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-mean">${esc(m)}</div><div class="lx-tr">${esc(tr)}</div><div class="lx-ayah">${ayahHtml(st.i)}<div class="lx-er">${esc(er)}</div></div>`;
     footer(box,null,'Понятно');return;
   }
   if(st.t==='match')return drawMatch(body,box,st);
+  if(st.t==='build')return drawBuild(body,box,st);
   const i=st.i,[a,tr,m,ea,er]=W(i);
-  let prompt,opts,right,isAr=false;
+  let prompt,opts,right,isAr=false,note='';
   if(st.t==='ar2ru'){prompt=`<div class="lx-kind">Что означает слово?</div><div class="lx-big">${arSpan(a,'big')}</div>`;
-    const others=pick(3,[...new Set(WORDS.map(w=>w[2]))],[m]);opts=shuffle([m,...others]);right=m;}
+    opts=shuffle([m,...distract(3,i,2)]);right=m;}
   else if(st.t==='ru2ar'){prompt=`<div class="lx-kind">Выбери слово</div><div class="lx-q">${esc(m)}</div>`;
-    const others=pick(3,WORDS.map(w=>w[0]),[a]);opts=shuffle([a,...others]);right=a;isAr=true;}
-  else{prompt=`<div class="lx-kind">Смысл аята</div><div class="lx-ayah solo">${arSpan(ea,'ay')}</div>`;
-    const others=pick(2,[...new Set(WORDS.map(w=>w[4]))],[er]);opts=shuffle([er,...others]);right=er;}
+    opts=shuffle([a,...distract(3,i,0)]);right=a;isAr=true;}
+  else if(st.t==='inayah'){prompt=`<div class="lx-kind">Что означает <span class="hlw">выделенное</span> слово?</div><div class="lx-ayah solo">${ayahHtml(i)}</div>`;
+    opts=shuffle([m,...distract(3,i,2)]);right=m;note=er;}
+  else if(st.t==='root'){const sib=WORDS[rnd(rootSib(i))];
+    prompt=`<div class="lx-kind">Какое слово от того же корня?</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-tr">${esc(m)}</div>`;
+    const others=shuffle(WORDS.filter(w=>w[6]&&w[6]!==WORDS[i][6])).slice(0,3).map(w=>w[0]);
+    opts=shuffle([sib[0],...others]);right=sib[0];isAr=true;note=`Корень ${[...WORDS[i][6]].join(' ')} · ${sib[2]}`;}
+  else{prompt=`<div class="lx-kind">Смысл аята</div><div class="lx-ayah solo">${ayahHtml(i)}</div>`;
+    opts=shuffle([er,...distract(2,i,4)]);right=er;}
   body.innerHTML=prompt;
   const ol=el('div',{class:'lx-opts'+(isAr?' ar-opts':'')});
   let answered=false;
@@ -808,11 +847,33 @@ function drawStep(){
       const ok=o===right;b.classList.add(ok?'ok':'bad');
       if(!ok)[...ol.children].forEach((c,k)=>{if(opts[k]===right)c.classList.add('ok');});
       grade(i,ok);
-      footer(box,ok?{ok:true}:{ok:false,right:isAr?arSpan(right):esc(right)},'Дальше');
+      footer(box,ok?{ok:true,note}:{ok:false,right:isAr?arSpan(right):esc(right),note},'Дальше');
     };
     ol.appendChild(b);
   }
   body.appendChild(ol);
+}
+function ayahHtml(i){const w=WORDS[i];return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;}
+function drawBuild(body,box,st){ // «собери аят»: слова по порядку, как в Duolingo
+  const i=st.i,[a,,m,ea,er]=WORDS[i];
+  const tk=tokensOf(ea);
+  body.innerHTML=`<div class="lx-kind">Собери аят</div><div class="lx-q small">${esc(er)}</div>`;
+  const ans=el('div',{class:'bl-ans',dir:'rtl'}),pool=el('div',{class:'bl-pool',dir:'rtl'});
+  body.append(ans,pool);
+  const order=shuffle(tk.map((t,k)=>k));let picked=[];
+  const f=el('div',{class:'lx-foot'});const chk=el('button',{class:'lbtn'},'Проверить');chk.disabled=true;f.appendChild(chk);box.appendChild(f);
+  const draw=()=>{
+    ans.innerHTML='';pool.innerHTML='';
+    for(const k of picked){const b=el('button',{class:'bl-t'},arSpan(tk[k]));b.onclick=()=>{picked=picked.filter(x=>x!==k);draw();};ans.appendChild(b);}
+    for(const k of order){const b=el('button',{class:'bl-t'+(picked.includes(k)?' used':'')},arSpan(tk[k]));b.disabled=picked.includes(k);b.onclick=()=>{picked.push(k);draw();};pool.appendChild(b);}
+    chk.disabled=picked.length!==tk.length;
+  };
+  draw();
+  chk.onclick=()=>{
+    const ok=picked.map(k=>tk[k]).join(' ')===tk.join(' ');
+    f.remove();grade(i,ok);
+    footer(box,ok?{ok:true}:{ok:false,right:arSpan(tk.join(' '))},'Дальше');
+  };
 }
 function drawMatch(body,box,st){
   body.innerHTML='<div class="lx-kind">Сопоставь пары</div>';
@@ -838,7 +899,7 @@ function grade(i,ok,fromMatch){
 }
 function footer(box,res,label){
   const f=el('div',{class:'lx-foot'+(res?res.ok?' ok':' bad':'')});
-  if(res)f.appendChild(el('div',{class:'lx-res'},res.ok?'<b>Верно!</b>':`<b>Правильно:</b> ${res.right}`));
+  if(res)f.appendChild(el('div',{class:'lx-res'},(res.ok?'<b>Верно!</b>':`<b>Правильно:</b> ${res.right}`)+(res.note?`<div class="lx-note">${esc(res.note)}</div>`:'')));
   const b=el('button',{class:'lbtn'},label);b.onclick=()=>{S.pos++;drawStep();};
   f.appendChild(b);box.appendChild(f);b.focus();
 }
@@ -878,10 +939,10 @@ function renderDay(){
   const root=$('view-day');root.innerHTML='';
   const [ht,hs]=hadithFor(viewDate);
   root.appendChild(el('figure',{class:'hadith'},`<blockquote>«${esc(ht)}»</blockquote><figcaption>Хадис дня · ${esc(hs)}</figcaption>`));
-  const [wi,[wa,wt,wm,ea,er]]=wordFor(viewDate);
+  const [wi,[wa,wt,wm,ea,er,ehl]]=wordFor(viewDate);
   root.appendChild(el('section',{class:'word'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${WORDS.length}</span></div>
     <div class="wmain"><div class="wtr"><b>${esc(wm)}</b><span>${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
-    <div class="wex"><div class="wexa" lang="ar" dir="rtl">${esc(arText(ea))}</div><div class="wexr">${esc(er)}</div></div>`));
+    <div class="wex"><div class="wexa" lang="ar" dir="rtl">${arHl(ea,ehl)}</div><div class="wexr">${esc(er)}</div></div>`));
   const nowOpen=new Set();
   trackerPlan(root,viewDate,nowOpen);
   for(const b of BLOCKS){
@@ -1207,6 +1268,7 @@ try{const t=localStorage.getItem('fajr-witr-tab');if(['stats','plan','notes','le
 if(location.hash==='#notes')tab='notes';
 lsLoad();
 migrateNotes();
+migrateLearn();
 switchTab(tab);
 setStatus('Загружаю…');pull();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});

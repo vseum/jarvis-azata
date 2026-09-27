@@ -134,6 +134,7 @@ const STATIC = {
   '/favicon.ico': ['favicon-32.png', 'image/png'],
   '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json; charset=utf-8'],
   '/sw.js': ['sw.js', 'text/javascript; charset=utf-8'],
+  '/data.js': ['data.js', 'text/javascript; charset=utf-8'],
 };
 
 function send(res, status, body, type) {

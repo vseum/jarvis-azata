@@ -1,7 +1,8 @@
 // Офлайн-оболочка: страница открывается без сети, отметки ждут в localStorage до связи.
-const CACHE = 'shell-v19';
+const CACHE = 'shell-v20';
 const SHELL = [
   '/',
+  '/data.js',
   '/manifest.webmanifest',
   '/icon.svg?v=2',
   '/apple-touch-icon.png?v=2',
@@ -31,12 +32,13 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
 
   // Страница: сначала сеть (свежий деплой), без сети — последняя сохранённая версия
-  if (e.request.mode === 'navigate' || url.pathname === '/') {
+  if (e.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/data.js') {
+    const k = url.pathname === '/data.js' ? '/data.js' : '/';
     e.respondWith(fetch(e.request).then(r => {
       const copy = r.clone();
-      caches.open(CACHE).then(c => c.put('/', copy));
+      if (r.ok) caches.open(CACHE).then(c => c.put(k, copy));
       return r;
-    }).catch(() => caches.match('/')));
+    }).catch(() => caches.match(k)));
     return;
   }
 

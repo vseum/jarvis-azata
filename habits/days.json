@@ -1,14 +1,17 @@
 {
- "updatedAt": "2026-09-27T06:36:23.802Z",
+ "updatedAt": "2026-09-27T06:39:01.112Z",
  "days": {
   "2026-09-27": {
    "v": {
     "wake_fajr": true,
-    "sleep_isha": true
+    "sleep_isha": true,
+    "tahajjud": false,
+    "witr": false,
+    "sleep_back": true
    },
-   "score": 2,
-   "pct": 7,
-   "updatedAt": "2026-09-27T06:36:08.766Z"
+   "score": 3,
+   "pct": 10,
+   "updatedAt": "2026-09-27T06:38:46.107Z"
   }
  }
 }

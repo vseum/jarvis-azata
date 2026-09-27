@@ -425,7 +425,7 @@ function score(h,raw){
 function sc(h,v){ // score of one item within a day's values
   v=v||{};
   if(h.type==='group'){
-    if(v[h.id]===true)return 1; // days logged before the sub-items existed
+    if(v[h.id]===true&&!h.subs.some(x=>v[x.id]!==undefined))return 1; // день отмечен до появления подпунктов
     let n=0;for(const x of h.subs)if(v[x.id]===true)n++;return n/h.subs.length;
   }
   return score(h,v[h.id]);

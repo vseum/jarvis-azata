@@ -1,5 +1,5 @@
 // Офлайн-оболочка: страница открывается без сети, отметки ждут в localStorage до связи.
-const CACHE = 'shell-v6';
+const CACHE = 'shell-v7';
 const SHELL = [
   '/',
   '/manifest.webmanifest',
@@ -13,6 +13,7 @@ const SHELL = [
   '/fonts/montserrat-latin-500-normal.woff2',
   '/fonts/montserrat-latin-600-normal.woff2',
   '/fonts/montserrat-latin-700-normal.woff2',
+  '/fonts/amiri-arabic-400-normal.woff2',
 ];
 
 self.addEventListener('install', e => {

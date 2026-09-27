@@ -155,7 +155,7 @@ const server = http.createServer(async (req, res) => {
   if (p === '/healthz') return send(res, 200, { ok: true });
   if (p === '/robots.txt') return send(res, 200, 'User-agent: *\nDisallow: /\n', 'text/plain; charset=utf-8');
 
-  const font = p.match(/^\/fonts\/(montserrat-(?:cyrillic|latin)-\d00-normal\.woff2)$/);
+  const font = p.match(/^\/fonts\/((?:montserrat-(?:cyrillic|latin)|amiri-arabic)-\d00-normal\.woff2)$/);
   if (font && req.method === 'GET') {
     try {
       const buf = fs.readFileSync(path.join(__dirname, 'fonts', font[1]));

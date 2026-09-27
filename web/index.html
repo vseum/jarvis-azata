@@ -273,6 +273,9 @@ button,textarea{touch-action:manipulation}
 .lnode .lw{font-size:12px;color:var(--ink-3);max-width:180px;text-align:center}
 .lnode .lw .ar{font-size:17px;line-height:1.6}
 .lnode:disabled{opacity:.55}
+.lnode.exam .lc{border-radius:18px;width:70px;height:56px;font-size:16px}
+.lnode.exam.cur .lc{background:var(--ink);color:#fff;box-shadow:0 0 0 6px var(--fill)}
+.lnode.exam .lw{font-size:12px;font-weight:600;color:var(--ink-2)}
 .ar{font-family:"KFGQPC Hafs","Geeza Pro",serif;text-rendering:optimizeLegibility;font-variant-ligatures:normal}
 .lx{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 20px calc(16px + env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto}
 .lx-top{display:flex;align-items:center;gap:14px}
@@ -692,6 +695,17 @@ function doRefocus(){if(refocus){const e=$(refocus);refocus=null;if(e)e.focus();
 // Прогресс — документ `learn`: _w {индекс: {b: ящик 0-6, due: дата, ok, bad}}, _done [уроки], _xp {дата: очки}
 const LS=4, BOXDAYS=[0,1,2,4,7,15,30];
 const lessonsN=Math.ceil(WORDS.length/LS);
+const EXAM_EVERY=2,EXAM_PASS=80;
+function lessonIds(li){return [...Array(LS).keys()].map(k=>li*LS+k).filter(i=>i<WORDS.length);}
+function units(){ // путь: урок, урок, экзамен по их 8 словам, урок, урок, экзамен…
+  const u=[];
+  for(let li=0;li<lessonsN;li++){u.push({t:'lesson',li});if((li+1)%EXAM_EVERY===0||li===lessonsN-1){const e=Math.floor(li/EXAM_EVERY);u.push({t:'exam',e,ids:[].concat(...[...Array(EXAM_EVERY).keys()].map(k=>e*EXAM_EVERY+k).filter(x=>x<lessonsN).map(lessonIds))});}}
+  return u;
+}
+function unitDone(x){const v=L();return x.t==='lesson'?(v._done||[]).includes(x.li):((v._exams||{})[x.e]||0)>=EXAM_PASS;}
+function nextUnit(){return units().find(x=>!unitDone(x))||null;}
+function unitLabel(x){const a=x.t==='lesson'?lessonIds(x.li):x.ids;return `слова ${a[0]+1}–${a[a.length-1]+1}`;}
+function startUnit(x){if(x.t==='lesson')startSession('lesson',x.li);else startSession('exam',undefined,x);}
 function L(){return docOf('learn');}
 function wstat(i){return (L()._w||{})[i];}
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
@@ -709,20 +723,29 @@ function renderLearn(){
     <div class="lstat"><b class="num">${learned}<small>/${WORDS.length}</small></b><span>слов изучено</span></div>
     <div class="lstat"><b class="num">${xpT}<small>/${goal}</small></b><span>XP сегодня</span></div>`));
   root.appendChild(el('div',{class:'lgoal'},`<i style="width:${Math.min(100,xpT/goal*100)}%"></i>`));
-  const next=done.length<lessonsN?done.length:-1;
+  const nu=nextUnit();
   const acts=el('div',{class:'lacts'});
   if(due.length){const b=el('button',{class:'lbtn'},`Повторить · ${due.length} ${due.length===1?'слово':due.length<5?'слова':'слов'}`);b.onclick=()=>startSession('review');acts.appendChild(b);}
-  if(next>=0){const b=el('button',{class:'lbtn'+(due.length?' ghost':'')},`${done.length?'Следующий урок':'Начать первый урок'} · слова ${next*LS+1}–${Math.min(WORDS.length,next*LS+LS)}`);b.onclick=()=>startSession('lesson',next);acts.appendChild(b);}
-  if(!due.length&&next<0)acts.appendChild(el('div',{class:'lnote'},'Все уроки пройдены. Повторения появятся по расписанию.'));
+  if(nu){const b=el('button',{class:'lbtn'+(due.length?' ghost':'')},`${nu.t==='exam'?'Экзамен':done.length?'Следующий урок':'Начать первый урок'} · ${unitLabel(nu)}`);b.onclick=()=>startUnit(nu);acts.appendChild(b);}
+  if(learned>=4){const b=el('button',{class:'lbtn ghost'},'Свободная тренировка · без ограничений');b.onclick=()=>startSession('free');acts.appendChild(b);}
+  if(!due.length&&!nu)acts.appendChild(el('div',{class:'lnote'},'Все уроки пройдены. Тренируйся сколько хочешь — повторения тоже придут по расписанию.'));
   root.appendChild(acts);
   // путь уроков
   const path=el('div',{class:'lpath'});
   const off=[0,46,0,-46];
-  for(let li=0;li<lessonsN;li++){
-    const st=done.includes(li)?'done':li===next?'cur':'lock';
-    const ids=[...Array(LS).keys()].map(k=>li*LS+k).filter(i=>i<WORDS.length);
-    const node=el('button',{class:'lnode '+st,style:`transform:translateX(${off[li%4]}px)`},`<span class="lc">${st==='done'?CHECK:li+1}</span><span class="lw">${arSpan(ids.map(i=>WORDS[i][0]).join(' · '))}</span>`);
-    if(st==='lock')node.disabled=true;else node.onclick=()=>startSession(st==='done'?'practice':'lesson',li);
+  let pos=0;
+  for(const x of units()){
+    const st=unitDone(x)?'done':x===nu||(nu&&x.t===nu.t&&(x.li===nu.li&&x.e===nu.e))?'cur':'lock';
+    let node;
+    if(x.t==='lesson'){
+      node=el('button',{class:'lnode '+st,style:`transform:translateX(${off[pos%4]}px)`},`<span class="lc">${st==='done'?CHECK:x.li+1}</span><span class="lw">${arSpan(lessonIds(x.li).map(i=>WORDS[i][0]).join(' · '))}</span>`);
+      pos++;
+      if(st==='lock')node.disabled=true;else node.onclick=()=>startSession(st==='done'?'practice':'lesson',x.li);
+    }else{
+      const best=(v._exams||{})[x.e];
+      node=el('button',{class:'lnode exam '+st},`<span class="lc">${st==='done'?CHECK:'Э'}</span><span class="lw">Экзамен · ${unitLabel(x)}${best!==undefined?` · лучший ${best}%`:''}</span>`);
+      if(st==='lock')node.disabled=true;else node.onclick=()=>startUnit(x);
+    }
     path.appendChild(node);
   }
   root.appendChild(el('h3',{class:'wk'},'Путь · частые слова Корана'));
@@ -731,10 +754,16 @@ function renderLearn(){
 
 // сессия
 let S=null;
-function startSession(kind,li){
-  const ids=li!==undefined?[...Array(LS).keys()].map(k=>li*LS+k).filter(i=>i<WORDS.length):dueList().slice(0,8);
+function startSession(kind,li,unit){
+  const w=L()._w||{};
+  const ids=kind==='exam'?unit.ids.slice():li!==undefined?lessonIds(li)
+    :kind==='free'?shuffle(Object.keys(w).map(Number)).sort((a,b)=>(w[a].b||0)-(w[b].b||0)+(Math.random()-.5)).slice(0,10)
+    :dueList().slice(0,8);
   const q=[];
-  if(kind==='lesson'){
+  if(kind==='exam'){ // по вопросу на каждое слово + 2 случайных, без подсказок и повторов
+    const pool=shuffle(ids).concat(shuffle(ids).slice(0,2));
+    for(const i of pool)q.push({t:['ar2ru','ru2ar','ayah'][Math.floor(Math.random()*3)],i});
+  }else if(kind==='lesson'){
     for(const i of ids){if(!wstat(i))q.push({t:'intro',i});q.push({t:'ar2ru',i});}
     if(ids.length>=3)q.push({t:'match',ids});
     for(const i of shuffle(ids))q.push({t:Math.random()<.5?'ru2ar':'ayah',i});
@@ -742,7 +771,7 @@ function startSession(kind,li){
     for(const i of shuffle(ids))q.push({t:['ar2ru','ru2ar','ayah'][Math.floor(Math.random()*3)],i});
     if(ids.length>=4)q.splice(Math.min(3,q.length),0,{t:'match',ids:shuffle(ids).slice(0,4)});
   }
-  S={kind,li,ids,q,pos:0,total:q.length,firstBad:new Set(),retry:{},seen:new Set(),xp:0,correct:0,answered:0};
+  S={kind,li,unit,ids,q,pos:0,total:q.length,firstBad:new Set(),retry:{},seen:new Set(),xp:0,correct:0,answered:0};
   $('lx').hidden=false;document.body.style.overflow='hidden';
   drawStep();
 }
@@ -805,7 +834,7 @@ function drawMatch(body,box,st){
 function grade(i,ok,fromMatch){
   S.answered++;
   if(ok){S.correct++;S.xp+=fromMatch?2:5;}
-  else{S.firstBad.add(i);S.retry[i]=(S.retry[i]||0)+1;if(!fromMatch&&S.retry[i]<=2){S.q.push({t:['ar2ru','ru2ar'][Math.floor(Math.random()*2)],i});S.total++;}}
+  else{S.firstBad.add(i);S.retry[i]=(S.retry[i]||0)+1;if(!fromMatch&&S.kind!=='exam'&&S.retry[i]<=2){S.q.push({t:['ar2ru','ru2ar'][Math.floor(Math.random()*2)],i});S.total++;}}
 }
 function footer(box,res,label){
   const f=el('div',{class:'lx-foot'+(res?res.ok?' ok':' bad':'')});
@@ -815,25 +844,32 @@ function footer(box,res,label){
 }
 function finishSession(box){
   const sumIds=S.kind==='lesson'?S.ids:[...new Set(S.q.filter(x=>x.i!==undefined).map(x=>x.i).concat(S.q.filter(x=>x.ids).flatMap(x=>x.ids)))];
-  const xp=S.xp+(S.kind==='lesson'?10:0);
+  const acc=S.answered?Math.round(S.correct/S.answered*100):100;
+  const passed=S.kind==='exam'&&acc>=EXAM_PASS;
+  const xp=S.xp+(S.kind==='lesson'?10:0)+(passed?15:0);
   mutate('learn',v=>{
     v._w=v._w||{};
     for(const i of sumIds){
       const w=v._w[i]||{b:0,ok:0,bad:0};
-      if(S.firstBad.has(i)){w.bad++;w.b=1;}else{w.ok++;w.b=Math.min(6,(w.b||0)+1);}
-      w.due=addDays(today,BOXDAYS[w.b]);v._w[i]=w;
+      if(S.firstBad.has(i)){w.bad++;w.b=1;w.due=addDays(today,1);}
+      else{w.ok++;if((S.kind==='lesson'||S.kind==='review'||S.kind==='practice')||!w.due){w.b=Math.min(6,(w.b||0)+1);w.due=addDays(today,BOXDAYS[w.b]);}}
+      v._w[i]=w;
     }
     if(S.kind==='lesson'&&!(v._done||[]).includes(S.li))(v._done=v._done||[]).push(S.li);
+    if(S.kind==='exam'){v._exams=v._exams||{};v._exams[S.unit.e]=Math.max(v._exams[S.unit.e]||0,acc);}
     v._xp=v._xp||{};v._xp[today]=(v._xp[today]||0)+xp;
   });
   // пройденный урок или повторение сам отмечает «Арабский» в трекере (не трогает явный минус)
   if(!(state[today]&&state[today].arabic!==undefined))mutate(today,v=>{v.arabic=true;});
-  const acc=S.answered?Math.round(S.correct/S.answered*100):100;
-  const body=el('div',{class:'lx-body fin'},`<div class="lx-kind">${S.kind==='lesson'?'Урок пройден':'Повторение готово'}</div>
+  const body=el('div',{class:'lx-body fin'},`<div class="lx-kind">${S.kind==='exam'?(passed?'Экзамен сдан':'Экзамен не сдан — нужно '+EXAM_PASS+'%'):S.kind==='lesson'?'Урок пройден':S.kind==='free'?'Тренировка готова':'Повторение готово'}</div>
     <div class="fin-row"><div><b class="num">+${xp}</b><span>XP</span></div><div><b class="num">${acc}%</b><span>точность</span></div><div><b class="num">${learnStreak()}</b><span>дней подряд</span></div></div>
     ${S.firstBad.size?`<div class="lx-tr">Слова с ошибками вернутся в повторение завтра.</div>`:''}`);
   box.appendChild(body);
-  const f=el('div',{class:'lx-foot'});const b=el('button',{class:'lbtn'},'Готово');b.onclick=closeSession;f.appendChild(b);box.appendChild(f);
+  const f=el('div',{class:'lx-foot'});
+  const nu=nextUnit();
+  if(nu){const n=el('button',{class:'lbtn'},`${nu.t==='exam'?(S.kind==='exam'?'Пересдать':'Экзамен'):'Следующий урок'} · ${unitLabel(nu)}`);n.onclick=()=>startUnit(nu);f.appendChild(n);}
+  if(Object.keys(L()._w||{}).length>=4){const m=el('button',{class:'lbtn'+(nu?' ghost':'')},'Ещё тренировка');m.onclick=()=>startSession('free');f.appendChild(m);}
+  const b=el('button',{class:'lbtn ghost'},'Готово');b.onclick=closeSession;f.appendChild(b);box.appendChild(f);
 }
 const openState={};
 let shownOpen=new Set(); // blocks open on screen right now

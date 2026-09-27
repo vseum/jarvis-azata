@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Фаджр–Витр">
+<meta name="theme-color" content="#F2F4F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1513" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<title>От Фаджра до Витра</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Lora:ital,wght@0,600;1,500&display=swap">
+<style>
+:root{
+  --bg:#F2F4F2; --surface:#FFFFFF; --surface-2:#E8EDEA; --line:#D6DDD9;
+  --ink:#15201C; --ink-2:#56645E; --ink-3:#8A9690;
+  --accent:#1D6B52; --accent-ink:#FFFFFF; --accent-soft:#D5E9E0;
+  --dawn:#B4761E; --dawn-soft:#F3E4CC;
+  --warn:#A8452F;
+  --h0:#E3E8E5; --h1:#C3DDD1; --h2:#8CC0A8; --h3:#4E9A7A; --h4:#1D6B52;
+  --shadow:0 1px 2px rgba(21,32,28,.06),0 4px 16px rgba(21,32,28,.05);
+  --f-ui:"Onest",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --f-disp:"Lora",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0E1513; --surface:#162019; --surface-2:#1E2A25; --line:#2A3833;
+    --ink:#E4ECE8; --ink-2:#A3B2AB; --ink-3:#6E7D76;
+    --accent:#4DB58B; --accent-ink:#0B1411; --accent-soft:#1D3A2F;
+    --dawn:#E0A650; --dawn-soft:#3A2E1A;
+    --warn:#E07A62;
+    --h0:#1C2723; --h1:#1F4034; --h2:#2B6650; --h3:#3C8E6D; --h4:#56C194;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0E1513; --surface:#162019; --surface-2:#1E2A25; --line:#2A3833;
+  --ink:#E4ECE8; --ink-2:#A3B2AB; --ink-3:#6E7D76;
+  --accent:#4DB58B; --accent-ink:#0B1411; --accent-soft:#1D3A2F;
+  --dawn:#E0A650; --dawn-soft:#3A2E1A;
+  --warn:#E07A62;
+  --h0:#1C2723; --h1:#1F4034; --h2:#2B6650; --h3:#3C8E6D; --h4:#56C194;
+  --shadow:none;
+}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:560px;margin:0 auto;padding:0 16px 48px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
+.num{font-variant-numeric:tabular-nums}
+
+/* header */
+.top{position:sticky;top:0;z-index:5;background:var(--bg);padding-block:12px 10px;margin:0 -16px;padding-inline:16px;border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:4px;background:var(--surface-2);padding:3px;border-radius:12px;margin-bottom:12px}
+.tabs button{flex:1;padding:8px;border-radius:9px;font-weight:600;font-size:14px;color:var(--ink-2)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.datebar{display:flex;align-items:center;gap:8px}
+.datebar .nav{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;color:var(--ink-2);background:var(--surface-2);flex:none}
+.datebar .nav:disabled{opacity:.35;cursor:default}
+.dt{flex:1;min-width:0;text-align:center}
+.dt h1{margin:0;font-family:var(--f-disp);font-weight:600;font-size:22px;letter-spacing:-.01em;text-wrap:balance}
+.dt .hijri{font-size:12.5px;color:var(--dawn);margin-top:1px}
+.dt .today-link{font-size:12.5px;color:var(--accent);font-weight:600;padding:2px 6px}
+.prog{margin-top:10px;display:flex;align-items:center;gap:10px}
+.bar{flex:1;height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .25s ease}
+.prog b{font-size:13px;font-weight:600;min-width:92px;text-align:right}
+.status{font-size:12.5px;color:var(--ink-3);margin-top:6px;text-align:center;min-height:1em}
+.status.err{color:var(--warn)}
+
+/* blocks */
+.blocks{display:flex;flex-direction:column;gap:14px;margin-top:14px}
+.block{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.bh{display:flex;align-items:center;gap:10px;padding:12px 14px 8px}
+.bh .t{flex:1;min-width:0}
+.bh h2{margin:0;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.bh .hint{font-size:12.5px;color:var(--ink-3)}
+.bh .cnt{font-size:13px;color:var(--ink-2);font-weight:600}
+.bh .all{font-size:12.5px;font-weight:600;color:var(--accent);padding:6px 10px;border-radius:9px;background:var(--accent-soft)}
+.block.full .bh .cnt{color:var(--accent)}
+
+.row{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;text-align:left;border-top:1px solid var(--line);min-height:52px}
+.row .lab{flex:1;min-width:0}
+.row .n{font-weight:500}
+.row .note{font-size:12.5px;color:var(--ink-3)}
+.chk{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center;transition:background .15s,border-color .15s}
+.chk svg{width:14px;height:14px;opacity:0;transition:opacity .15s}
+button.row[aria-pressed="true"] .chk{background:var(--accent);border-color:var(--accent)}
+button.row[aria-pressed="true"] .chk svg{opacity:1}
+button.row[aria-pressed="true"] .n{color:var(--ink-2)}
+.chk path{stroke:var(--accent-ink)}
+
+.step{display:flex;align-items:center;gap:4px;flex:none}
+.step button{width:36px;height:36px;border-radius:10px;background:var(--surface-2);font-size:18px;font-weight:600}
+.step output{min-width:56px;text-align:center;font-weight:600}
+.step output.ok{color:var(--accent)}
+.multi{flex-direction:column;align-items:stretch;gap:8px}
+.multi .head{display:flex;align-items:center;gap:12px}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.chip{padding:9px 4px;border-radius:10px;background:var(--surface-2);font-size:13.5px;font-weight:600;color:var(--ink-2);text-align:center}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+/* stats */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.tile{background:var(--surface);border-radius:14px;padding:12px;box-shadow:var(--shadow)}
+.tile .v{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.tile .k{font-size:12px;color:var(--ink-3);margin-top:2px;line-height:1.25}
+.card{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:14px;margin-top:14px}
+.card h3{margin:0 0 10px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.heat-wrap{overflow-x:auto}
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px;width:max-content}
+.heat i{width:17px;height:17px;border-radius:4px;background:var(--h0);display:block}
+.heat i.l1{background:var(--h1)}.heat i.l2{background:var(--h2)}.heat i.l3{background:var(--h3)}.heat i.l4{background:var(--h4)}
+.heat i.fut{background:transparent}
+.heat i.sel{outline:2px solid var(--dawn);outline-offset:1px}
+.legend{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--ink-3);margin-top:10px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.hl-group{margin-top:12px}
+.hl-group:first-of-type{margin-top:0}
+.hl-group h4{margin:0 0 4px;font-size:12px;color:var(--ink-3);font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.hl{display:grid;grid-template-columns:minmax(0,1fr) auto 44px 40px;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line);font-size:14px}
+.hl .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dots{display:flex;gap:2px}
+.dots i{width:7px;height:14px;border-radius:2px;background:var(--h0)}
+.dots i.p{background:var(--h2)}.dots i.d{background:var(--h4)}
+.hl .pc,.hl .sk{text-align:right;font-weight:600}
+.hl .sk{color:var(--dawn)}
+.hl-head{font-size:11.5px;color:var(--ink-3);border-top:0;padding-top:0}
+.hl-head span{text-align:right}
+.foot{font-size:12.5px;color:var(--ink-3);margin-top:16px;text-align:center}
+@media (max-width:380px){.dots i{width:5px}.tile .v{font-size:19px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="tabs" role="tablist">
+      <button id="tab-day" role="tab" aria-selected="true">День</button>
+      <button id="tab-stats" role="tab" aria-selected="false">Статистика</button>
+    </div>
+    <div class="datebar" id="datebar">
+      <button class="nav" id="prev" aria-label="Предыдущий день">‹</button>
+      <div class="dt">
+        <h1 id="dtitle">—</h1>
+        <div class="hijri" id="hijri"></div>
+      </div>
+      <button class="nav" id="next" aria-label="Следующий день">›</button>
+    </div>
+    <div class="prog" id="progrow">
+      <div class="bar"><i id="barfill" style="width:0"></i></div>
+      <b class="num" id="progtxt">0 из 30</b>
+    </div>
+    <div class="status" id="status">Загружаю отметки…</div>
+  </div>
+
+  <main id="view-day" class="blocks"></main>
+  <main id="view-stats" hidden></main>
+</div>
+
+<script>
+(function(){
+const CHECK='<svg viewBox="0 0 14 14"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+const BLOCKS=[
+ {id:'dawn',name:'До Фаджра',hint:'подъём за час до азана',items:[
+  {id:'wake_fajr',n:'Подъём на Фаджр',note:'за 1 час до азана'},
+  {id:'am_squat',n:'Приседания',note:'15 раз'},
+  {id:'am_push',n:'Отжимания',note:'15 раз'},
+  {id:'am_abs',n:'Пресс',note:'30 раз'},
+  {id:'am_back',n:'Поясница'},
+  {id:'am_pull',n:'Подтягивания',note:'10 раз'},
+  {id:'am_shower',n:'Душ'},
+  {id:'am_minox',n:'Миноксидил'},
+  {id:'am_vit',n:'Витамины'}]},
+ {id:'morning',name:'Утро',hint:'после Фаджра',items:[
+  {id:'fajr_masjid',n:'Фаджр в мечети'},
+  {id:'am_azkar',n:'Азкары утра'},
+  {id:'quran',n:'Коран',note:'5 страниц'},
+  {id:'walk',n:'Прогулка',note:'30 минут'},
+  {id:'duha',n:'Духа намаз'},
+  {id:'breakfast',n:'Завтрак с семьёй',note:'или попутно'}]},
+ {id:'day',name:'День',hint:'работа и намазы',items:[
+  {id:'work',n:'Работа',note:'цель 4–5 часов',type:'hours',target:4,max:10},
+  {id:'jamaat',n:'Намазы в джамаате',type:'multi',opts:['Зухр','Аср','Магриб','Иша']}]},
+ {id:'evening',name:'Вечер',hint:'после Асра',items:[
+  {id:'pm_azkar',n:'Азкары вечера'},
+  {id:'pm_vit',n:'Витамины'},
+  {id:'pm_squat',n:'Приседания',note:'15 раз'},
+  {id:'pm_push',n:'Отжимания',note:'15 раз'},
+  {id:'pm_abs',n:'Пресс',note:'30 раз'},
+  {id:'pm_back',n:'Поясница'},
+  {id:'pm_pull',n:'Подтягивания',note:'10 раз'},
+  {id:'pm_shower',n:'Душ'},
+  {id:'pm_minox',n:'Миноксидил'}]},
+ {id:'night',name:'Ночь',hint:'после Иша',items:[
+  {id:'sleep_isha',n:'Сон после Иша'},
+  {id:'tahajjud',n:'Подъём на тахаджуд'},
+  {id:'witr',n:'Витр'},
+  {id:'sleep_back',n:'Сон до подъёма на Фаджр'}]}
+];
+const ALL=BLOCKS.flatMap(b=>b.items.map(h=>Object.assign({block:b.id},h)));
+const TOTAL=ALL.length;
+
+function score(h,raw){
+  if(h.type==='hours') return raw?Math.min(raw/h.target,1):0;
+  if(h.type==='multi') return Array.isArray(raw)?raw.length/h.opts.length:0;
+  return raw?1:0;
+}
+function dayScore(v){v=v||{};let s=0;for(const h of ALL)s+=score(h,v[h.id]);return s;}
+
+// dates
+const pad=n=>String(n).padStart(2,'0');
+const key=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse=k=>{const[y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d);};
+const addDays=(k,n)=>{const d=parse(k);d.setDate(d.getDate()+n);return key(d);};
+let today=key(new Date());
+let viewDate=today;
+const fmtDay=new Intl.DateTimeFormat('ru-RU',{weekday:'short',day:'numeric',month:'long'});
+let fmtHijri=null;
+try{fmtHijri=new Intl.DateTimeFormat('ru-RU-u-ca-islamic-umalqura',{day:'numeric',month:'long',year:'numeric'});}catch(e){}
+
+// state
+const state={}; // date -> values
+const pending=new Set(); let timer=null;
+const $=id=>document.getElementById(id);
+function setStatus(t,err){const s=$('status');s.textContent=t;s.classList.toggle('err',!!err);}
+// Access key: open the site once as /?k=KEY, it is remembered on this device.
+let KEY='';
+try{
+  const u=new URL(location.href);const k=u.searchParams.get('k');
+  if(k){localStorage.setItem('fajr-witr-key',k);u.searchParams.delete('k');history.replaceState(null,'',u.pathname+u.search+u.hash);}
+  KEY=localStorage.getItem('fajr-witr-key')||'';
+}catch(e){}
+function api(path,opts){
+  opts=opts||{};
+  opts.headers=Object.assign({'Content-Type':'application/json','X-Key':KEY},opts.headers||{});
+  return fetch(path,opts).then(r=>{if(r.status===401)throw {auth:true};if(!r.ok)throw new Error(r.status);return r.json();});
+}
+function authMsg(){setStatus('Нужен ключ доступа: открой ссылку вида рахмат.рус/?k=КЛЮЧ один раз на этом устройстве',true);}
+
+// Local copy keeps the page instant and survives a weak signal; the server is the shared copy.
+let unsynced={};
+try{unsynced=JSON.parse(localStorage.getItem('fajr-witr-unsynced')||'{}');}catch(e){}
+function lsLoad(){try{const raw=localStorage.getItem('fajr-witr-days');if(raw)Object.assign(state,JSON.parse(raw));}catch(e){}}
+function lsSave(){try{localStorage.setItem('fajr-witr-days',JSON.stringify(state));localStorage.setItem('fajr-witr-unsynced',JSON.stringify(unsynced));}catch(e){}}
+
+function mutate(date,fn){
+  const v=state[date]||(state[date]={});
+  fn(v);
+  render();
+  pending.add(date);
+  clearTimeout(timer);
+  timer=setTimeout(flush,450);
+}
+function flush(){
+  for(const d of pending)unsynced[d]=true;
+  pending.clear();
+  lsSave();
+  push();
+}
+let pushing=false;
+function push(){
+  if(pushing)return;
+  const d=Object.keys(unsynced)[0];
+  if(!d){setStatus('Сохранено');return;}
+  pushing=true;setStatus('Сохраняю…');
+  const v=state[d]||{};const s=dayScore(v);
+  api('/api/days/'+d,{method:'PUT',body:JSON.stringify({v,score:Math.round(s*100)/100,pct:Math.round(s/TOTAL*100)})})
+    .then(()=>{pushing=false;delete unsynced[d];lsSave();push();})
+    .catch(e=>{pushing=false;if(e&&e.auth)authMsg();else setStatus('Нет связи. Отметки сохранены на устройстве и уйдут при следующем открытии',true);});
+}
+function pull(){
+  api('/api/days')
+    .then(res=>{
+      const all=res.days||{};
+      for(const k in all)if(!unsynced[k]&&!pending.has(k))state[k]=all[k].v||{};
+      // server lost a day this device still has (e.g. after a redeploy) — send it back
+      for(const k in state)if(!all[k]&&Object.keys(state[k]||{}).length)unsynced[k]=true;
+      lsSave();render();
+      if(Object.keys(unsynced).length)push();else setStatus('Синхронизировано');
+    })
+    .catch(e=>{if(e&&e.auth)authMsg();else setStatus('Нет связи с сервером. Показываю то, что сохранено на устройстве',true);});
+}
+
+// ---------- day view
+function el(tag,attrs,html){const e=document.createElement(tag);if(attrs)for(const k in attrs){if(k==='class')e.className=attrs[k];else e.setAttribute(k,attrs[k]);}if(html!=null)e.innerHTML=html;return e;}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function renderDay(){
+  const v=state[viewDate]||{};
+  const root=$('view-day');root.innerHTML='';
+  for(const b of BLOCKS){
+    let got=0;for(const h of b.items)got+=score(h,v[h.id]);
+    const full=got>=b.items.length-1e-9;
+    const sec=el('section',{class:'block'+(full?' full':'')});
+    const bools=b.items.filter(h=>!h.type);
+    const allOn=bools.length&&bools.every(h=>v[h.id]);
+    const gotTxt=Number.isInteger(got)?got:got.toFixed(1).replace('.',',');
+    const bh=el('div',{class:'bh'},`<div class="t"><h2>${esc(b.name)}</h2><div class="hint">${esc(b.hint)}</div></div><span class="cnt num">${gotTxt}/${b.items.length}</span>`);
+    if(bools.length>1){
+      const all=el('button',{class:'all'},allOn?'Снять всё':'Отметить всё');
+      all.onclick=()=>mutate(viewDate,v=>{for(const h of bools){if(allOn)delete v[h.id];else v[h.id]=true;}});
+      bh.appendChild(all);
+    }
+    sec.appendChild(bh);
+    for(const h of b.items){
+      const note=h.note?`<div class="note">${esc(h.note)}</div>`:'';
+      if(!h.type){
+        const on=!!v[h.id];
+        const r=el('button',{class:'row','aria-pressed':String(on),id:'h-'+h.id},`<div class="lab"><div class="n">${esc(h.n)}</div>${note}</div><span class="chk">${CHECK}</span>`);
+        r.onclick=()=>mutate(viewDate,v=>{if(v[h.id])delete v[h.id];else v[h.id]=true;});
+        sec.appendChild(r);
+      }else if(h.type==='hours'){
+        const val=+v[h.id]||0;
+        const r=el('div',{class:'row'},`<div class="lab"><div class="n">${esc(h.n)}</div>${note}</div>`);
+        const st=el('div',{class:'step'});
+        const minus=el('button',{'aria-label':'Меньше на полчаса'},'−');
+        const out=el('output',{class:'num'+(val>=h.target?' ok':'')},(val?String(val).replace('.',','):'0')+' ч');
+        const plus=el('button',{'aria-label':'Больше на полчаса'},'+');
+        minus.onclick=()=>mutate(viewDate,v=>{const n=Math.max(0,(+v[h.id]||0)-0.5);if(n)v[h.id]=n;else delete v[h.id];});
+        plus.onclick=()=>mutate(viewDate,v=>{v[h.id]=Math.min(h.max,(+v[h.id]||0)+0.5);});
+        st.append(minus,out,plus);r.appendChild(st);sec.appendChild(r);
+      }else if(h.type==='multi'){
+        const arr=Array.isArray(v[h.id])?v[h.id]:[];
+        const r=el('div',{class:'row multi'});
+        r.appendChild(el('div',{class:'head'},`<div class="lab"><div class="n">${esc(h.n)}</div></div><span class="cnt num" style="font-weight:600;color:var(--ink-2)">${arr.length}/${h.opts.length}</span>`));
+        const ch=el('div',{class:'chips'});
+        for(const o of h.opts){
+          const on=arr.includes(o);
+          const c=el('button',{class:'chip','aria-pressed':String(on)},esc(o));
+          c.onclick=()=>mutate(viewDate,v=>{let a=Array.isArray(v[h.id])?v[h.id].slice():[];a=on?a.filter(x=>x!==o):h.opts.filter(x=>x===o||a.includes(x));if(a.length)v[h.id]=a;else delete v[h.id];});
+          ch.appendChild(c);
+        }
+        r.appendChild(ch);sec.appendChild(r);
+      }
+    }
+    root.appendChild(sec);
+  }
+}
+
+function renderHeader(){
+  const d=parse(viewDate);
+  let t=fmtDay.format(d);t=t.charAt(0).toUpperCase()+t.slice(1);
+  $('dtitle').textContent=viewDate===today?'Сегодня, '+t.split(', ').slice(1).join(', '):t;
+  $('hijri').textContent=fmtHijri?fmtHijri.format(d):'';
+  $('next').disabled=viewDate>=today;
+  const s=dayScore(state[viewDate]);
+  $('barfill').style.width=(s/TOTAL*100).toFixed(1)+'%';
+  const sTxt=Number.isInteger(s)?s:s.toFixed(1).replace('.',',');
+  $('progtxt').textContent=`${sTxt} из ${TOTAL} · ${Math.round(s/TOTAL*100)}%`;
+}
+
+// ---------- stats
+function firstDate(){const ks=Object.keys(state).filter(k=>Object.keys(state[k]||{}).length).sort();return ks[0]||today;}
+function streak(h){
+  let d=today,n=0;
+  if(score(h,(state[d]||{})[h.id])<1)d=addDays(d,-1);
+  while(score(h,(state[d]||{})[h.id])>=1){n++;d=addDays(d,-1);}
+  return n;
+}
+function pctWindow(h,days){
+  const start=firstDate();let done=0,cnt=0;
+  for(let i=0;i<days;i++){const d=addDays(today,-i);if(d<start)break;cnt++;done+=score(h,(state[d]||{})[h.id]);}
+  return cnt?Math.round(done/cnt*100):0;
+}
+function avg(fn,days){const start=firstDate();let s=0,c=0;for(let i=0;i<days;i++){const d=addDays(today,-i);if(d<start)break;c++;s+=fn(state[d]||{});}return c?s/c:0;}
+const fmt1=n=>n.toFixed(1).replace('.',',');
+
+function renderStats(){
+  const root=$('view-stats');root.innerHTML='';
+  const dayPct=avg(v=>dayScore(v)/TOTAL,7)*100;
+  const work=avg(v=>+v.work||0,7);
+  const jam=avg(v=>Array.isArray(v.jamaat)?v.jamaat.length:0,7);
+  const tiles=el('div',{class:'tiles'});
+  tiles.innerHTML=`<div class="tile"><div class="v num">${Math.round(dayPct)}%</div><div class="k">средний день за 7 дней</div></div>
+  <div class="tile"><div class="v num">${fmt1(work)} ч</div><div class="k">работа в день, 7 дней</div></div>
+  <div class="tile"><div class="v num">${fmt1(jam)}/4</div><div class="k">джамаат в день, 7 дней</div></div>`;
+  root.appendChild(tiles);
+
+  // heatmap: 15 weeks, Mon-first columns
+  const card=el('div',{class:'card'},'<h3>Последние 15 недель</h3>');
+  const wrap=el('div',{class:'heat-wrap'});const grid=el('div',{class:'heat'});
+  const t=parse(today);const dow=(t.getDay()+6)%7;
+  let start=addDays(today,-(dow+7*14));
+  for(let i=0;i<15*7;i++){
+    const d=addDays(start,i);const c=el('i');
+    if(d>today)c.className='fut';
+    else{const v=state[d];if(v&&Object.keys(v).length){const p=dayScore(v)/TOTAL;c.className=p>=.9?'l4':p>=.7?'l3':p>=.4?'l2':'l1';}
+      c.title=d;c.setAttribute('role','button');c.tabIndex=-1;
+      c.onclick=()=>{viewDate=d;switchTab('day');};}
+    if(d===viewDate)c.classList.add('sel');
+    grid.appendChild(c);
+  }
+  wrap.appendChild(grid);card.appendChild(wrap);
+  card.appendChild(el('div',{class:'legend'},'меньше <i style="background:var(--h0)"></i><i style="background:var(--h1)"></i><i style="background:var(--h2)"></i><i style="background:var(--h3)"></i><i style="background:var(--h4)"></i> 90%+ · нажми день, чтобы открыть'));
+  root.appendChild(card);
+
+  // per habit
+  const list=el('div',{class:'card'},'<h3>По привычкам</h3>');
+  for(const b of BLOCKS){
+    const g=el('div',{class:'hl-group'},`<h4>${esc(b.name)}</h4>`);
+    g.appendChild(el('div',{class:'hl hl-head'},'<span style="text-align:left"></span><span>14 дней</span><span>30д</span><span>серия</span>'));
+    for(const h of b.items){
+      let dots='';
+      for(let i=13;i>=0;i--){const d=addDays(today,-i);const s=score(h,(state[d]||{})[h.id]);dots+=`<i class="${s>=1?'d':s>0?'p':''}"></i>`;}
+      g.appendChild(el('div',{class:'hl'},`<span class="nm">${esc(h.n)}${h.note&&/раз|стр|мин/.test(h.note)?' <span style="color:var(--ink-3)">'+esc(h.note.replace(' раз',''))+'</span>':''}</span><span class="dots">${dots}</span><span class="pc num">${pctWindow(h,30)}%</span><span class="sk num">${streak(h)}</span>`));
+    }
+    list.appendChild(g);
+  }
+  root.appendChild(list);
+  root.appendChild(el('div',{class:'foot'},'Серия — сколько дней подряд выполнено, считая сегодня или вчера. Проценты считаются с первого дня отметок.'));
+}
+
+let tab='day';
+function switchTab(t){
+  tab=t;
+  $('tab-day').setAttribute('aria-selected',String(t==='day'));
+  $('tab-stats').setAttribute('aria-selected',String(t==='stats'));
+  $('view-day').hidden=t!=='day';$('view-stats').hidden=t!=='stats';
+  $('datebar').hidden=t!=='day';$('progrow').hidden=t!=='day';
+  try{localStorage.setItem('fajr-witr-tab',t);}catch(e){}
+  render();window.scrollTo(0,0);
+}
+function render(){renderHeader();if(tab==='day')renderDay();else renderStats();}
+
+$('prev').onclick=()=>{viewDate=addDays(viewDate,-1);render();};
+$('next').onclick=()=>{if(viewDate<today){viewDate=addDays(viewDate,1);render();}};
+$('tab-day').onclick=()=>switchTab('day');
+$('tab-stats').onclick=()=>switchTab('stats');
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible')return;
+  const now=key(new Date());
+  if(now!==today){if(viewDate===today)viewDate=now;today=now;render();}
+  pull(); // pick up marks made on the other device
+});
+
+try{if(localStorage.getItem('fajr-witr-tab')==='stats')tab='stats';}catch(e){}
+lsLoad();
+switchTab(tab);
+setStatus('Загружаю…');pull();
+})();
+</script>
+</body>
+</html>

@@ -270,6 +270,34 @@ button,textarea{touch-action:manipulation}
 .lbtn{width:100%;padding:15px 18px;border-radius:14px;background:var(--ink);color:#fff;font-size:15px;font-weight:600}
 .lbtn.ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--ink)}
 .lnote{font-size:13px;color:var(--ink-3);text-align:center;padding:8px}
+.lnote.left{text-align:left;padding:0 0 4px;margin-top:-8px}
+.lcov{display:flex;align-items:center;gap:14px;background:var(--fill);border-radius:14px;padding:12px 14px}
+.lcov b{display:block;font-size:24px;font-weight:600;letter-spacing:-.02em}.lcov span{font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+.lcov-t{font-size:12.5px;color:var(--ink-2);line-height:1.4}
+.nlist{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.nrow{display:flex;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid var(--line)}
+.nlab{flex:1;min-width:0}.nlab .n{font-size:15px;font-weight:600}.nlab .note{font-size:12px;color:var(--ink-3);margin-top:3px}
+.nbar{height:4px;border-radius:4px;background:var(--fill);margin-top:6px;overflow:hidden}.nbar i{display:block;height:100%;background:#1E7F4F}
+.nbtn{padding:9px 12px;border-radius:11px;background:var(--ink);color:#fff;font-size:13px;font-weight:600}
+.nbtn.ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--line)}
+.rd-h{flex:1;display:flex;flex-direction:column}.rd-h b{font-size:16px}.rd-h span{font-size:12px;color:var(--ink-3)}
+.rd-tg{padding:7px 11px;border-radius:10px;border:1.5px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-2)}
+.rd-tg.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.lx-body.rd{gap:6px}
+.rd-ay{padding:4px 0 8px;border-bottom:1px solid var(--line)}
+.rd-line{text-align:right}
+.rw{font:inherit;color:var(--ink);padding:0 2px;border-radius:8px;line-height:inherit}
+.rw.new{color:var(--ink-3)}
+.rw.sel{background:#FDECEA;color:#D93025}
+.rd-n{font-size:.8em;color:var(--ink-3)}
+.rd-ru{font-size:13.5px;color:var(--ink-2);line-height:1.45;padding-bottom:4px}
+.rd-foot{gap:8px;background:var(--fill)}
+.rd-info{min-height:52px;font-size:14px}.rd-info .lnote{padding:4px}
+.rd-w{text-align:center}.rd-w .ar{font-size:34px;line-height:1.8}
+.rd-p{display:flex;align-items:baseline;gap:10px;padding:3px 0;border-top:1px solid var(--line)}
+.rd-s{font-size:24px;line-height:1.7;min-width:64px;text-align:right}
+.rd-m{flex:1;line-height:1.45}.rd-m .ar{font-size:1.4em}
+.rd-nw{font-size:11px;color:#D93025;white-space:nowrap}
 .lpath{display:flex;flex-direction:column;align-items:center;gap:14px;padding:6px 0 20px}
 .lnode{display:flex;flex-direction:column;align-items:center;gap:4px}
 .lnode .lc{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-size:18px;font-weight:700;background:var(--fill);color:var(--ink-3);border:2px solid var(--line)}
@@ -558,7 +586,9 @@ function triRow(v,id,name,note,cls){
 const HADITHS=window.QHADITHS||[];
 function hadithFor(date){if(!HADITHS.length)return ['',''];const n=Math.floor(parse(date).getTime()/864e5);return HADITHS[((n%HADITHS.length)+HADITHS.length)%HADITHS.length];}
 // Слово дня: частые слова Корана по порядку, с 27.09.2026 по одному в день, потом по кругу.
-const WORDS=window.QWORDS||[]; // [ар, транслит, значение, аят, перевод, № слова в аяте, корень, частота, ссылка]
+const WORDS=window.QWORDS||[]; // [ар, транслит, значение, аят, перевод, № слова в аяте, корень, частота, ссылка, пометка, пояснение]
+const MAIN_N=Math.min(300,WORDS.length); // 0–299 — путь частых слов; дальше — слова сур из намаза
+const NAMAZ=window.QNAMAZ||[],QCOV=window.QCOV||{total:1,g:[]};
 const WORDS_START='2026-09-27';
 const MARKRE=/^[\u06D6-\u06ED]+$/;
 function arHl(t,hl){ // аят с изучаемым словом красным; знаки паузы приклеены к слову
@@ -566,7 +596,7 @@ function arHl(t,hl){ // аят с изучаемым словом красным
   return t.split(' ').map(x=>{if(MARKRE.test(x))return esc(x);k++;return k===hl?`<span class="hlw">${esc(x)}</span>`:esc(x);}).join(' ').replace(/\s+([\u06D6-\u06DC])/g,'\u2060\u200A\u2060$1');
 }
 const arText=t=>t.replace(/\s+([\u06D6-\u06DC])/g,'\u2060\u200A\u2060$1');
-function wordFor(date){if(!WORDS.length)return [0,['','','','','',0]];const n=Math.round((parse(date)-parse(WORDS_START))/864e5);const i=((n%WORDS.length)+WORDS.length)%WORDS.length;return [i,WORDS[i]];}
+function wordFor(date){if(!WORDS.length)return [0,['','','','','',0]];const n=Math.round((parse(date)-parse(WORDS_START))/864e5);const i=((n%MAIN_N)+MAIN_N)%MAIN_N;return [i,WORDS[i]];}
 // ---------- планы: фокус дня, дела, развлечения (в документе дня), цели недели и месяца (свои документы)
 const isDay=k=>/^\d{4}-\d{2}-\d{2}$/.test(k);
 function hasMarks(v){return !!v&&Object.keys(v).some(k=>k[0]!=='_');} // habit marks, not plans or notes
@@ -721,9 +751,9 @@ function doRefocus(){if(refocus){const e=$(refocus);refocus=null;if(e)e.focus();
 // ---------- «Слова»: заучивание частых слов Корана, механика как в Duolingo
 // Прогресс — документ `learn`: _w {индекс: {b: ящик 0-6, due: дата, ok, bad}}, _done [уроки], _xp {дата: очки}
 const LS=4, BOXDAYS=[0,1,2,4,7,15,30];
-const lessonsN=Math.ceil(WORDS.length/LS);
+const lessonsN=Math.ceil(MAIN_N/LS);
 const EXAM_EVERY=2,EXAM_PASS=80;
-function lessonIds(li){return [...Array(LS).keys()].map(k=>li*LS+k).filter(i=>i<WORDS.length);}
+function lessonIds(li){return [...Array(LS).keys()].map(k=>li*LS+k).filter(i=>i<MAIN_N);}
 function units(){ // путь: урок, урок, экзамен по их 8 словам, урок, урок, экзамен…
   const u=[];
   for(let li=0;li<lessonsN;li++){u.push({t:'lesson',li});if((li+1)%EXAM_EVERY===0||li===lessonsN-1){const e=Math.floor(li/EXAM_EVERY);u.push({t:'exam',e,ids:[].concat(...[...Array(EXAM_EVERY).keys()].map(k=>e*EXAM_EVERY+k).filter(x=>x<lessonsN).map(lessonIds))});}}
@@ -758,6 +788,71 @@ function arSpan(t,cls){return `<span class="ar ${cls||''}" lang="ar" dir="rtl">$
 function learnStreak(){let d=today,n=0;const xp=L()._xp||{};if(!xp[d])d=addDays(d,-1);while(xp[d]){n++;d=addDays(d,-1);}return n;}
 function dueList(){const w=L()._w||{};return Object.keys(w).map(Number).filter(i=>w[i].due<=today).sort((a,b)=>w[a].due<w[b].due?-1:1);}
 
+// Сколько понимаю: доля слов Корана (и сур из намаза), все леммы которых уже изучены
+function knownSet(){return new Set(Object.keys(L()._w||{}).map(Number));}
+function quranCov(K){let n=0;for(const [ids,c] of QCOV.g)if(ids.every(i=>K.has(i)))n+=c;return n/QCOV.total;}
+const tokIds=tok=>tok[1].map(sg=>sg[1]).filter(r=>typeof r==='number'&&r>=0);
+function tokKnown(tok,K){return tokIds(tok).every(i=>K.has(i));}
+function surahIds(su){const out=[];for(const ay of su[2])for(const tok of ay[2])for(const sg of tok[1])if(typeof sg[1]==='number'&&sg[1]>=0&&!out.includes(sg[1]))out.push(sg[1]);return out;}
+function surahCov(su,K){let n=0,t=0;for(const ay of su[2])for(const tok of ay[2]){if(!tokIds(tok).length)continue;t++;if(tokKnown(tok,K))n++;}return [n,t];} // слова-местоимения без словарной части не считаем
+const pct=x=>x>=.995&&x<1?'99%':Math.round(x*100)+'%';
+function renderNamaz(root,K){
+  if(!NAMAZ.length)return;
+  let n=0,t=0;for(const su of NAMAZ){const [a,b]=surahCov(su,K);n+=a;t+=b;}
+  root.appendChild(el('h3',{class:'wk'},`Мой намаз · понимаю ${n} из ${t} слов`));
+  root.appendChild(el('div',{class:'lnote left'},'Суры, которые ты читаешь в намазе. Учи их слова — и каждый намаз станет повторением. «Читать» — текст с разбором каждого слова: серым — ещё не изученные.'));
+  const list=el('div',{class:'nlist'});
+  for(const su of NAMAZ){
+    const [a,b]=surahCov(su,K),left=surahIds(su).filter(i=>!K.has(i)).length;
+    const row=el('div',{class:'nrow'});
+    row.appendChild(el('div',{class:'nlab'},`<div class="n">${esc(su[1])}</div><div class="nbar"><i style="width:${a/b*100}%"></i></div><div class="note">${a} из ${b} слов${left?` · учить ещё ${left}`:' · все выучены'}</div>`));
+    const rd=el('button',{class:'nbtn ghost'},'Читать');rd.onclick=()=>openReader(su);
+    row.appendChild(rd);
+    if(left){const lb=el('button',{class:'nbtn'},'Учить');lb.onclick=()=>startNamaz(su);row.appendChild(lb);}
+    list.appendChild(row);
+  }
+  root.appendChild(list);
+}
+function startNamaz(su){const K=knownSet(),ids=surahIds(su).filter(i=>!K.has(i)).slice(0,LS);if(ids.length)startSession('nlesson',undefined,{ids,su});}
+// чтение суры: каждое слово — кнопка с разбором по частям
+function openReader(su){
+  S=null;const box=$('lx');box.innerHTML='';box.hidden=false;document.body.style.overflow='hidden';
+  const K=knownSet(),[n,t]=surahCov(su,K);
+  const top=el('div',{class:'lx-top'});
+  const x=el('button',{class:'lx-close','aria-label':'Закрыть'},'×');x.onclick=closeSession;
+  const tg=el('button',{class:'rd-tg'},'Перевод');
+  top.append(x,el('div',{class:'rd-h'},`<b>${esc(su[1])}</b><span>понимаю ${n} из ${t} слов · ${pct(n/t)}</span>`),tg);
+  box.appendChild(top);
+  const body=el('div',{class:'lx-body rd'});box.appendChild(body);
+  const info=el('div',{class:'rd-info'},'<div class="lnote">Нажми на слово — покажу, из чего оно состоит и что значит.</div>');
+  let sel=null;
+  for(const ay of su[2]){
+    const d=el('div',{class:'rd-ay'});
+    const line=el('div',{class:'ar ay rd-line',lang:'ar',dir:'rtl'});
+    for(const tok of ay[2]){
+      const b=el('button',{class:'rw'+(!tokIds(tok).length||tokKnown(tok,K)?'':' new')},esc(arText(tok[0])));
+      b.onclick=()=>{if(sel)sel.classList.remove('sel');sel=b;b.classList.add('sel');showTok(info,tok,K);};
+      line.appendChild(b);line.appendChild(document.createTextNode(' '));
+    }
+    line.appendChild(el('span',{class:'rd-n'},'﴿'+String(ay[0]).replace(/\d/g,c=>'٠١٢٣٤٥٦٧٨٩'[c])+'﴾'));
+    d.appendChild(line);d.appendChild(el('div',{class:'rd-ru',hidden:''},esc(ay[1])));
+    body.appendChild(d);
+  }
+  tg.onclick=()=>{const on=tg.classList.toggle('on');body.querySelectorAll('.rd-ru').forEach(e=>e.hidden=!on);};
+  const f=el('div',{class:'lx-foot rd-foot'});f.appendChild(info);
+  const left=surahIds(su).filter(i=>!K.has(i)).length;
+  if(left){const lb=el('button',{class:'lbtn'},`Учить слова суры · осталось ${left}`);lb.onclick=()=>startNamaz(su);f.appendChild(lb);}
+  box.appendChild(f);
+}
+function showTok(info,tok,K){
+  const parts=tok[1].map(sg=>{
+    const [surf,ref,own]=sg,isW=typeof ref==='number'&&ref>=0,w=isW?WORDS[ref]:null;
+    const mean=own?esc(own):isW?`${bareAr(w[0])===bareAr(surf)?'':arSpan(w[0])+' '}«${esc(w[2])}»`:esc(ref);
+    const st=isW&&!own?(K.has(ref)?'':' <span class="rd-nw">не изучено</span>'):'';
+    return `<div class="rd-p"><span class="ar rd-s" lang="ar" dir="rtl">${esc(surf)}</span><span class="rd-m">${mean}${st}</span></div>`;
+  }).join('');
+  info.innerHTML=`<div class="rd-w">${arSpan(tok[0])}</div>${parts}`;
+}
 function renderLearn(){
   const root=$('view-learn');root.innerHTML='';
   const v=L(),done=v._done||[],xpT=(v._xp||{})[today]||0,goal=30;
@@ -767,6 +862,8 @@ function renderLearn(){
     <div class="lstat"><b class="num">${learned}<small>/${WORDS.length}</small></b><span>слов изучено</span></div>
     <div class="lstat"><b class="num">${xpT}<small>/${goal}</small></b><span>XP сегодня</span></div>`));
   root.appendChild(el('div',{class:'lgoal'},`<i style="width:${Math.min(100,xpT/goal*100)}%"></i>`));
+  const K=knownSet(),qc=quranCov(K);
+  root.appendChild(el('div',{class:'lcov'},`<div><b class="num">${pct(qc)}</b><span>слов Корана понимаю</span></div><div class="lcov-t">${qc<.5?'Первые 125 частых слов дают 60% текста, 300 — 73%.':qc<.73?'300 частых слов — это 73% текста Корана.':'Дальше каждый процент даётся дольше — сначала закрой суры из намаза.'}</div>`));
   const nu=nextUnit();
   const acts=el('div',{class:'lacts'});
   if(due.length){const b=el('button',{class:'lbtn'},`Повторить · ${due.length} ${due.length===1?'слово':due.length<5?'слова':'слов'}`);b.onclick=()=>startSession('review');acts.appendChild(b);}
@@ -792,6 +889,7 @@ function renderLearn(){
     }
     path.appendChild(node);
   }
+  renderNamaz(root,K);
   root.appendChild(el('h3',{class:'wk'},'Путь · частые слова Корана'));
   root.appendChild(path);
 }
@@ -801,14 +899,14 @@ let S=null;
 function uniqPairs(ids){const seenA=new Set(),seenM=new Set(),out=[];for(const i of shuffle(ids)){const a=bareAr(WORDS[i][0]),m=WORDS[i][2];if(seenA.has(a)||seenM.has(m))continue;seenA.add(a);seenM.add(m);out.push(i);}return out;}
 function startSession(kind,li,unit){
   const w=L()._w||{};
-  const ids=kind==='exam'?unit.ids.slice():li!==undefined?lessonIds(li)
+  const ids=kind==='exam'||kind==='nlesson'?unit.ids.slice():li!==undefined?lessonIds(li)
     :kind==='free'?shuffle(Object.keys(w).map(Number)).sort((a,b)=>(w[a].b||0)-(w[b].b||0)+(Math.random()-.5)).slice(0,10)
     :dueList().slice(0,8);
   const q=[];
   if(kind==='exam'){ // по вопросу на каждое слово + 2 случайных, без подсказок и повторов
     const pool=shuffle(ids).concat(shuffle(ids).slice(0,2));
     for(const i of pool)q.push({t:rnd(qTypes(i,true)),i});
-  }else if(kind==='lesson'){
+  }else if(kind==='lesson'||kind==='nlesson'){
     for(const i of ids){if(!wstat(i))q.push({t:'intro',i});q.push({t:'ar2ru',i});}
     const mids=uniqPairs(ids);if(mids.length>=3)q.push({t:'match',ids:mids});
     for(const i of shuffle(ids))q.push({t:rnd(qTypes(i).filter(t=>t!=='ar2ru')),i});
@@ -920,16 +1018,17 @@ function footer(box,res,label){
   f.appendChild(b);box.appendChild(f);b.focus();
 }
 function finishSession(box){
-  const sumIds=S.kind==='lesson'?S.ids:[...new Set(S.q.filter(x=>x.i!==undefined).map(x=>x.i).concat(S.q.filter(x=>x.ids).flatMap(x=>x.ids)))];
+  const isLes=S.kind==='lesson'||S.kind==='nlesson';
+  const sumIds=isLes?S.ids:[...new Set(S.q.filter(x=>x.i!==undefined).map(x=>x.i).concat(S.q.filter(x=>x.ids).flatMap(x=>x.ids)))];
   const acc=S.answered?Math.round(S.correct/S.answered*100):100;
   const passed=S.kind==='exam'&&acc>=EXAM_PASS;
-  const xp=S.xp+(S.kind==='lesson'?10:0)+(passed?15:0);
+  const xp=S.xp+(isLes?10:0)+(passed?15:0);
   mutate('learn',v=>{
     v._w=v._w||{};
     for(const i of sumIds){
       const w=v._w[i]||{b:0,ok:0,bad:0};
       if(S.firstBad.has(i)){w.bad++;w.b=1;w.due=addDays(today,1);}
-      else{w.ok++;if((S.kind==='lesson'||S.kind==='review'||S.kind==='practice')||!w.due){w.b=Math.min(6,(w.b||0)+1);w.due=addDays(today,BOXDAYS[w.b]);}}
+      else{w.ok++;if((isLes||S.kind==='review'||S.kind==='practice')||!w.due){w.b=Math.min(6,(w.b||0)+1);w.due=addDays(today,BOXDAYS[w.b]);}}
       v._w[i]=w;
     }
     if(S.kind==='lesson'&&!(v._done||[]).includes(S.li))(v._done=v._done||[]).push(S.li);
@@ -938,12 +1037,15 @@ function finishSession(box){
   });
   // пройденный урок или повторение сам отмечает «Арабский» в трекере (не трогает явный минус)
   if(!(state[today]&&state[today].arabic!==undefined))mutate(today,v=>{v.arabic=true;});
-  const body=el('div',{class:'lx-body fin'},`<div class="lx-kind">${S.kind==='exam'?(passed?'Экзамен сдан':'Экзамен не сдан — нужно '+EXAM_PASS+'%'):S.kind==='lesson'?'Урок пройден':S.kind==='free'?'Тренировка готова':'Повторение готово'}</div>
+  const body=el('div',{class:'lx-body fin'},`<div class="lx-kind">${S.kind==='exam'?(passed?'Экзамен сдан':'Экзамен не сдан — нужно '+EXAM_PASS+'%'):isLes?'Урок пройден':S.kind==='free'?'Тренировка готова':'Повторение готово'}</div>
     <div class="fin-row"><div><b class="num">+${xp}</b><span>XP</span></div><div><b class="num">${acc}%</b><span>точность</span></div><div><b class="num">${learnStreak()}</b><span>дней подряд</span></div></div>
     ${S.firstBad.size?`<div class="lx-tr">Слова с ошибками вернутся в повторение завтра.</div>`:''}`);
   box.appendChild(body);
   const f=el('div',{class:'lx-foot'});
-  const nu=nextUnit();
+  const nu=S.kind==='nlesson'?null:nextUnit();
+  if(S.kind==='nlesson'){const su=S.unit.su,K2=knownSet(),left=surahIds(su).filter(i=>!K2.has(i)).length;
+    if(left){const n=el('button',{class:'lbtn'},`Дальше · ${su[1]} · осталось ${left}`);n.onclick=()=>startNamaz(su);f.appendChild(n);}
+    const r=el('button',{class:'lbtn'+(left?' ghost':'')},`Читать ${su[1]}`);r.onclick=()=>openReader(su);f.appendChild(r);}
   if(nu){const n=el('button',{class:'lbtn'},`${nu.t==='exam'?(S.kind==='exam'?'Пересдать':'Экзамен'):'Следующий урок'} · ${unitLabel(nu)}`);n.onclick=()=>startUnit(nu);f.appendChild(n);}
   if(Object.keys(L()._w||{}).length>=4){const m=el('button',{class:'lbtn'+(nu?' ghost':'')},'Ещё тренировка');m.onclick=()=>startSession('free');f.appendChild(m);}
   const b=el('button',{class:'lbtn ghost'},'Готово');b.onclick=closeSession;f.appendChild(b);box.appendChild(f);
@@ -957,7 +1059,7 @@ function renderDay(){
   const [ht,hs]=hadithFor(viewDate);
   if(ht)root.appendChild(el('figure',{class:'hadith'},`<blockquote>«${esc(ht)}»</blockquote><figcaption>Хадис дня · ${esc(hs)}</figcaption>`));
   const [wi,[wa,wt,wm,ea,er,ehl,,,,wk,wx]]=wordFor(viewDate);
-  if(WORDS.length)root.appendChild(wordCard=el('section',{class:'word',role:'button',title:'Открыть «Слова»'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${WORDS.length}</span></div>
+  if(WORDS.length)root.appendChild(wordCard=el('section',{class:'word',role:'button',title:'Открыть «Слова»'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${MAIN_N}</span></div>
     <div class="wmain"><div class="wtr"><b>${esc(wm)}</b><span>${esc(wk||'')} · ${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
     <div class="wex"><div class="wexa" lang="ar" dir="rtl">${arHl(ea,ehl)}</div><div class="wexr">${esc(er)}</div></div>${wx?`<div class="wx">${explHtml(wx)}</div>`:''}`));
   if(wordCard){wordCard.onclick=()=>switchTab('learn');wordCard=null;}

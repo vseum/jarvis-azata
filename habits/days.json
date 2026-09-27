@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-27T06:42:49.938Z",
+ "updatedAt": "2026-09-27T06:43:43.307Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -9,11 +9,13 @@
     "witr": false,
     "sleep_back": true,
     "am_squat": true,
-    "am_push": true
+    "am_push": true,
+    "am_abs": true,
+    "am_back": true
    },
-   "score": 5,
-   "pct": 17,
-   "updatedAt": "2026-09-27T06:42:34.930Z"
+   "score": 7,
+   "pct": 23,
+   "updatedAt": "2026-09-27T06:43:28.299Z"
   }
  }
 }

@@ -51,7 +51,13 @@ async function readRemote() {
   const r = await gh('GET', `/repos/${GH_REPO}/contents/${GH_PATH}?ref=${GH_BRANCH}`);
   if (r.status !== 200) return r.status;
   sha = r.json.sha;
-  const doc = JSON.parse(Buffer.from(r.json.content, 'base64').toString('utf8'));
+  let b64 = r.json.content;
+  if (!b64) { // files over 1 MB come without content — read the blob instead
+    const blob = await gh('GET', `/repos/${GH_REPO}/git/blobs/${sha}`);
+    if (blob.status !== 200) return blob.status;
+    b64 = blob.json.content;
+  }
+  const doc = JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
   merge(doc.days || {});
   return 200;
 }
@@ -142,7 +148,7 @@ function send(res, status, body, type) {
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let size = 0; const parts = [];
-    req.on('data', c => { size += c.length; if (size > 65536) { reject(new Error('too large')); req.destroy(); } else parts.push(c); });
+    req.on('data', c => { size += c.length; if (size > 1048576) { reject(new Error('too large')); req.destroy(); } else parts.push(c); });
     req.on('end', () => resolve(Buffer.concat(parts).toString('utf8')));
     req.on('error', reject);
   });

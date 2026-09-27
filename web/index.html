@@ -45,7 +45,7 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radi
 
 /* header */
 .top{position:sticky;top:0;z-index:5;background:var(--bg);margin:0 -20px;padding:10px 20px 10px}
-.tabs{display:flex;gap:22px;margin-bottom:10px}
+.tabs{display:flex;gap:16px;margin-bottom:10px}
 .tabs button{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);padding:4px 0;border-bottom:2px solid transparent}
 .tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--ink)}
 .datebar{display:flex;align-items:center;gap:6px}
@@ -175,6 +175,35 @@ button.row[aria-pressed="true"] .n{color:var(--ink-3)}
 .foot{font-size:11.5px;color:var(--ink-3);margin-top:22px;line-height:1.5}
 button,textarea{touch-action:manipulation}
 .dt h1{cursor:pointer}
+.notes{display:flex;flex-direction:column;gap:14px;margin-top:6px}
+.qn{display:flex;flex-direction:column;gap:8px}
+.qn textarea{font:inherit;font-size:16px;line-height:1.45;color:var(--ink);border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;resize:none;min-height:50px;background:var(--bg);overflow:hidden}
+.qn textarea:focus{outline:none;border-color:var(--ink)}
+.qn textarea::placeholder{color:var(--ink-3)}
+.qn-save{align-self:flex-end;font-size:13px;font-weight:600;padding:8px 16px;border-radius:999px;background:var(--ink);color:#fff}
+.qn-save:disabled{background:var(--fill);color:var(--ink-3)}
+.nq{font:inherit;font-size:16px;border:0;border-bottom:1px solid var(--line);padding:10px 2px;background:transparent;color:var(--ink);-webkit-appearance:none;border-radius:0}
+.nq:focus{outline:none;border-color:var(--ink)}
+.ntags{display:flex;flex-wrap:wrap;gap:6px}
+.ntag{font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:999px;border:1.5px solid var(--line);color:var(--ink-2)}
+.ntag small{color:var(--ink-3);font-weight:500}
+.ntag[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.ntag[aria-pressed="true"] small{color:#ccc}
+.ngrp{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:14px 0 6px}
+.ncard{padding:12px 14px;border:1.5px solid var(--line);border-radius:14px;margin-bottom:8px}
+.ncard.pin{background:var(--fill);border-color:var(--fill)}
+.nt{white-space:pre-wrap;word-wrap:break-word;font-size:15px;line-height:1.5;cursor:text}
+.tag{color:var(--ink-2);font-weight:600}
+.nmeta{display:flex;align-items:center;gap:14px;margin-top:8px;font-size:12px;color:var(--ink-3)}
+.nmeta span{flex:1}
+.nmeta button{font-size:12px;font-weight:600;color:var(--ink-3)}
+.nedit{width:100%;font:inherit;font-size:16px;line-height:1.5;border:0;resize:none;padding:0;background:transparent;color:var(--ink)}
+.nedit:focus{outline:none}
+.nempty{font-size:13.5px;color:var(--ink-3);padding:20px 0;text-align:center}
+.daynotes .dn{display:flex;gap:10px;align-items:baseline;text-align:left;padding:10px 0;border-top:1px solid var(--line);width:100%}
+.dn-t{flex:1;white-space:pre-wrap;font-size:14.5px;line-height:1.45}
+.dn-m{font-size:11.5px;color:var(--ink-3)}
+.daynotes .qn{margin-top:8px}
 .note-block{display:flex;flex-direction:column;gap:8px}
 .note-lab{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .note-block textarea{font:inherit;font-size:16px;color:var(--ink);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;resize:vertical;min-height:52px;background:var(--bg)}
@@ -233,6 +262,7 @@ button,textarea{touch-action:manipulation}
     <div class="tabs" role="tablist">
       <button id="tab-day" role="tab" aria-selected="true">День</button>
       <button id="tab-plan" role="tab" aria-selected="false">План</button>
+      <button id="tab-notes" role="tab" aria-selected="false">Заметки</button>
       <button id="tab-stats" role="tab" aria-selected="false">Статистика</button>
     </div>
     <div class="datebar" id="datebar">
@@ -257,6 +287,7 @@ button,textarea{touch-action:manipulation}
 
   <main id="view-day" class="blocks"></main>
   <main id="view-plan" class="plan" hidden></main>
+  <main id="view-notes" class="notes" hidden></main>
   <main id="view-stats" hidden></main>
   <div class="toast" id="toast" role="status" hidden></div>
 </div>
@@ -407,6 +438,7 @@ function pull(){
       for(const k in all)if(!unsynced[k]&&!pending.has(k))state[k]=all[k].v||{};
       // server lost a day this device still has (e.g. after a redeploy) — send it back
       for(const k in state)if(!all[k]&&Object.keys(state[k]||{}).length)unsynced[k]=true;
+      migrateNotes();
       lsSave();render();
       if(unsentCount())push();else setStatus('Синхронизировано');
     })
@@ -663,20 +695,104 @@ function renderDay(){
   }
   shownOpen=nowOpen;
   setTimeout(doRefocus,0);
-  const nb=el('section',{class:'note-block'},'<label class="note-lab" for="day-note">Заметка дня</label>');
-  const ta=el('textarea',{id:'day-note',rows:'2',placeholder:'Что помешало или помогло — одной строкой'});
-  ta.value=v._note||'';
-  ta.oninput=()=>saveNote(viewDate,ta.value);
-  nb.appendChild(ta);root.appendChild(nb);
+  const dn=allNotes().filter(([,n])=>noteDay(n)===viewDate).sort((a,b)=>a[1].at<b[1].at?-1:1);
+  const nb=el('section',{class:'pblock daynotes'});
+  nb.appendChild(planHead('Заметки дня','мысли, идеи, что помешало',dn.length?String(dn.length):''));
+  for(const [,n] of dn){
+    const r=el('button',{class:'dn'},`<span class="dn-t">${noteHtml(n.t)}</span><span class="dn-m">${noteTimeTxt(n)}</span>`);
+    r.onclick=()=>{switchTab('notes');};nb.appendChild(r);
+  }
+  nb.appendChild(quickNote('day-note-new','Записать мысль…',viewDate));
+  root.appendChild(nb);
 }
-let noteTimer=null;
-function saveNote(date,text){
-  const v=state[date]||(state[date]={});
-  if(text.trim())v._note=text;else delete v._note;
-  unsynced[date]=true;
-  lsSave();
-  clearTimeout(noteTimer);
-  noteTimer=setTimeout(push,800);
+
+// ---------- заметки (вместо Google Keep). Хранятся по месяцу создания: ключ YYYY-MM, поле _notes [{id,t,at,up,pin}]
+const isMonth=k=>/^\d{4}-\d{2}$/.test(k);
+function allNotes(){const out=[];for(const k in state)if(isMonth(k))for(const n of state[k]._notes||[])out.push([k,n]);return out;}
+function noteDay(n){return key(new Date(n.at));}
+function noteTimeTxt(n){const d=new Date(n.at);return pad(d.getHours())+':'+pad(d.getMinutes());}
+function tagsOf(t){return [...new Set((t.match(/#[\p{L}\d_]+/gu)||[]).map(x=>x.toLowerCase()))];}
+function noteHtml(t){return esc(t).replace(/#[\p{L}\d_]+/gu,m=>`<span class="tag">${m}</span>`);}
+function addNote(t,date){
+  t=t.trim();if(!t)return;
+  const at=(!date||date===today)?new Date():new Date(parse(date).setHours(12,0,0,0));
+  const mk=key(at).slice(0,7);
+  mutate(mk,v=>{(v._notes=v._notes||[]).unshift({id:uid(),t,at:at.toISOString()});});
+}
+function quickNote(id,ph,date){
+  const box=el('div',{class:'qn'});
+  const ta=el('textarea',{id,rows:'1',placeholder:ph});
+  let draft='';try{draft=localStorage.getItem('fajr-witr-draft-'+id)||'';}catch(e){}
+  ta.value=draft;
+  const grow=()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,260)+'px';};
+  ta.oninput=()=>{grow();try{localStorage.setItem('fajr-witr-draft-'+id,ta.value);}catch(e){}btn.disabled=!ta.value.trim();};
+  const btn=el('button',{class:'qn-save'},'Сохранить');btn.disabled=!draft.trim();
+  const save=()=>{const t=ta.value;if(!t.trim())return;ta.value='';try{localStorage.removeItem('fajr-witr-draft-'+id);}catch(e){}refocus=id;addNote(t,date);toast('Заметка сохранена');};
+  btn.onclick=save;
+  ta.onkeydown=e=>{if(e.key==='Enter'&&(e.metaKey||e.ctrlKey)){e.preventDefault();save();}};
+  box.append(ta,btn);setTimeout(grow,0);
+  return box;
+}
+function migrateNotes(){ // old single «Заметка дня» (_note) becomes a normal note, once, same id on every device
+  for(const k of Object.keys(state)){
+    const v=state[k];if(!isDay(k)||!v||!v._note)continue;
+    const mk=k.slice(0,7),m=docOf(mk),id='n-'+k;
+    m._notes=m._notes||[];
+    if(!m._notes.some(n=>n.id===id))m._notes.push({id,t:v._note,at:new Date(parse(k).setHours(21,0,0,0)).toISOString()});
+    delete v._note;unsynced[k]=true;unsynced[mk]=true;
+  }
+}
+let noteQuery='',noteTag='',editing=null;
+function renderNotes(){
+  const root=$('view-notes');root.innerHTML='';
+  root.appendChild(quickNote('note-new','Новая заметка… #тег',null));
+  const q=el('input',{type:'search',id:'note-q',class:'nq',placeholder:'Поиск',value:''});q.value=noteQuery;
+  q.oninput=()=>{noteQuery=q.value;renderNoteList();};
+  root.appendChild(q);
+  const tags={};for(const [,n] of allNotes())for(const t of tagsOf(n.t))tags[t]=(tags[t]||0)+1;
+  const tk=Object.keys(tags).sort((a,b)=>tags[b]-tags[a]);
+  if(tk.length){
+    const ch=el('div',{class:'ntags'});
+    for(const t of tk){const c=el('button',{class:'ntag','aria-pressed':String(noteTag===t)},`${esc(t)} <small>${tags[t]}</small>`);c.onclick=()=>{noteTag=noteTag===t?'':t;renderNotes();};ch.appendChild(c);}
+    root.appendChild(ch);
+  }
+  root.appendChild(el('div',{id:'note-list'}));
+  renderNoteList();
+  doRefocus();
+}
+function renderNoteList(){
+  const box=$('note-list');if(!box)return;box.innerHTML='';
+  const q=noteQuery.trim().toLowerCase();
+  let list=allNotes().filter(([,n])=>(!q||n.t.toLowerCase().includes(q))&&(!noteTag||tagsOf(n.t).includes(noteTag)));
+  list.sort((a,b)=>(b[1].pin?1:0)-(a[1].pin?1:0)||(a[1].at<b[1].at?1:-1));
+  if(!list.length){box.appendChild(el('div',{class:'nempty'},q||noteTag?'Ничего не найдено':'Здесь будут твои заметки. Пиши сверху, #теги помогут найти потом.'));return;}
+  let lastLabel='';
+  const f=new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long'});
+  for(const [mk,n] of list){
+    const d=noteDay(n);
+    const label=n.pin?'Закреплённые':d===today?'Сегодня':d===addDays(today,-1)?'Вчера':f.format(parse(d));
+    if(label!==lastLabel){box.appendChild(el('div',{class:'ngrp'},label));lastLabel=label;}
+    const card=el('div',{class:'ncard'+(n.pin?' pin':'')});
+    if(editing===n.id){
+      const ta=el('textarea',{class:'nedit'});ta.value=n.t;
+      const done=()=>{editing=null;const t=ta.value.trim();
+        if(!t)mutate(mk,v=>{v._notes=(v._notes||[]).filter(x=>x.id!==n.id);});
+        else if(t!==n.t)mutate(mk,v=>{const x=(v._notes||[]).find(x=>x.id===n.id);if(x){x.t=t;x.up=new Date().toISOString();}});
+        else renderNoteList();};
+      ta.onblur=done;card.appendChild(ta);box.appendChild(card);
+      setTimeout(()=>{ta.style.height=ta.scrollHeight+'px';ta.focus();},0);
+      continue;
+    }
+    const txt=el('div',{class:'nt'},noteHtml(n.t));
+    txt.onclick=()=>{editing=n.id;renderNoteList();};
+    const meta=el('div',{class:'nmeta'},`<span>${n.pin?f.format(parse(d))+' · ':''}${noteTimeTxt(n)}</span>`);
+    const pin=el('button',null,n.pin?'Открепить':'Закрепить');
+    pin.onclick=()=>mutate(mk,v=>{const x=(v._notes||[]).find(x=>x.id===n.id);if(x)x.pin=!x.pin;});
+    const del=el('button',null,'Удалить');
+    del.onclick=()=>{const before=(docOf(mk)._notes||[]).slice();mutate(mk,v=>{v._notes=(v._notes||[]).filter(x=>x.id!==n.id);});toast('Заметка удалена',()=>mutate(mk,v=>{v._notes=before;}));};
+    meta.append(pin,del);
+    card.append(txt,meta);box.appendChild(card);
+  }
 }
 
 function toast(text,undo){
@@ -803,12 +919,12 @@ let tab='day';
 let calMonth=key(new Date()).slice(0,7);
 function switchTab(t){
   tab=t;
-  for(const x of ['day','plan','stats']){$('tab-'+x).setAttribute('aria-selected',String(t===x));$('view-'+x).hidden=t!==x;}
-  $('datebar').hidden=t==='stats';$('progrow').hidden=t!=='day';$('planrow').hidden=t==='stats';
+  for(const x of ['day','plan','notes','stats']){$('tab-'+x).setAttribute('aria-selected',String(t===x));$('view-'+x).hidden=t!==x;}
+  $('datebar').hidden=t==='stats'||t==='notes';$('progrow').hidden=t!=='day';$('planrow').hidden=t==='stats'||t==='notes';
   try{localStorage.setItem('fajr-witr-tab',t);}catch(e){}
   render();window.scrollTo(0,0);
 }
-function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else renderStats();}
+function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else if(tab==='notes')renderNotes();else renderStats();}
 
 function go(n){const d=addDays(viewDate,n);if(d>today)return;viewDate=d;render();}
 $('prev').onclick=()=>go(-1);
@@ -824,6 +940,7 @@ $('next').onclick=()=>go(1);
 $('tab-day').onclick=()=>switchTab('day');
 $('tab-stats').onclick=()=>switchTab('stats');
 $('tab-plan').onclick=()=>switchTab('plan');
+$('tab-notes').onclick=()=>{switchTab('notes');const c=$('note-new');if(c)c.focus();};
 $('planrow').onclick=()=>{if(tab!=='plan')switchTab('plan');};
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState!=='visible'){lsSave();return;}
@@ -832,8 +949,10 @@ document.addEventListener('visibilitychange',()=>{
   pull(); // pick up marks made on the other device
 });
 
-try{const t=localStorage.getItem('fajr-witr-tab');if(t==='stats'||t==='plan')tab=t;}catch(e){}
+try{const t=localStorage.getItem('fajr-witr-tab');if(t==='stats'||t==='plan'||t==='notes')tab=t;}catch(e){}
+if(location.hash==='#notes')tab='notes';
 lsLoad();
+migrateNotes();
 switchTab(tab);
 setStatus('Загружаю…');pull();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});

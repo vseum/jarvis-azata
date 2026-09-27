@@ -1,0 +1,48 @@
+KFGQPC HAFS Uthmanic Script — лицензия, сопровождающая шрифт
+===========================================================
+
+Файл:   UthmanicHafs1Ver18.woff2
+Версия: Version 0.18  (Ashfaq Ahmad Niazi: KFGQPC HAFS Uthmanic Script Regular: 2019)
+sha256: 8c00e7a7d5f773bcfb1642fdcfba505dbd81975fef39f14718827a32d075020c
+Правообладатель: King Fahd Glorious Quran Printing Complex
+Официальный сайт: http://fonts.qurancomplex.gov.sa/
+
+Ниже — текст лицензии и уведомление об авторских правах, извлечённые ИЗ САМОГО
+файла шрифта (таблица `name`, nameID 13 и nameID 0) с помощью fontTools.
+EULA разрешает Use / Copy / Distribute бесплатно ПРИ УСЛОВИИ, что копия шрифта
+сопровождается этой лицензией — поэтому файл лежит рядом со шрифтом и
+раздаётся вместе с ним (/fonts/quran/KFGQPC-EULA.txt).
+
+⚠️ ЗАПРЕЩЕНО EULA (пункт 1): продавать, ИЗМЕНЯТЬ, переводить, реверс-инженерить,
+декомпилировать, дизассемблировать. Практический вывод для нашей сборки:
+шрифт НЕЛЬЗЯ прогонять через сабсеттеры и оптимизаторы (pyftsubset, glyphhanger,
+subfont, любые font-min плагины) — это «Modified/Altered». Vite копирует
+public/** байт-в-байт; сверка sha256 файла в dist/ после сборки — часть
+приёмочного протокола раздела «Коран».
+
+-----------------------------------------------------------------------------
+NAME ID 0 — COPYRIGHT NOTICE
+-----------------------------------------------------------------------------
+The digitally signed machine readable Typeface(Font) licensed to you is copyrighted, (2010), King Fahd Glorious Quran Printing Complex.
+ISBN: 978-603-8010-15-0, Accession No. 1430/7278
+All rights reserved. This Font is the property of King Fahd Glorious Quran Printing Complex, and may not be reproduced, modified without the express written approval of King Fahd Glorious Quran Printing Complex.
+
+-----------------------------------------------------------------------------
+NAME ID 13 — ELECTRONIC END-USER LICENSE AGREEMENT
+-----------------------------------------------------------------------------
+ELECTRONIC END-USER LICENSE AGREEMENT
+
+By installing this Font You accept all the terms and conditions of this Agreement.
+
+Copyright (c) 2010 by King Fahd Glorious Quran Printing Complex (KFGQPC), AlMadinah AlMunawarrah, Kingdom of Saudi Arabia. All Rights Reserved. KFGQPC retains full title and ownership of this Typeface both as artwork and font software. This Agreement does not grant you any intellectual property rights in the Font.
+
+Permission is hereby granted, Free of Cost, to any person obtaining a copy of this Font accompanying this license, the rights to Use, Copy, Distribute, subject to the following conditions:
+
+1.    The Font Software cannot be Sold, Modified, Altered, Translated, Reverse Engineered, Decompiled, Disassembled, Reproduced or Attempted to discover the Source Code of this Font in no means.
+
+2.    The Font Software is provided "AS IS", and KFGQPC makes no warranties as to its use or performance, fitness for a particular purpose. KFGQPC does not and cannot warrant the performance or results you may obtain by using the Font. In no event shall KFGQPC be liable for any Claims, Damages or other Liability, including any Damages, arising from, out of the use or inability to use the Font or from other dealings in the Font.
+
+-----------------------------------------------------------------------------
+NAME ID 14 — LICENSE URL
+-----------------------------------------------------------------------------
+http://fonts.qurancomplex.gov.sa/

@@ -151,6 +151,15 @@ const server = http.createServer(async (req, res) => {
   if (p === '/healthz') return send(res, 200, { ok: true });
   if (p === '/robots.txt') return send(res, 200, 'User-agent: *\nDisallow: /\n', 'text/plain; charset=utf-8');
 
+  const font = p.match(/^\/fonts\/(montserrat-(?:cyrillic|latin)-\d00-normal\.woff2)$/);
+  if (font && req.method === 'GET') {
+    try {
+      const buf = fs.readFileSync(path.join(__dirname, 'fonts', font[1]));
+      res.writeHead(200, { 'Content-Type': 'font/woff2', 'Cache-Control': 'public, max-age=31536000, immutable' });
+      return res.end(buf);
+    } catch (e) { return send(res, 404, 'Not found', 'text/plain; charset=utf-8'); }
+  }
+
   if (STATIC[p] && req.method === 'GET') {
     const [file, type] = STATIC[p];
     return send(res, 200, fs.readFileSync(path.join(__dirname, file)), type);

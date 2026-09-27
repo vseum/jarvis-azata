@@ -83,6 +83,11 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radi
 [lang="ar"]{text-rendering:optimizeLegibility;font-variant-ligatures:normal;font-feature-settings:normal}
 .wexr{font-size:12px;color:var(--ink-2);margin-top:0}
 .hlw{color:#D93025}
+.word{cursor:pointer}
+.word:active{background:var(--fill)}
+.wx{font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.lx-expl{font-size:14.5px;line-height:1.55;background:var(--fill);border-radius:12px;padding:12px 14px;color:var(--ink)}
+.ar.ex{font-size:1.35em;line-height:1.4}
 .hadith{margin:4px 0 0;padding:14px 16px;background:var(--fill);border-radius:14px}
 .hadith blockquote{margin:0;font-size:14px;line-height:1.5;font-weight:500;color:var(--ink);text-wrap:pretty}
 .hadith figcaption{margin-top:6px;font-size:11.5px;color:var(--ink-3)}
@@ -826,15 +831,16 @@ function drawStep(){
   const st=S.q[S.pos],body=el('div',{class:'lx-body'});box.appendChild(body);
   const W=i=>WORDS[i];
   if(st.t==='intro'){
-    const [a,tr,m,ea,er,hl]=W(st.i);
-    body.innerHTML=`<div class="lx-kind">Новое слово</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-mean">${esc(m)}</div><div class="lx-tr">${esc(tr)}</div><div class="lx-ayah">${ayahHtml(st.i)}<div class="lx-er">${esc(er)}</div></div>`;
+    const [a,tr,m,ea,er,hl,,,,kind,expl]=W(st.i);
+    body.innerHTML=`<div class="lx-kind">Новое слово</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-mean">${esc(m)}</div><div class="lx-tr">${esc(kind||'')} · читается «${esc(tr)}»</div>${expl?`<div class="lx-expl">${explHtml(expl)}</div>`:''}<div class="lx-ayah">${ayahHtml(st.i)}<div class="lx-er">${esc(er)}</div></div>`;
     footer(box,null,'Понятно');return;
   }
   if(st.t==='match')return drawMatch(body,box,st);
   if(st.t==='build')return drawBuild(body,box,st);
   const i=st.i,[a,tr,m,ea,er]=W(i);
   let prompt,opts,right,isAr=false,note='';
-  if(st.t==='ar2ru'){prompt=`<div class="lx-kind">Что означает слово?</div><div class="lx-big">${arSpan(a,'big')}</div>`;
+  const kind=WORDS[i][9]||'',expl=WORDS[i][10]||'';
+  if(st.t==='ar2ru'){prompt=`<div class="lx-kind">Что означает слово?</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-tr">${esc(kind)}</div>`;
     opts=shuffle([m,...distract(3,i,2)]);right=m;}
   else if(st.t==='ru2ar'){prompt=`<div class="lx-kind">Выбери слово</div><div class="lx-q">${esc(m)}</div>`;
     opts=shuffle([a,...distract(3,i,0)]);right=a;isAr=true;}
@@ -855,12 +861,14 @@ function drawStep(){
       const ok=o===right;b.classList.add(ok?'ok':'bad');
       if(!ok)[...ol.children].forEach((c,k)=>{if(opts[k]===right)c.classList.add('ok');});
       grade(i,ok);
-      footer(box,ok?{ok:true,note}:{ok:false,right:isAr?arSpan(right):esc(right),note},'Дальше');
+      const n2=note||(st.t!=='ayah'&&expl?expl:'');
+      footer(box,ok?{ok:true,note:n2}:{ok:false,right:isAr?arSpan(right):esc(right),note:n2},'Дальше');
     };
     ol.appendChild(b);
   }
   body.appendChild(ol);
 }
+function explHtml(t){return esc(t).replace(/[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]+(?:[\s\u200c]*[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]+)*/g,m=>`<span class="ar ex" lang="ar" dir="rtl">${m}</span>`);}
 function ayahHtml(i){const w=WORDS[i];return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;}
 function drawBuild(body,box,st){ // «собери аят»: слова по порядку, как в Duolingo
   const i=st.i,[a,,m,ea,er]=WORDS[i];
@@ -907,7 +915,7 @@ function grade(i,ok,fromMatch){
 }
 function footer(box,res,label){
   const f=el('div',{class:'lx-foot'+(res?res.ok?' ok':' bad':'')});
-  if(res)f.appendChild(el('div',{class:'lx-res'},(res.ok?'<b>Верно!</b>':`<b>Правильно:</b> ${res.right}`)+(res.note?`<div class="lx-note">${esc(res.note)}</div>`:'')));
+  if(res)f.appendChild(el('div',{class:'lx-res'},(res.ok?'<b>Верно!</b>':`<b>Правильно:</b> ${res.right}`)+(res.note?`<div class="lx-note">${explHtml(res.note)}</div>`:'')));
   const b=el('button',{class:'lbtn'},label);b.onclick=()=>{S.pos++;drawStep();};
   f.appendChild(b);box.appendChild(f);b.focus();
 }
@@ -940,6 +948,7 @@ function finishSession(box){
   if(Object.keys(L()._w||{}).length>=4){const m=el('button',{class:'lbtn'+(nu?' ghost':'')},'Ещё тренировка');m.onclick=()=>startSession('free');f.appendChild(m);}
   const b=el('button',{class:'lbtn ghost'},'Готово');b.onclick=closeSession;f.appendChild(b);box.appendChild(f);
 }
+let wordCard=null;
 const openState={};
 let shownOpen=new Set(); // blocks open on screen right now
 function renderDay(){
@@ -947,10 +956,11 @@ function renderDay(){
   const root=$('view-day');root.innerHTML='';
   const [ht,hs]=hadithFor(viewDate);
   if(ht)root.appendChild(el('figure',{class:'hadith'},`<blockquote>«${esc(ht)}»</blockquote><figcaption>Хадис дня · ${esc(hs)}</figcaption>`));
-  const [wi,[wa,wt,wm,ea,er,ehl]]=wordFor(viewDate);
-  if(WORDS.length)root.appendChild(el('section',{class:'word'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${WORDS.length}</span></div>
-    <div class="wmain"><div class="wtr"><b>${esc(wm)}</b><span>${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
-    <div class="wex"><div class="wexa" lang="ar" dir="rtl">${arHl(ea,ehl)}</div><div class="wexr">${esc(er)}</div></div>`));
+  const [wi,[wa,wt,wm,ea,er,ehl,,,,wk,wx]]=wordFor(viewDate);
+  if(WORDS.length)root.appendChild(wordCard=el('section',{class:'word',role:'button',title:'Открыть «Слова»'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${WORDS.length}</span></div>
+    <div class="wmain"><div class="wtr"><b>${esc(wm)}</b><span>${esc(wk||'')} · ${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
+    <div class="wex"><div class="wexa" lang="ar" dir="rtl">${arHl(ea,ehl)}</div><div class="wexr">${esc(er)}</div></div>${wx?`<div class="wx">${explHtml(wx)}</div>`:''}`));
+  if(wordCard){wordCard.onclick=()=>switchTab('learn');wordCard=null;}
   const nowOpen=new Set();
   trackerPlan(root,viewDate,nowOpen);
   for(const b of BLOCKS){

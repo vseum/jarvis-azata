@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-27T14:57:14.342Z",
+ "updatedAt": "2026-09-27T15:06:06.703Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -30,11 +30,13 @@
     "jamaat": [
      "Зухр"
     ],
-    "pm_azkar": true
+    "pm_azkar": true,
+    "pm_vit_mg": true,
+    "pm_vit_zn": true
    },
-   "score": 20.25,
-   "pct": 65,
-   "updatedAt": "2026-09-27T14:56:59.331Z"
+   "score": 21.25,
+   "pct": 69,
+   "updatedAt": "2026-09-27T15:05:51.693Z"
   },
   "2026-09": {
    "v": {

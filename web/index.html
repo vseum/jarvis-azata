@@ -311,10 +311,12 @@ button,textarea{touch-action:manipulation}
 .lnode.exam .lc{border-radius:18px;width:70px;height:56px;font-size:16px}
 .lnode.exam.cur .lc{background:var(--ink);color:#fff;box-shadow:0 0 0 6px var(--fill)}
 .lnode.exam .lw{font-size:12px;font-weight:600;color:var(--ink-2)}
+.lnode.exam.big .lc{width:96px;height:62px;border-radius:20px;font-size:17px}
 .ar{font-family:"KFGQPC Hafs","Geeza Pro",serif;text-rendering:optimizeLegibility;font-variant-ligatures:normal}
 .lx{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 20px calc(16px + env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto}
 .lx-top{display:flex;align-items:center;gap:14px}
 .lx-close{font-size:28px;color:var(--ink-3);width:36px;height:36px;line-height:1}
+.lx-back{font-size:30px;color:var(--ink-2);width:32px;height:36px;line-height:1;margin-left:-8px}.lx-back:disabled{opacity:.2}
 .lx-bar{flex:1;height:10px;border-radius:10px;background:var(--fill);overflow:hidden}
 .lx-bar i{display:block;height:100%;background:#1E7F4F;border-radius:10px;transition:width .3s}
 .lx-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:22px 0 12px}
@@ -754,14 +756,19 @@ function doRefocus(){if(refocus){const e=$(refocus);refocus=null;if(e)e.focus();
 // Прогресс — документ `learn`: _w {индекс: {b: ящик 0-6, due: дата, ok, bad}}, _done [уроки], _xp {дата: очки}
 const LS=4, BOXDAYS=[0,1,2,4,7,15,30];
 const lessonsN=Math.ceil(MAIN_N/LS);
-const EXAM_EVERY=2,EXAM_PASS=80;
+const EXAM_EVERY=2,BIG_EVERY=4,EXAM_PASS=80; // экзамен после 2 уроков (8 слов), большой — после 4 уроков (16 слов)
 function lessonIds(li){return [...Array(LS).keys()].map(k=>li*LS+k).filter(i=>i<MAIN_N);}
-function units(){ // путь: урок, урок, экзамен по их 8 словам, урок, урок, экзамен…
-  const u=[];
-  for(let li=0;li<lessonsN;li++){u.push({t:'lesson',li});if((li+1)%EXAM_EVERY===0||li===lessonsN-1){const e=Math.floor(li/EXAM_EVERY);u.push({t:'exam',e,ids:[].concat(...[...Array(EXAM_EVERY).keys()].map(k=>e*EXAM_EVERY+k).filter(x=>x<lessonsN).map(lessonIds))});}}
+function units(){ // путь: урок, урок, экзамен (8 слов), урок, урок, экзамен, большой экзамен (16 слов)…
+  const u=[],span=(from,n)=>[].concat(...[...Array(n).keys()].map(k=>from+k).filter(x=>x<lessonsN).map(lessonIds));
+  for(let li=0;li<lessonsN;li++){
+    u.push({t:'lesson',li});
+    const last=li===lessonsN-1;
+    if((li+1)%EXAM_EVERY===0||last){const e=Math.floor(li/EXAM_EVERY);u.push({t:'exam',e,key:e,ids:span(e*EXAM_EVERY,EXAM_EVERY)});}
+    if((li+1)%BIG_EVERY===0||(last&&Math.floor(li/BIG_EVERY)*BIG_EVERY<li-1)){const b=Math.floor(li/BIG_EVERY);u.push({t:'exam',big:true,key:'b'+b,ids:span(b*BIG_EVERY,BIG_EVERY)});}
+  }
   return u;
 }
-function unitDone(x){const v=L();return x.t==='lesson'?(v._done||[]).includes(x.li):((v._exams||{})[x.e]||0)>=EXAM_PASS;}
+function unitDone(x){const v=L();return x.t==='lesson'?(v._done||[]).includes(x.li):((v._exams||{})[x.key]||0)>=EXAM_PASS;}
 function nextUnit(){return units().find(x=>!unitDone(x))||null;}
 function unitLabel(x){const a=x.t==='lesson'?lessonIds(x.li):x.ids;return `слова ${a[0]+1}–${a[a.length-1]+1}`;}
 function startUnit(x){if(x.t==='lesson')startSession('lesson',x.li);else startSession('exam',undefined,x);}
@@ -869,7 +876,7 @@ function renderLearn(){
   const nu=nextUnit();
   const acts=el('div',{class:'lacts'});
   if(due.length){const b=el('button',{class:'lbtn'},`Повторить · ${due.length} ${due.length===1?'слово':due.length<5?'слова':'слов'}`);b.onclick=()=>startSession('review');acts.appendChild(b);}
-  if(nu){const b=el('button',{class:'lbtn'+(due.length?' ghost':'')},`${nu.t==='exam'?'Экзамен':done.length?'Следующий урок':'Начать первый урок'} · ${unitLabel(nu)}`);b.onclick=()=>startUnit(nu);acts.appendChild(b);}
+  if(nu){const b=el('button',{class:'lbtn'+(due.length?' ghost':'')},`${nu.t==='exam'?(nu.big?'Большой экзамен':'Экзамен'):done.length?'Следующий урок':'Начать первый урок'} · ${unitLabel(nu)}`);b.onclick=()=>startUnit(nu);acts.appendChild(b);}
   if(learned>=4){const b=el('button',{class:'lbtn ghost'},'Свободная тренировка · без ограничений');b.onclick=()=>startSession('free');acts.appendChild(b);}
   if(!due.length&&!nu)acts.appendChild(el('div',{class:'lnote'},'Все уроки пройдены. Тренируйся сколько хочешь — повторения тоже придут по расписанию.'));
   root.appendChild(acts);
@@ -878,15 +885,15 @@ function renderLearn(){
   const off=[0,46,0,-46];
   let pos=0;
   for(const x of units()){
-    const st=unitDone(x)?'done':x===nu||(nu&&x.t===nu.t&&(x.li===nu.li&&x.e===nu.e))?'cur':'lock';
+    const st=unitDone(x)?'done':x===nu||(nu&&x.t===nu.t&&x.li===nu.li&&x.key===nu.key)?'cur':'lock';
     let node;
     if(x.t==='lesson'){
       node=el('button',{class:'lnode '+st,style:`transform:translateX(${off[pos%4]}px)`},`<span class="lc">${st==='done'?CHECK:x.li+1}</span><span class="lw">${arSpan(lessonIds(x.li).map(i=>WORDS[i][0]).join(' · '))}</span>`);
       pos++;
       if(st==='lock')node.disabled=true;else node.onclick=()=>startSession(st==='done'?'practice':'lesson',x.li);
     }else{
-      const best=(v._exams||{})[x.e];
-      node=el('button',{class:'lnode exam '+st},`<span class="lc">${st==='done'?CHECK:'Э'}</span><span class="lw">Экзамен · ${unitLabel(x)}${best!==undefined?` · лучший ${best}%`:''}</span>`);
+      const best=(v._exams||{})[x.key];
+      node=el('button',{class:'lnode exam '+(x.big?'big ':'')+st},`<span class="lc">${st==='done'?CHECK:x.big?'БЭ':'Э'}</span><span class="lw">${x.big?'Большой экзамен':'Экзамен'} · ${unitLabel(x)}${best!==undefined?` · лучший ${best}%`:''}</span>`);
       if(st==='lock')node.disabled=true;else node.onclick=()=>startUnit(x);
     }
     path.appendChild(node);
@@ -905,8 +912,8 @@ function startSession(kind,li,unit){
     :kind==='free'?shuffle(Object.keys(w).map(Number)).sort((a,b)=>(w[a].b||0)-(w[b].b||0)+(Math.random()-.5)).slice(0,10)
     :dueList().slice(0,8);
   const q=[];
-  if(kind==='exam'){ // по вопросу на каждое слово + 2 случайных, без подсказок и повторов
-    const pool=shuffle(ids).concat(shuffle(ids).slice(0,2));
+  if(kind==='exam'){ // по вопросу на каждое слово + 2 случайных (в большом — 4), без подсказок и повторов
+    const pool=shuffle(ids).concat(shuffle(ids).slice(0,unit.big?4:2));
     for(const i of pool)q.push({t:rnd(qTypes(i,true)),i});
   }else if(kind==='lesson'||kind==='nlesson'){
     for(const i of ids){if(!wstat(i))q.push({t:'intro',i});q.push({t:'ar2ru',i});}
@@ -916,7 +923,7 @@ function startSession(kind,li,unit){
     for(const i of shuffle(ids))q.push({t:rnd(qTypes(i)),i});
     const mids=uniqPairs(ids);if(mids.length>=4)q.splice(Math.min(3,q.length),0,{t:'match',ids:mids.slice(0,4)});
   }
-  S={kind,li,unit,ids,q,pos:0,total:q.length,firstBad:new Set(),retry:{},seen:new Set(),xp:0,correct:0,answered:0};
+  S={kind,li,unit,ids,q,pos:0,total:q.length,firstBad:new Set(),retry:{},seen:new Set(),xp:0,correct:0,answered:0,hist:[]};
   $('lx').hidden=false;document.body.style.overflow='hidden';
   drawStep();
 }
@@ -925,7 +932,11 @@ function drawStep(){
   const box=$('lx');box.innerHTML='';
   const top=el('div',{class:'lx-top'});
   const x=el('button',{class:'lx-close','aria-label':'Закрыть'},'×');x.onclick=closeSession;
-  top.append(x,el('div',{class:'lx-bar'},`<i style="width:${S.pos/S.total*100}%"></i>`));
+  // «назад»: вернуться к прошлому шагу и ответить заново — счёт откатывается к состоянию до него
+  if(S.pos<S.q.length)S.hist[S.pos]={correct:S.correct,answered:S.answered,xp:S.xp,firstBad:[...S.firstBad],retry:Object.assign({},S.retry),qlen:S.q.length,total:S.total};
+  const bk=el('button',{class:'lx-back','aria-label':'Назад'},'‹');bk.disabled=S.pos===0||S.pos>=S.q.length;
+  bk.onclick=()=>{const p=S.pos-1,h=S.hist[p];if(!h)return;Object.assign(S,{pos:p,correct:h.correct,answered:h.answered,xp:h.xp,firstBad:new Set(h.firstBad),retry:h.retry,total:h.total});S.q.length=h.qlen;drawStep();};
+  top.append(x,bk,el('div',{class:'lx-bar'},`<i style="width:${S.pos/S.total*100}%"></i>`));
   box.appendChild(top);
   if(S.pos>=S.q.length)return finishSession(box);
   const st=S.q[S.pos],body=el('div',{class:'lx-body'});box.appendChild(body);
@@ -1034,12 +1045,12 @@ function finishSession(box){
       v._w[i]=w;
     }
     if(S.kind==='lesson'&&!(v._done||[]).includes(S.li))(v._done=v._done||[]).push(S.li);
-    if(S.kind==='exam'){v._exams=v._exams||{};v._exams[S.unit.e]=Math.max(v._exams[S.unit.e]||0,acc);}
+    if(S.kind==='exam'){v._exams=v._exams||{};v._exams[S.unit.key]=Math.max(v._exams[S.unit.key]||0,acc);}
     v._v=2;v._xp=v._xp||{};v._xp[today]=(v._xp[today]||0)+xp;
   });
   // пройденный урок или повторение сам отмечает «Арабский» в трекере (не трогает явный минус)
   if(!(state[today]&&state[today].arabic!==undefined))mutate(today,v=>{v.arabic=true;});
-  const body=el('div',{class:'lx-body fin'},`<div class="lx-kind">${S.kind==='exam'?(passed?'Экзамен сдан':'Экзамен не сдан — нужно '+EXAM_PASS+'%'):isLes?'Урок пройден':S.kind==='free'?'Тренировка готова':'Повторение готово'}</div>
+  const body=el('div',{class:'lx-body fin'},`<div class="lx-kind">${S.kind==='exam'?((S.unit.big?'Большой экзамен':'Экзамен')+(passed?' сдан':' не сдан — нужно '+EXAM_PASS+'%')):isLes?'Урок пройден':S.kind==='free'?'Тренировка готова':'Повторение готово'}</div>
     <div class="fin-row"><div><b class="num">+${xp}</b><span>XP</span></div><div><b class="num">${acc}%</b><span>точность</span></div><div><b class="num">${learnStreak()}</b><span>дней подряд</span></div></div>
     ${S.firstBad.size?`<div class="lx-tr">Слова с ошибками вернутся в повторение завтра.</div>`:''}`);
   box.appendChild(body);
@@ -1048,7 +1059,7 @@ function finishSession(box){
   if(S.kind==='nlesson'){const su=S.unit.su,K2=knownSet(),left=surahIds(su).filter(i=>!K2.has(i)).length;
     if(left){const n=el('button',{class:'lbtn'},`Дальше · ${su[1]} · осталось ${left}`);n.onclick=()=>startNamaz(su);f.appendChild(n);}
     const r=el('button',{class:'lbtn'+(left?' ghost':'')},`Читать ${su[1]}`);r.onclick=()=>openReader(su);f.appendChild(r);}
-  if(nu){const n=el('button',{class:'lbtn'},`${nu.t==='exam'?(S.kind==='exam'?'Пересдать':'Экзамен'):'Следующий урок'} · ${unitLabel(nu)}`);n.onclick=()=>startUnit(nu);f.appendChild(n);}
+  if(nu){const n=el('button',{class:'lbtn'},`${nu.t==='exam'?(S.kind==='exam'&&nu.key===S.unit.key?'Пересдать':nu.big?'Большой экзамен':'Экзамен'):'Следующий урок'} · ${unitLabel(nu)}`);n.onclick=()=>startUnit(nu);f.appendChild(n);}
   if(Object.keys(L()._w||{}).length>=4){const m=el('button',{class:'lbtn'+(nu?' ghost':'')},'Ещё тренировка');m.onclick=()=>startSession('free');f.appendChild(m);}
   const b=el('button',{class:'lbtn ghost'},'Готово');b.onclick=closeSession;f.appendChild(b);box.appendChild(f);
 }

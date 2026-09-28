@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-28T04:47:02.431Z",
+ "updatedAt": "2026-09-28T04:47:46.789Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -101,11 +101,18 @@
     "quran": true,
     "tahajjud": false,
     "witr": false,
-    "sleep_back": false
+    "sleep_back": false,
+    "am_minox": true,
+    "am_vit_mg": true,
+    "am_vit_zn": true,
+    "am_vit_cr": true,
+    "duha": true,
+    "breakfast": true,
+    "work": 0.5
    },
-   "score": 5,
-   "pct": 16,
-   "updatedAt": "2026-09-28T04:46:47.430Z"
+   "score": 9.13,
+   "pct": 29,
+   "updatedAt": "2026-09-28T04:47:31.785Z"
   }
  }
 }

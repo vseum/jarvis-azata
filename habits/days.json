@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-28T10:23:24.806Z",
+ "updatedAt": "2026-09-28T10:36:20.146Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -206,7 +206,7 @@
     "am_vit_cr": true,
     "duha": true,
     "breakfast": true,
-    "work": 4,
+    "work": 4.5,
     "arabic": true,
     "_tasks": [
      {
@@ -265,7 +265,7 @@
    },
    "score": 17.25,
    "pct": 56,
-   "updatedAt": "2026-09-28T10:23:09.800Z"
+   "updatedAt": "2026-09-28T10:36:05.140Z"
   },
   "2026-W40": {
    "v": {

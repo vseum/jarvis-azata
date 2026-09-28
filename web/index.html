@@ -239,6 +239,8 @@ button,textarea{touch-action:manipulation}
 .ph h2,.ph-c h2{margin:0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .ph .hint,.ph-c .hint{font-size:12px;color:var(--ink-3)}
 .ph .cnt{font-size:12.5px;color:var(--ink-3);font-weight:600}
+.fitem .ftext{flex:1;min-width:0;text-align:left;font-size:17px;font-weight:600;color:var(--ink);padding:14px 0;line-height:1.35}
+.fitem.done .ftext{color:var(--ink-3);text-decoration:line-through}
 .frow{display:flex;align-items:flex-start;gap:12px}
 .frow textarea{flex:1;font:inherit;font-size:16px;font-weight:500;color:var(--ink);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;resize:none;min-height:56px;background:var(--bg)}
 .frow textarea:focus{outline:none;border-color:var(--ink)}
@@ -633,7 +635,7 @@ function autoDiary(k){const v=state[k];if(!isDay(k)||!v||v._da||v.diary!==undefi
 function touch(k){autoDiary(k);unsynced[k]=true;lsSave();clearTimeout(timer);timer=setTimeout(push,800);} // typing: save without redraw
 function isoWeek(k){const d=parse(k);const th=new Date(d);th.setDate(d.getDate()-(d.getDay()+6)%7+3);const y=th.getFullYear();const j=new Date(y,0,4);return y+'-W'+pad(1+Math.round(((th-j)/864e5-3+(j.getDay()+6)%7)/7));}
 function weekStart(k){return addDays(k,-((parse(k).getDay()+6)%7));}
-let refocus=null;
+let refocus=null,focusEdit=null;
 
 function listUI(k,field,g,placeholder){
   const wrap=el('div',{class:'list'});
@@ -668,12 +670,26 @@ function renderDayPlans(root,k){
   const f=v._focus||{};
   const fs=el('section',{class:'pblock focus'+(f.done?' done':'')});
   fs.appendChild(planHead('Фокус дня','что порадует и прибавит сил'));
-  const fr=el('div',{class:'frow'});
-  const ta=el('textarea',{id:'focus-'+k,rows:'2',placeholder:'Одно главное дело на сегодня'});ta.value=f.t||'';
-  ta.oninput=()=>{docOf(k)._focus=Object.assign({},docOf(k)._focus,{t:ta.value});touch(k);};
-  const fb=el('button',{class:'ck big','aria-pressed':String(!!f.done),'aria-label':'Фокус выполнен'},CHECK);
-  fb.onclick=()=>mutate(k,v=>{v._focus=Object.assign({},v._focus,{done:!(v._focus&&v._focus.done)});});
-  fr.append(ta,fb);fs.appendChild(fr);root.appendChild(fs);
+  // заполненный фокус — пункт с галочкой; нажатие на текст — снова правка
+  if((f.t||'').trim()&&focusEdit!==k){
+    const row=el('div',{class:'item fitem'+(f.done?' done':'')});
+    const ck=el('button',{class:'ck','aria-pressed':String(!!f.done),'aria-label':'Фокус выполнен'},CHECK);
+    ck.onclick=()=>mutate(k,v=>{v._focus=Object.assign({},v._focus,{done:!(v._focus&&v._focus.done)});});
+    const tx=el('button',{class:'ftext','aria-label':'Изменить фокус'},esc(f.t));
+    tx.onclick=()=>{focusEdit=k;refocus='focus-'+k;render();};
+    const del=el('button',{class:'del','aria-label':'Удалить'},'×');
+    del.onclick=()=>{const before=Object.assign({},docOf(k)._focus);mutate(k,v=>{delete v._focus;});toast('Фокус удалён',()=>mutate(k,v=>{v._focus=before;}));};
+    row.append(ck,tx,del);fs.appendChild(row);root.appendChild(fs);
+  }else{
+    const fr=el('div',{class:'frow'});
+    const ta=el('textarea',{id:'focus-'+k,rows:'2',placeholder:'Одно главное дело на сегодня',enterkeyhint:'done'});ta.value=f.t||'';
+    ta.oninput=()=>{docOf(k)._focus=Object.assign({},docOf(k)._focus,{t:ta.value});touch(k);};
+    const save=()=>{if(focusEdit===k)focusEdit=null;docOf(k)._focus=Object.assign({},docOf(k)._focus,{t:ta.value.trim()});touch(k);};
+    // Enter / «Готово» на клавиатуре — сразу в пункт; уход в другое поле — только сохранить, без перерисовки (не сбить ввод)
+    ta.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();save();render();}};
+    ta.onblur=()=>{if(!ta.isConnected)return;save();setTimeout(()=>{const a=document.activeElement;if(!a||!/^(INPUT|TEXTAREA)$/.test(a.tagName))render();},0);};
+    fr.append(ta);fs.appendChild(fr);root.appendChild(fs);
+  }
 
   // дела
   const tasks=v._tasks||[];

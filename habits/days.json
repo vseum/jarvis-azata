@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-28T06:48:43.438Z",
+ "updatedAt": "2026-09-28T07:06:18.396Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -206,7 +206,7 @@
     "am_vit_cr": true,
     "duha": true,
     "breakfast": true,
-    "work": 3,
+    "work": 3.5,
     "arabic": true,
     "_tasks": [
      {
@@ -248,16 +248,19 @@
      {
       "id": "muku4nyp5z70",
       "t": "ранний подъем",
-      "done": false
+      "done": true,
+      "up": "2026-09-28T07:05:45.548Z"
      }
     ],
     "am_push": true,
     "am_abs": true,
-    "am_pull": true
+    "am_pull": true,
+    "am_shower": false,
+    "am_squat": true
    },
-   "score": 14.75,
-   "pct": 48,
-   "updatedAt": "2026-09-28T06:48:28.437Z"
+   "score": 15.88,
+   "pct": 51,
+   "updatedAt": "2026-09-28T07:06:03.388Z"
   },
   "2026-W40": {
    "v": {

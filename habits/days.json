@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-28T08:00:13.033Z",
+ "updatedAt": "2026-09-28T10:23:24.806Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -257,11 +257,15 @@
     "am_abs": true,
     "am_pull": true,
     "am_shower": false,
-    "am_squat": true
+    "am_squat": true,
+    "walk": true,
+    "jamaat": [
+     "Зухр"
+    ]
    },
-   "score": 16,
-   "pct": 52,
-   "updatedAt": "2026-09-28T07:59:58.032Z"
+   "score": 17.25,
+   "pct": 56,
+   "updatedAt": "2026-09-28T10:23:09.800Z"
   },
   "2026-W40": {
    "v": {

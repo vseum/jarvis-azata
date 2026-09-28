@@ -291,7 +291,7 @@ button,textarea{touch-action:manipulation}
 .ilw{display:inline-flex;flex-direction:column;align-items:center}
 .ilw .ar{font-size:27px;line-height:1.75}
 .ilg{font-family:var(--f);font-size:11.5px;font-weight:500;color:var(--ink-2);line-height:1.25;max-width:120px;text-align:center;direction:ltr}
-.ilw.hl .ar,.ilw.hl .ilg{color:#D93025}.ilw.hl .ilg{font-weight:700}
+.ilw.ilhl .ar,.ilw.ilhl .ilg{color:#D93025}.ilw.ilhl .ilg{font-weight:700}
 .wexa .il{gap:4px 10px}.wexa .ilw .ar{font-size:23px}
 .rw .ilg{display:none}
 .gl-on .rd-line{display:flex;flex-wrap:wrap;align-items:flex-start;gap:4px 8px}
@@ -996,7 +996,7 @@ const GLOSS=window.QGLOSS||{};
 function ilToks(t){const out=[];for(const x of t.split(' ')){if(!x)continue;if(MARKRE.test(x)&&out.length)out[out.length-1]+=' '+x;else out.push(x);}return out;}
 function ilHtml(i){const w=WORDS[i],g=GLOSS[w[8]],tk=ilToks(w[3]);
   if(!g||g.length!==tk.length)return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;
-  return `<div class="il" dir="rtl">${tk.map((t,k)=>`<span class="ilw${k===w[5]?' hl':''}"><span class="ar" lang="ar">${esc(arText(t))}</span><span class="ilg">${esc(g[k])}</span></span>`).join('')}</div>`;}
+  return `<div class="il" dir="rtl">${tk.map((t,k)=>`<span class="ilw${k===w[5]?' ilhl':''}"><span class="ar" lang="ar">${esc(arText(t))}</span><span class="ilg">${esc(g[k])}</span></span>`).join('')}</div>`;}
 function ayahHtml(i){const w=WORDS[i];return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;}
 function drawBuild(body,box,st){ // «собери аят»: слова по порядку, как в Duolingo
   const i=st.i,[a,,m,ea,er]=WORDS[i];

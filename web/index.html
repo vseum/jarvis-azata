@@ -86,6 +86,13 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radi
 .lx-er .hlw,.lx-note .hlw,.wexr .hlw,.lx-q .hlw{font-weight:600}
 .word{cursor:pointer}
 .word:active{background:var(--fill)}
+.ls{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.ls-h{font-size:11.5px;font-weight:600;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase}
+.ls-r{display:flex;gap:12px;align-items:flex-start}
+.ls-m{flex:0 0 92px;font-size:14px;font-weight:700;padding-top:6px}
+.ls-x{flex:1;display:flex;flex-direction:column;align-items:flex-end;text-align:right}
+.ls-a{font-size:24px;line-height:1.8}
+.ls-ru{font-size:13px;color:var(--ink-2);line-height:1.4}.ls-ru i{font-style:normal;color:var(--ink-3);font-size:11.5px}
 .wx{font-size:12.5px;color:var(--ink-2);line-height:1.5;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
 .lx-expl{font-size:14.5px;line-height:1.55;background:var(--fill);border-radius:12px;padding:12px 14px;color:var(--ink)}
 .ar.ex{font-size:1.35em;line-height:1.4}
@@ -954,7 +961,7 @@ function drawStep(){
   const W=i=>WORDS[i];
   if(st.t==='intro'){
     const [a,tr,m,ea,er,hl,,,,kind,expl]=W(st.i);
-    body.innerHTML=`<div class="lx-kind">Новое слово</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-mean">${esc(m)}</div><div class="lx-tr">${esc(kind||'')} · читается «${esc(tr)}»</div>${expl?`<div class="lx-expl">${explHtml(expl)}</div>`:''}<div class="lx-ayah">${ilHtml(st.i)}<div class="lx-er">${ruHl(st.i)}</div></div>`;
+    body.innerHTML=`<div class="lx-kind">Новое слово</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-mean">${esc(m)}</div><div class="lx-tr">${esc(kind||'')} · читается «${esc(tr)}»</div>${expl?`<div class="lx-expl">${explHtml(expl)}</div>`:''}${sensesHtml(st.i)}<div class="lx-ayah">${ilHtml(st.i)}<div class="lx-er">${ruHl(st.i)}</div></div>`;
     footer(box,null,'Понятно');return;
   }
   if(st.t==='match')return drawMatch(body,box,st);
@@ -997,6 +1004,9 @@ function ilToks(t){const out=[];for(const x of t.split(' ')){if(!x)continue;if(M
 function ilHtml(i){const w=WORDS[i],g=GLOSS[w[8]],tk=ilToks(w[3]);
   if(!g||g.length!==tk.length)return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;
   return `<div class="il" dir="rtl">${tk.map((t,k)=>`<span class="ilw${k===w[5]?' ilhl':''}"><span class="ar" lang="ar">${esc(arText(t))}</span><span class="ilg">${esc(g[k])}</span></span>`).join('')}</div>`;}
+// значения слова с примером на каждое: поле 12 = [[значение, фрагмент аята, № слова во фрагменте, перевод, ссылка]]
+function sensesHtml(i){const ss=WORDS[i][12];if(!ss||ss.length<2)return '';
+  return `<div class="ls"><div class="ls-h">Значения · пример на каждое</div>${ss.map(([m,fr,h,ru,ref])=>`<div class="ls-r"><div class="ls-m">${esc(m)}</div><div class="ls-x"><span class="ar ls-a" lang="ar" dir="rtl">${arHl(fr,h)}</span><span class="ls-ru">${esc(ru)} <i>${esc(ref)}</i></span></div></div>`).join('')}</div>`;}
 function ayahHtml(i){const w=WORDS[i];return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;}
 function drawBuild(body,box,st){ // «собери аят»: слова по порядку, как в Duolingo
   const i=st.i,[a,,m,ea,er]=WORDS[i];
@@ -1091,7 +1101,7 @@ function renderDay(){
   const [wi,[wa,wt,wm,ea,er,ehl,,,,wk,wx]]=wordFor(viewDate);
   if(WORDS.length)root.appendChild(wordCard=el('section',{class:'word',role:'button',title:'Открыть «Слова»'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${MAIN_N}</span></div>
     <div class="wmain"><div class="wtr"><b>${esc(wm)}</b><span>${esc(wk||'')} · ${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
-    <div class="wex"><div class="wexa" lang="ar" dir="rtl">${ilHtml(wi)}</div><div class="wexr">${ruHl(wi)}</div></div>${wx?`<div class="wx">${explHtml(wx)}</div>`:''}`));
+    <div class="wex"><div class="wexa" lang="ar" dir="rtl">${ilHtml(wi)}</div><div class="wexr">${ruHl(wi)}</div></div>${wx?`<div class="wx">${explHtml(wx)}</div>`:''}${sensesHtml(wi)}`));
   if(wordCard){wordCard.onclick=()=>switchTab('learn');wordCard=null;}
   const nowOpen=new Set();
   trackerPlan(root,viewDate,nowOpen);

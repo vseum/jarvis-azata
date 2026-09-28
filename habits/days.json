@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-28T05:56:16.521Z",
+ "updatedAt": "2026-09-28T05:57:05.437Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -194,11 +194,29 @@
      "done": false
     },
     "diary": true,
-    "_da": true
+    "_da": true,
+    "_fun": [
+     {
+      "id": "muku49boui2y",
+      "t": "прогулка",
+      "done": false,
+      "up": "2026-09-28T05:56:33.376Z"
+     },
+     {
+      "id": "muku4dgyjjxz",
+      "t": "кофе",
+      "done": false
+     },
+     {
+      "id": "muku4nyp5z70",
+      "t": "ранний подъем",
+      "done": false
+     }
+    ]
    },
    "score": 11.25,
    "pct": 36,
-   "updatedAt": "2026-09-28T05:56:01.511Z"
+   "updatedAt": "2026-09-28T05:56:50.427Z"
   }
  }
 }

@@ -99,6 +99,11 @@ HL=json.load(open(__file__.rsplit('/',1)[0]+'/ru_hl.json',encoding='utf8'))
 for i,w in enumerate(W2):
     m=re.search(r'(?<![А-Яа-яЁё])'+re.escape(HL[str(i)])+r'(?![А-Яа-яЁё])',w[4]);assert m,(i,HL[str(i)])
     w[11:]=[[m.start(),m.end()]]
+# значения с примером на каждое (поле 12): senses.json {индекс: [[значение, фрагмент, № слова, перевод, ссылка]]}
+SN=json.load(open(__file__.rsplit('/',1)[0]+'/senses.json',encoding='utf8'))
+for i,w in enumerate(W2):
+    ss=SN.get(str(i),[])
+    if len(ss)>=2:w[12:]=[ss]
 out=js[:mW.start(1)]+json.dumps(W2,ensure_ascii=False,separators=(',',':'))+js[mW.end(1):]
 out='\n'.join(l for l in out.split('\n') if not l.startswith(('window.QNAMAZ=','window.QCOV=')))
 out=out.rstrip('\n')+'\nwindow.QNAMAZ='+json.dumps(NAMAZ,ensure_ascii=False,separators=(',',':'))+';\n'

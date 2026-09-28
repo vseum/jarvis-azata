@@ -262,6 +262,10 @@ button,textarea{touch-action:manipulation}
 .item.add .plus{width:24px;text-align:center;color:var(--ink-3);font-size:20px;flex:none}
 .sub-h{font-size:12px;font-weight:600;color:var(--ink-2);margin:14px 0 4px}
 .sub-h:first-of-type{margin-top:0}
+.yrev{border:1.5px solid var(--ink);border-radius:16px;padding:0 14px 12px;margin-bottom:10px}
+.yrev .bh{cursor:default}
+.ymv{font-size:12.5px;font-weight:600;color:var(--ink-2);padding:6px 10px;border-radius:999px;border:1.5px solid var(--line);flex:none;margin-right:4px}
+.yno{margin:10px 0 0}
 .carry{align-self:flex-start;font-size:13px;font-weight:600;padding:8px 14px;border-radius:999px;border:1.5px solid var(--ink);margin-bottom:12px}
 .sep{display:flex;align-items:center;gap:12px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin:6px 0 -6px}
 .sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--line)}
@@ -734,6 +738,33 @@ function renderPlan(){
   ms.appendChild(mh);ms.appendChild(listUI(planMonth,'_goals',null,'Добавить цель месяца'));root.appendChild(ms);
   doRefocus();
 }
+// «Вчера не отмечено»: неотмеченные пункты вчерашнего плана — отметить сделанное задним числом или перенести на сегодня
+function yesterdayReview(root){
+  if(viewDate!==today)return;
+  const y=addDays(today,-1),yv=state[y]||{};
+  if(yv._rv)return; // уже разобрано («остальное не сделал»)
+  const rows=[];
+  if(yv._focus&&(yv._focus.t||'').trim()&&!yv._focus.done)rows.push({kind:'focus',t:yv._focus.t,tag:'фокус'});
+  for(const x of yv._tasks||[])if(!x.done&&!x.moved)rows.push({kind:'_tasks',id:x.id,t:x.t,g:x.g,tag:(x.g||'v')==='c'?'главное':'дело'});
+  for(const x of yv._fun||[])if(!x.done)rows.push({kind:'_fun',id:x.id,t:x.t,tag:'радость'});
+  if(!rows.length)return;
+  const sec=el('section',{class:'block open yrev'});
+  sec.appendChild(el('div',{class:'bh'},`<div class="t"><h2>Вчера не отмечено</h2><span class="hint">сделал — отметь, не успел — перенеси на сегодня</span></div><span class="cnt num">${rows.length}</span>`));
+  const body=el('div',{class:'body'});
+  const now=()=>new Date().toISOString();
+  for(const r of rows){
+    const row=el('div',{class:'row tri'});
+    row.appendChild(el('div',{class:'lab'},`<div class="n">${esc(r.t)}</div><div class="note">${r.tag}</div>`));
+    if(r.kind==='_tasks'){const mv=el('button',{class:'ymv'},'→ сегодня');
+      mv.onclick=()=>{mutate(y,v=>{const x=(v._tasks||[]).find(x=>x.id===r.id);if(x){x.moved=true;x.up=now();}});mutate(today,v=>{(v._tasks=v._tasks||[]).push({id:uid(),t:r.t,g:r.g||'v',done:false,at:now()});});};
+      row.appendChild(mv);}
+    const yes=el('button',{class:'mark yes','aria-pressed':'false','aria-label':'Сделал вчера'},CHECK);
+    yes.onclick=()=>mutate(y,v=>{if(r.kind==='focus')v._focus=Object.assign({},v._focus,{done:true});else{const x=(v[r.kind]||[]).find(x=>x.id===r.id);if(x){x.done=true;x.up=now();}}});
+    row.appendChild(yes);body.appendChild(row);
+  }
+  const no=el('button',{class:'carry yno'},'Остальное не сделал');no.onclick=()=>mutate(y,v=>{v._rv=true;});
+  body.appendChild(no);sec.appendChild(body);root.appendChild(sec);
+}
 // план дня в трекере: только отметки, заполнение — во вкладке «План»
 function trackerPlan(root,k,nowOpen){
   const v=state[k]||{};
@@ -1104,6 +1135,7 @@ function renderDay(){
     <div class="wex"><div class="wexa" lang="ar" dir="rtl">${ilHtml(wi)}</div><div class="wexr">${ruHl(wi)}</div></div>${wx?`<div class="wx">${explHtml(wx)}</div>`:''}${sensesHtml(wi)}`));
   if(wordCard){wordCard.onclick=()=>switchTab('learn');wordCard=null;}
   const nowOpen=new Set();
+  yesterdayReview(root);
   trackerPlan(root,viewDate,nowOpen);
   for(const b of BLOCKS){
     let got=0;for(const h of b.items)got+=sc(h,v);

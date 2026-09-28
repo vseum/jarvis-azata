@@ -256,11 +256,11 @@ button,textarea{touch-action:manipulation}
 .ck.big svg{width:18px;height:18px}
 .list{border-top:1px solid var(--line)}
 .item{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);min-height:50px}
-.item input{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;color:var(--ink);padding:12px 0}
-.item input:focus{outline:none}
-.item input::placeholder{color:var(--ink-3)}
-.item.done input{color:var(--ink-3);text-decoration:line-through}
-.item.moved input{color:var(--ink-3)}
+.item input,.item textarea{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:16px;line-height:1.4;color:var(--ink);padding:12px 0;resize:none;overflow:hidden;display:block}
+.item input:focus,.item textarea:focus{outline:none}
+.item input::placeholder,.item textarea::placeholder{color:var(--ink-3)}
+.item.done input,.item.done textarea{color:var(--ink-3);text-decoration:line-through}
+.item.moved input,.item.moved textarea{color:var(--ink-3)}
 .item .mv{font-size:11.5px;color:var(--ink-3);white-space:nowrap}
 .item .del{width:32px;height:32px;font-size:20px;color:#C4C4C4;flex:none}
 .item.add .plus{width:24px;text-align:center;color:var(--ink-3);font-size:20px;flex:none}
@@ -643,6 +643,8 @@ function isoWeek(k){const d=parse(k);const th=new Date(d);th.setDate(d.getDate()
 function weekStart(k){return addDays(k,-((parse(k).getDay()+6)%7));}
 let refocus=null,focusEdit=null;
 
+function grow(t){t.style.height='auto';t.style.height=t.scrollHeight+'px';}
+function growAll(root){(root||document).querySelectorAll('.item textarea').forEach(grow);}
 function listUI(k,field,g,placeholder){
   const wrap=el('div',{class:'list'});
   const all=docOf(k)[field]||[];
@@ -650,8 +652,9 @@ function listUI(k,field,g,placeholder){
     const row=el('div',{class:'item'+(it.done?' done':'')+(it.moved?' moved':'')});
     const ck=el('button',{class:'ck','aria-pressed':String(!!it.done),'aria-label':'Сделано'},CHECK);
     ck.onclick=()=>mutate(k,v=>{const x=(v[field]||[]).find(x=>x.id===it.id);if(x){x.done=!x.done;delete x.moved;x.up=new Date().toISOString();}});
-    const inp=el('input',{type:'text',value:'','aria-label':'Текст'});inp.value=it.t;
-    inp.oninput=()=>{it.t=inp.value;it.up=new Date().toISOString();touch(k);};
+    const inp=el('textarea',{rows:'1','aria-label':'Текст',enterkeyhint:'done'});inp.value=it.t; // длинный текст переносится на новую строку
+    inp.oninput=()=>{inp.value=inp.value.replace(/\n/g,' ');it.t=inp.value;it.up=new Date().toISOString();touch(k);grow(inp);};
+    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();inp.blur();}};
     const del=el('button',{class:'del','aria-label':'Удалить'},'×');
     del.onclick=()=>{const before=(docOf(k)[field]||[]).slice();mutate(k,v=>{v[field]=(v[field]||[]).filter(x=>x.id!==it.id);markGone(v,it.id);});toast('Удалено',()=>mutate(k,v=>{v[field]=before;unGone(v,[it.id]);}));};
     row.append(ck,inp);
@@ -660,7 +663,7 @@ function listUI(k,field,g,placeholder){
   }
   const addId='add-'+k+'-'+field+'-'+(g||'');
   const add=el('div',{class:'item add'});
-  const ai=el('input',{type:'text',id:addId,placeholder:placeholder,enterkeyhint:'done'});
+  const ai=el('textarea',{rows:'1',id:addId,placeholder:placeholder,enterkeyhint:'done'});ai.oninput=()=>{ai.value=ai.value.replace(/\n/g,' ');grow(ai);};
   const commit=()=>{const t=ai.value.trim();if(!t)return;ai.value='';refocus=addId;mutate(k,v=>{(v[field]=v[field]||[]).push(Object.assign({id:uid(),t,done:false},g?{g}:{}));});};
   ai.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit();}};
   ai.onblur=()=>{if(ai.value.trim())commit();};
@@ -1460,7 +1463,8 @@ function switchTab(t){
   try{localStorage.setItem('fajr-witr-tab',t);}catch(e){}
   render();window.scrollTo(0,0);
 }
-function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else if(tab==='notes')renderNotes();else if(tab==='learn')renderLearn();else renderStats();}
+function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else if(tab==='notes')renderNotes();else if(tab==='learn')renderLearn();else renderStats();growAll();}
+addEventListener('resize',()=>growAll());
 
 function go(n){const d=addDays(viewDate,n);if(d>today)return;viewDate=d;render();}
 $('prev').onclick=()=>go(-1);

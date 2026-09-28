@@ -347,6 +347,10 @@ button,textarea{touch-action:manipulation}
 .lx-big{text-align:center;padding:10px 0}
 .ar.big{font-size:64px;line-height:1.7}
 .lx-mean{font-size:22px;font-weight:600;text-align:center}
+.mn{list-style:none;margin:0;padding:0;display:inline-flex;flex-direction:column;gap:6px;text-align:left}
+.mn li{display:flex;align-items:baseline;gap:10px}
+.mn i{font-style:normal;flex:none;font-size:12px;font-weight:700;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;display:inline-grid;place-items:center;transform:translateY(-2px)}
+.wtr .mn{gap:3px}.wtr .mn li{gap:7px}.wtr .mn i{width:17px;height:17px;font-size:10.5px}
 .lx-tr{font-size:14px;color:var(--ink-3);text-align:center}
 .lx-q{font-size:26px;font-weight:600;text-align:center;padding:24px 0}
 .lx-ayah{border-top:1px solid var(--line);padding-top:10px;text-align:right}
@@ -1008,7 +1012,7 @@ function drawStep(){
   const W=i=>WORDS[i];
   if(st.t==='intro'){
     const [a,tr,m,ea,er,hl,,,,kind,expl]=W(st.i);
-    body.innerHTML=`<div class="lx-kind">Новое слово</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-mean">${esc(m)}</div><div class="lx-tr">${esc(kind||'')} · читается «${esc(tr)}»</div>${expl?`<div class="lx-expl">${explHtml(expl)}</div>`:''}${sensesHtml(st.i)}<div class="lx-ayah">${ilHtml(st.i)}<div class="lx-er">${ruHl(st.i)}</div></div>`;
+    body.innerHTML=`<div class="lx-kind">Новое слово</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-mean">${meanHtml(st.i)}</div><div class="lx-tr">${esc(kind||'')} · читается «${esc(tr)}»</div>${expl?`<div class="lx-expl">${explHtml(expl)}</div>`:''}${sensesHtml(st.i)}<div class="lx-ayah">${ilHtml(st.i)}<div class="lx-er">${ruHl(st.i)}</div></div>`;
     footer(box,null,'Понятно');return;
   }
   if(st.t==='match')return drawMatch(body,box,st);
@@ -1052,6 +1056,12 @@ function ilHtml(i){const w=WORDS[i],g=GLOSS[w[8]],tk=ilToks(w[3]);
   if(!g||g.length!==tk.length)return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;
   return `<div class="il" dir="rtl">${tk.map((t,k)=>`<span class="ilw${k===w[5]?' ilhl':''}"><span class="ar" lang="ar">${esc(arText(t))}</span><span class="ilg">${esc(g[k])}</span></span>`).join('')}</div>`;}
 // значения слова с примером на каждое: поле 12 = [[значение, фрагмент аята, № слова во фрагменте, перевод, ссылка]]
+// значение слова: разные значения — нумерованным списком, синонимы — через «/»
+function meanHtml(i){const w=WORDS[i],ss=w[12];
+  const groups=ss&&ss.length>=2?ss.map(x=>x[0]):w[2].split(/\s*;\s*/);
+  const syn=t=>esc(t).replace(/,\s*(?![^(]*\))/g,' / ');
+  if(groups.length<2)return `<span class="mn1">${syn(groups[0])}</span>`;
+  return `<ol class="mn">${groups.map((g,k)=>`<li><i>${k+1}</i>${syn(g)}</li>`).join('')}</ol>`;}
 function sensesHtml(i){const ss=WORDS[i][12];if(!ss||ss.length<2)return '';
   return `<div class="ls"><div class="ls-h">Значения · пример на каждое</div>${ss.map(([m,fr,h,ru,ref])=>`<div class="ls-r"><div class="ls-m">${esc(m)}</div><div class="ls-x"><span class="ar ls-a" lang="ar" dir="rtl">${arHl(fr,h)}</span><span class="ls-ru">${esc(ru)} <i>${esc(ref)}</i></span></div></div>`).join('')}</div>`;}
 function ayahHtml(i){const w=WORDS[i];return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;}
@@ -1147,7 +1157,7 @@ function renderDay(){
   if(ht)root.appendChild(el('figure',{class:'hadith'},`<blockquote>«${esc(ht)}»</blockquote><figcaption>Хадис дня · ${esc(hs)}</figcaption>`));
   const [wi,[wa,wt,wm,ea,er,ehl,,,,wk,wx]]=wordFor(viewDate);
   if(WORDS.length)root.appendChild(wordCard=el('section',{class:'word',role:'button',title:'Открыть «Слова»'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${MAIN_N}</span></div>
-    <div class="wmain"><div class="wtr"><b>${esc(wm)}</b><span>${esc(wk||'')} · ${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
+    <div class="wmain"><div class="wtr"><b>${meanHtml(wi)}</b><span>${esc(wk||'')} · ${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
     <div class="wex"><div class="wexa" lang="ar" dir="rtl">${ilHtml(wi)}</div><div class="wexr">${ruHl(wi)}</div></div>${wx?`<div class="wx">${explHtml(wx)}</div>`:''}${sensesHtml(wi)}`));
   if(wordCard){wordCard.onclick=()=>switchTab('learn');wordCard=null;}
   const nowOpen=new Set();

@@ -83,7 +83,7 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radi
 [lang="ar"]{text-rendering:optimizeLegibility;font-variant-ligatures:normal;font-feature-settings:normal}
 .wexr{font-size:12px;color:var(--ink-2);margin-top:0}
 .hlw{color:#D93025}
-.lx-er .hlw,.lx-note .hlw,.wexr .hlw,.lx-q .hlw{font-weight:600}
+.lx-er .hlw,.lx-note .hlw,.wexr .hlw,.lx-q .hlw,.ls-ru .hlw{font-weight:600}
 .word{cursor:pointer}
 .word:active{background:var(--fill)}
 .ls{margin-top:12px;display:flex;flex-direction:column;gap:10px}
@@ -1065,9 +1065,9 @@ function meanHtml(i){const w=WORDS[i],ss=w[12];
   if(groups.length<2)return `<span class="mn1">${syn(groups[0])}</span>`;
   return `<ol class="mn">${groups.map((g,k)=>`<li><i>${k+1}</i>${syn(g)}</li>`).join('')}</ol>`;}
 function sensesHtml(i){const ss=WORDS[i][12];if(!ss||ss.length<2)return '';
-  return `<div class="ls"><div class="ls-h">Когда как переводится</div>${ss.map(([m,fr,h,ru,ref,gl,hint],k)=>{
+  return `<div class="ls"><div class="ls-h">Когда как переводится</div>${ss.map(([m,fr,h,ru,ref,gl,hint,rh],k)=>{
     const tk=fr.split(' '),il=gl&&gl.length===tk.length?`<div class="il" dir="rtl">${tk.map((t,n)=>`<span class="ilw${n===h?' ilhl':''}"><span class="ar" lang="ar">${esc(arText(t))}</span><span class="ilg">${esc(gl[n])}</span></span>`).join('')}</div>`:`<span class="ar ls-a" lang="ar" dir="rtl">${arHl(fr,h)}</span>`;
-    return `<div class="ls-r"><div class="ls-t"><i>${k+1}</i><div><b>«${esc(m)}»</b>${hint?`<span>${esc(hint)}</span>`:''}</div></div>${il}<div class="ls-ru">${esc(ru)} <i>${esc(ref)}</i></div></div>`;}).join('')}</div>`;}
+    return `<div class="ls-r"><div class="ls-t"><i>${k+1}</i><div><b>«${esc(m)}»</b>${hint?`<span>${esc(hint)}</span>`:''}</div></div>${il}<div class="ls-ru">${rh?esc(ru.slice(0,rh[0]))+`<span class="hlw">${esc(ru.slice(rh[0],rh[1]))}</span>`+esc(ru.slice(rh[1])):esc(ru)} <i>${esc(ref)}</i></div></div>`;}).join('')}</div>`;}
 function ayahHtml(i){const w=WORDS[i];return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;}
 function drawBuild(body,box,st){ // «собери аят»: слова по порядку, как в Duolingo
   const i=st.i,[a,,m,ea,er]=WORDS[i];

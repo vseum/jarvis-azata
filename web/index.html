@@ -1045,6 +1045,7 @@ function drawStep(){
     b.onclick=()=>{if(answered)return;answered=true;
       const ok=o===right;b.classList.add(ok?'ok':'bad');
       if(!ok)[...ol.children].forEach((c,k)=>{if(opts[k]===right)c.classList.add('ok');});
+      if(st.t==='ayah')[...ol.children].forEach((c,k)=>{if(opts[k]===right)c.innerHTML=ruHl(i);}); // после ответа — слово красным и в переводе
       grade(i,ok);
       const n2=note||(st.t!=='ayah'&&expl?expl:'');
       footer(box,ok?{ok:true,note:n2}:{ok:false,right:isAr?arSpan(right):esc(right),note:n2},'Дальше');

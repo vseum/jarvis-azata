@@ -287,6 +287,16 @@ button,textarea{touch-action:manipulation}
 .lx-body.rd{gap:6px}
 .rd-ay{padding:4px 0 8px;border-bottom:1px solid var(--line)}
 .rd-line{text-align:right}
+.il{display:flex;flex-wrap:wrap;gap:6px 12px;padding:4px 0}
+.ilw{display:inline-flex;flex-direction:column;align-items:center}
+.ilw .ar{font-size:27px;line-height:1.75}
+.ilg{font-family:var(--f);font-size:11.5px;font-weight:500;color:var(--ink-2);line-height:1.25;max-width:120px;text-align:center;direction:ltr}
+.ilw.hl .ar,.ilw.hl .ilg{color:#D93025}.ilw.hl .ilg{font-weight:700}
+.wexa .il{gap:4px 10px}.wexa .ilw .ar{font-size:23px}
+.rw .ilg{display:none}
+.gl-on .rd-line{display:flex;flex-wrap:wrap;align-items:flex-start;gap:4px 8px}
+.gl-on .rw{display:inline-flex;flex-direction:column;align-items:center}
+.gl-on .rw .ilg{display:block;font-size:11px}
 .rw{font:inherit;color:var(--ink);padding:0 2px;border-radius:8px;line-height:inherit}
 .rw.new{color:var(--ink-3)}
 .rw.sel{background:#FDECEA;color:#D93025}
@@ -836,10 +846,11 @@ function openReader(su){
   const info=el('div',{class:'rd-info'},'<div class="lnote">Нажми на слово — покажу, из чего оно состоит и что значит.</div>');
   let sel=null;
   for(const ay of su[2]){
+    const g=GLOSS[su[0]+':'+ay[0]]||[];
     const d=el('div',{class:'rd-ay'});
     const line=el('div',{class:'ar ay rd-line',lang:'ar',dir:'rtl'});
     for(const tok of ay[2]){
-      const b=el('button',{class:'rw'+(!tokIds(tok).length||tokKnown(tok,K)?'':' new')},esc(arText(tok[0])));
+      const b=el('button',{class:'rw'+(!tokIds(tok).length||tokKnown(tok,K)?'':' new')},`<span>${esc(arText(tok[0]))}</span>${g.length===ay[2].length?`<span class="ilg">${esc(g[ay[2].indexOf(tok)])}</span>`:''}`);
       b.onclick=()=>{if(sel)sel.classList.remove('sel');sel=b;b.classList.add('sel');showTok(info,tok,K);};
       line.appendChild(b);line.appendChild(document.createTextNode(' '));
     }
@@ -847,7 +858,7 @@ function openReader(su){
     d.appendChild(line);d.appendChild(el('div',{class:'rd-ru',hidden:''},esc(ay[1])));
     body.appendChild(d);
   }
-  tg.onclick=()=>{const on=tg.classList.toggle('on');body.querySelectorAll('.rd-ru').forEach(e=>e.hidden=!on);};
+  tg.onclick=()=>{const on=tg.classList.toggle('on');body.classList.toggle('gl-on',on);body.querySelectorAll('.rd-ru').forEach(e=>e.hidden=!on);};
   const f=el('div',{class:'lx-foot rd-foot'});f.appendChild(info);
   const left=surahIds(su).filter(i=>!K.has(i)).length;
   if(left){const lb=el('button',{class:'lbtn'},`Учить слова суры · осталось ${left}`);lb.onclick=()=>startNamaz(su);f.appendChild(lb);}
@@ -943,7 +954,7 @@ function drawStep(){
   const W=i=>WORDS[i];
   if(st.t==='intro'){
     const [a,tr,m,ea,er,hl,,,,kind,expl]=W(st.i);
-    body.innerHTML=`<div class="lx-kind">Новое слово</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-mean">${esc(m)}</div><div class="lx-tr">${esc(kind||'')} · читается «${esc(tr)}»</div>${expl?`<div class="lx-expl">${explHtml(expl)}</div>`:''}<div class="lx-ayah">${ayahHtml(st.i)}<div class="lx-er">${ruHl(st.i)}</div></div>`;
+    body.innerHTML=`<div class="lx-kind">Новое слово</div><div class="lx-big">${arSpan(a,'big')}</div><div class="lx-mean">${esc(m)}</div><div class="lx-tr">${esc(kind||'')} · читается «${esc(tr)}»</div>${expl?`<div class="lx-expl">${explHtml(expl)}</div>`:''}<div class="lx-ayah">${ilHtml(st.i)}<div class="lx-er">${ruHl(st.i)}</div></div>`;
     footer(box,null,'Понятно');return;
   }
   if(st.t==='match')return drawMatch(body,box,st);
@@ -980,6 +991,12 @@ function drawStep(){
   body.appendChild(ol);
 }
 function explHtml(t){return esc(t).replace(/[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]+(?:[\s\u200c]*[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]+)*/g,m=>`<span class="ar ex" lang="ar" dir="rtl">${m}</span>`);}
+// подстрочник: под каждым арабским словом — русский перевод этого слова (QGLOSS[ссылка] по словам аята)
+const GLOSS=window.QGLOSS||{};
+function ilToks(t){const out=[];for(const x of t.split(' ')){if(!x)continue;if(MARKRE.test(x)&&out.length)out[out.length-1]+=' '+x;else out.push(x);}return out;}
+function ilHtml(i){const w=WORDS[i],g=GLOSS[w[8]],tk=ilToks(w[3]);
+  if(!g||g.length!==tk.length)return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;
+  return `<div class="il" dir="rtl">${tk.map((t,k)=>`<span class="ilw${k===w[5]?' hl':''}"><span class="ar" lang="ar">${esc(arText(t))}</span><span class="ilg">${esc(g[k])}</span></span>`).join('')}</div>`;}
 function ayahHtml(i){const w=WORDS[i];return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;}
 function drawBuild(body,box,st){ // «собери аят»: слова по порядку, как в Duolingo
   const i=st.i,[a,,m,ea,er]=WORDS[i];
@@ -1074,7 +1091,7 @@ function renderDay(){
   const [wi,[wa,wt,wm,ea,er,ehl,,,,wk,wx]]=wordFor(viewDate);
   if(WORDS.length)root.appendChild(wordCard=el('section',{class:'word',role:'button',title:'Открыть «Слова»'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${MAIN_N}</span></div>
     <div class="wmain"><div class="wtr"><b>${esc(wm)}</b><span>${esc(wk||'')} · ${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
-    <div class="wex"><div class="wexa" lang="ar" dir="rtl">${arHl(ea,ehl)}</div><div class="wexr">${ruHl(wi)}</div></div>${wx?`<div class="wx">${explHtml(wx)}</div>`:''}`));
+    <div class="wex"><div class="wexa" lang="ar" dir="rtl">${ilHtml(wi)}</div><div class="wexr">${ruHl(wi)}</div></div>${wx?`<div class="wx">${explHtml(wx)}</div>`:''}`));
   if(wordCard){wordCard.onclick=()=>switchTab('learn');wordCard=null;}
   const nowOpen=new Set();
   trackerPlan(root,viewDate,nowOpen);

@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-30T06:37:29.647Z",
+ "updatedAt": "2026-09-30T06:38:03.591Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -434,6 +434,12 @@
       "g": "c",
       "done": false,
       "at": "2026-09-30T01:38:04.549Z"
+     },
+     {
+      "id": "munqgs0cmwo3",
+      "t": "Прогулка с семьей",
+      "done": false,
+      "g": "c"
      }
     ],
     "sleep_isha": true,
@@ -453,11 +459,16 @@
     "am_minox": true,
     "am_vit_zn": true,
     "am_vit_cr": true,
-    "duha": true
+    "duha": true,
+    "_focus": {
+     "t": "Привести дела в порядок перед выездом в Зеленодольск"
+    },
+    "diary": true,
+    "_da": true
    },
-   "score": 13,
-   "pct": 42,
-   "updatedAt": "2026-09-30T06:37:14.636Z"
+   "score": 14,
+   "pct": 45,
+   "updatedAt": "2026-09-30T06:38:01.507Z"
   }
  }
 }

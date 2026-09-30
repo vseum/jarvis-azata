@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-30T04:13:28.833Z",
+ "updatedAt": "2026-09-30T04:22:39.941Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -445,11 +445,15 @@
     "fajr_masjid": true,
     "am_azkar": true,
     "quran": true,
-    "arabic": true
+    "arabic": true,
+    "am_squat": true,
+    "am_push": true,
+    "am_pull": true,
+    "breakfast": true
    },
-   "score": 6.33,
-   "pct": 20,
-   "updatedAt": "2026-09-30T04:13:13.737Z"
+   "score": 10.33,
+   "pct": 33,
+   "updatedAt": "2026-09-30T04:22:24.933Z"
   }
  }
 }

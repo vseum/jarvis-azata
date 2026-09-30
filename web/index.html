@@ -101,6 +101,11 @@ button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radi
 .hadith{margin:4px 0 0;padding:14px 16px;background:var(--fill);border-radius:14px}
 .hadith blockquote{margin:0;font-size:14px;line-height:1.5;font-weight:500;color:var(--ink);text-wrap:pretty}
 .hadith figcaption{margin-top:6px;font-size:11.5px;color:var(--ink-3)}
+.hd-top{font-size:11.5px;font-weight:600;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.hd-ar{font-size:24px;line-height:1.95;text-align:right;margin-bottom:6px}
+.hd-more{margin-top:8px}.hd-more summary{font-size:13px;font-weight:600;cursor:pointer;list-style:none;color:var(--ink)}
+.hd-more summary::before{content:'▸ ';color:var(--ink-3)}.hd-more[open] summary::before{content:'▾ '}
+.hd-more p{font-size:14px;line-height:1.55;margin:0 0 6px}
 .bh{display:flex;align-items:center;gap:10px;padding:6px 0 10px;width:100%;text-align:left}
 .bh .t{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .bh h2{margin:0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
@@ -1223,8 +1228,8 @@ let shownOpen=new Set(); // blocks open on screen right now
 function renderDay(){
   const v=state[viewDate]||{};
   const root=$('view-day');root.innerHTML='';
-  const [ht,hs]=hadithFor(viewDate);
-  if(ht)root.appendChild(el('figure',{class:'hadith'},`<blockquote>«${esc(ht)}»</blockquote><figcaption>Хадис дня · ${esc(hs)}</figcaption>`));
+  const [ht,hs,har,hctx,hwhy]=hadithFor(viewDate);
+  if(ht){const f=el('figure',{class:'hadith'},`<div class="hd-top">Хадис дня · ${esc(hs)}</div>${har?`<div class="ar hd-ar" lang="ar" dir="rtl">${esc(har.replace(/\s*[،؛]\s*/g,' '))}</div>`:''}<blockquote>«${esc(ht)}»</blockquote>${hctx||hwhy?`<details class="hd-more"><summary>Когда и почему сказано · в чём смысл</summary>${hctx?`<div class="sr-k">Когда и почему сказано</div><p>${explHtml(hctx)}</p>`:''}${hwhy?`<div class="sr-k">В чём смысл</div><p>${explHtml(hwhy)}</p>`:''}</details>`:''}`);root.appendChild(f);}
   const nowOpen=new Set();
   yesterdayReview(root);
   trackerPlan(root,viewDate,nowOpen);

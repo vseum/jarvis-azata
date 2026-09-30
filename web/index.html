@@ -302,6 +302,23 @@ button,textarea{touch-action:manipulation}
 .lx-body.rd{gap:6px}
 .rd-ay{padding:4px 0 8px;border-bottom:1px solid var(--line)}
 .rd-line{text-align:right}
+.sura{display:flex;flex-direction:column;gap:18px;margin-top:6px;padding-bottom:30px}
+.sr-head{text-align:center}.sr-ar{font-size:44px;line-height:1.8}.sr-head h2{font-size:18px;margin:0 0 10px}
+.sr-facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;text-align:left;font-size:13.5px;background:var(--fill);border-radius:14px;padding:12px 14px}
+.sr-facts dt{color:var(--ink-3)}.sr-facts dd{margin:0;line-height:1.4}
+.sr-sec p{font-size:14.5px;line-height:1.55;margin:0 0 8px}
+.sr-learn{display:flex;flex-direction:column;gap:8px}
+.sr-cov{display:flex;align-items:baseline;gap:10px}.sr-cov b{font-size:24px}.sr-cov small{font-size:14px;color:var(--ink-3)}.sr-cov span{font-size:13px;color:var(--ink-2)}
+.sr-btns{display:flex;gap:8px;flex-wrap:wrap}
+.sr-h{display:flex;align-items:center;justify-content:space-between;gap:10px}.sr-tg{font-size:12px}
+.sr-ay{padding:10px 0 12px;border-bottom:1px solid var(--line)}
+.sr-il{gap:6px 12px}.sr-il .ilw .ar{font-size:30px;line-height:1.8}.sr-n{font-size:22px;color:var(--ink-3);align-self:center}
+.sr-ru{font-size:14px;color:var(--ink-2);line-height:1.5;margin-top:4px}.sr-ru b{color:var(--ink-3);font-weight:600}
+.sr-tf{margin-top:6px}.sr-tf summary{font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;list-style:none}
+.sr-tf summary::before{content:'▸ ';color:var(--ink-3)}.sr-tf[open] summary::before{content:'▾ '}
+.sr-tf p{background:var(--fill);border-radius:12px;padding:10px 12px;margin:6px 0 0;font-size:14px;line-height:1.55}
+.sr-hd{margin:0 0 10px;background:var(--fill);border-radius:12px;padding:10px 12px}.sr-hd blockquote{margin:0;font-size:14px;line-height:1.5}.sr-hd figcaption{font-size:12px;color:var(--ink-3);margin-top:4px}
+.sr-ls{margin:0;padding-left:18px;font-size:14.5px;line-height:1.55}.sr-ls li{margin-bottom:6px}
 .il{display:flex;flex-wrap:wrap;gap:6px 12px;padding:4px 0}
 .ilw{display:inline-flex;flex-direction:column;align-items:center}
 .ilw .ar{font-size:27px;line-height:1.75}
@@ -403,6 +420,7 @@ button,textarea{touch-action:manipulation}
       <button id="tab-plan" role="tab" aria-selected="false">План</button>
       <button id="tab-notes" role="tab" aria-selected="false">Заметки</button>
       <button id="tab-learn" role="tab" aria-selected="false">Слова</button>
+      <button id="tab-sura" role="tab" aria-selected="false">Сура</button>
       <button id="tab-stats" role="tab" aria-selected="false">Статистика</button>
     </div>
     <div class="datebar" id="datebar">
@@ -429,6 +447,7 @@ button,textarea{touch-action:manipulation}
   <main id="view-plan" class="plan" hidden></main>
   <main id="view-notes" class="notes" hidden></main>
   <main id="view-learn" class="learn" hidden></main>
+  <main id="view-sura" class="sura" hidden></main>
   <main id="view-stats" hidden></main>
   <div class="lx" id="lx" hidden></div>
   <div class="toast" id="toast" role="status" hidden></div>
@@ -935,6 +954,41 @@ function showTok(info,tok,K){
     return `<div class="rd-p"><span class="ar rd-s" lang="ar" dir="rtl">${esc(surf)}</span><span class="rd-m">${mean}${st}</span></div>`;
   }).join('');
   info.innerHTML=`<div class="rd-w">${arSpan(tok[0])}</div>${parts}`;
+}
+// ---------- «Сура»: изучаемая сура целиком — подстрочник, перевод, толкование, история, хадисы
+const STUDY=window.QSTUDY||[],SURA=window.QSURA||{};
+const arNum=n=>String(n).replace(/\d/g,c=>'٠١٢٣٤٥٦٧٨٩'[c]);
+function renderSura(){
+  const root=$('view-sura');root.innerHTML='';
+  const su=STUDY[0];if(!su){root.appendChild(el('div',{class:'lnote'},'Сура не загружена.'));return;}
+  const inf=SURA[su[0]]||{},K=knownSet(),[n,t]=surahCov(su,K),left=surahIds(su).filter(i=>!K.has(i)).length;
+  root.appendChild(el('section',{class:'sr-head'},`<div class="ar sr-ar" lang="ar" dir="rtl">${esc(inf.ar||'')}</div><h2>Сура ${esc(inf.name||su[1])} · «${esc(inf.mean||'')}»</h2>
+    <dl class="sr-facts">${(inf.facts||[]).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${explHtml(v)}</dd>`).join('')}</dl>`));
+  if(inf.about)root.appendChild(el('section',{class:'sr-sec'},`<h3 class="wk">О суре</h3>${inf.about.map(x=>`<p>${explHtml(x)}</p>`).join('')}`));
+  const st=el('section',{class:'sr-sec sr-learn'},`<div class="sr-cov"><b class="num">${n}<small>/${t}</small></b><span>слов суры знаешь${left?` · выучить ещё ${left}`:' · все выучены'}</span></div><div class="nbar"><i style="width:${t?n/t*100:0}%"></i></div>`);
+  const bb=el('div',{class:'sr-btns'});
+  if(left){const b=el('button',{class:'nbtn'},'Учить слова суры');b.onclick=()=>startNamaz(su);bb.appendChild(b);}
+  const r=el('button',{class:'nbtn ghost'},'Читать с разбором слов');r.onclick=()=>openReader(su);bb.appendChild(r);
+  st.appendChild(bb);root.appendChild(st);
+  // аяты
+  const sec=el('section',{class:'sr-sec'});
+  const tg=el('button',{class:'rd-tg sr-tg'},'Раскрыть всё толкование');
+  sec.append(el('div',{class:'sr-h'},'<h3 class="wk">Текст, подстрочник, толкование</h3>'));sec.firstChild.appendChild(tg);
+  const tafs=[];
+  for(const [a,ru,toks] of su[2]){
+    const g=GLOSS[su[0]+':'+a]||[];
+    const d=el('div',{class:'sr-ay'});
+    d.appendChild(el('div',{class:'il sr-il',dir:'rtl'},toks.map((tk,k)=>`<span class="ilw"><span class="ar" lang="ar">${esc(arText(tk[0]))}</span><span class="ilg">${esc(g[k]||'')}</span></span>`).join('')+`<span class="ar sr-n" lang="ar">﴿${arNum(a)}﴾</span>`));
+    d.appendChild(el('div',{class:'sr-ru'},`<b>${a}.</b> ${esc(ru)}`));
+    const tf=(inf.tafsir||{})[a];
+    if(tf){const det=el('details',{class:'sr-tf'},`<summary>Толкование</summary><p>${explHtml(tf)}</p>`);tafs.push(det);d.appendChild(det);}
+    sec.appendChild(d);
+  }
+  tg.onclick=()=>{const open=!tafs.every(x=>x.open);tafs.forEach(x=>x.open=open);tg.textContent=open?'Свернуть толкование':'Раскрыть всё толкование';};
+  root.appendChild(sec);
+  if(inf.story)root.appendChild(el('section',{class:'sr-sec'},`<h3 class="wk">${esc(inf.story.title)}</h3>${inf.story.text.map(x=>`<p>${explHtml(x)}</p>`).join('')}`));
+  if(inf.hadith)root.appendChild(el('section',{class:'sr-sec'},`<h3 class="wk">Хадисы о суре</h3>${inf.hadith.map(([x,g])=>`<figure class="sr-hd"><blockquote>${esc(x)}</blockquote><figcaption>${esc(g)}</figcaption></figure>`).join('')}`));
+  if(inf.lessons)root.appendChild(el('section',{class:'sr-sec'},`<h3 class="wk">Уроки суры</h3><ul class="sr-ls">${inf.lessons.map(x=>`<li>${explHtml(x)}</li>`).join('')}</ul>`));
 }
 function renderLearn(){
   const root=$('view-learn');root.innerHTML='';
@@ -1451,14 +1505,14 @@ let tab='day';
 let calMonth=key(new Date()).slice(0,7);
 function switchTab(t){
   tab=t;
-  for(const x of ['day','plan','notes','learn','stats']){$('tab-'+x).setAttribute('aria-selected',String(t===x));$('view-'+x).hidden=t!==x;}
-  const flat=t==='stats'||t==='notes'||t==='learn';
+  for(const x of ['day','plan','notes','learn','sura','stats']){$('tab-'+x).setAttribute('aria-selected',String(t===x));$('view-'+x).hidden=t!==x;}
+  const flat=t==='stats'||t==='notes'||t==='learn'||t==='sura';
   $('datebar').hidden=flat;$('progrow').hidden=t!=='day';$('planrow').hidden=flat;
   const tb=$('tab-'+t);if(tb&&tb.scrollIntoView)tb.scrollIntoView({block:'nearest',inline:'nearest'});
   try{localStorage.setItem('fajr-witr-tab',t);}catch(e){}
   render();window.scrollTo(0,0);
 }
-function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else if(tab==='notes')renderNotes();else if(tab==='learn')renderLearn();else renderStats();growAll();}
+function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else if(tab==='notes')renderNotes();else if(tab==='learn')renderLearn();else if(tab==='sura')renderSura();else renderStats();growAll();}
 addEventListener('resize',()=>growAll());
 
 function go(n){const d=addDays(viewDate,n);if(d>today)return;viewDate=d;render();}
@@ -1476,6 +1530,7 @@ $('tab-day').onclick=()=>switchTab('day');
 $('tab-stats').onclick=()=>switchTab('stats');
 $('tab-plan').onclick=()=>switchTab('plan');
 $('tab-learn').onclick=()=>switchTab('learn');
+$('tab-sura').onclick=()=>switchTab('sura');
 $('tab-notes').onclick=()=>{switchTab('notes');const c=$('note-new');if(c)c.focus();};
 $('planrow').onclick=()=>{if(tab!=='plan')switchTab('plan');};
 document.addEventListener('visibilitychange',()=>{
@@ -1485,7 +1540,7 @@ document.addEventListener('visibilitychange',()=>{
   pull(); // pick up marks made on the other device
 });
 
-try{const t=localStorage.getItem('fajr-witr-tab');if(['stats','plan','notes','learn'].includes(t))tab=t;}catch(e){}
+try{const t=localStorage.getItem('fajr-witr-tab');if(['stats','plan','notes','learn','sura'].includes(t))tab=t;}catch(e){}
 if(location.hash==='#notes')tab='notes';
 lsLoad();
 switchTab(tab);

@@ -1229,7 +1229,7 @@ function renderDay(){
   const v=state[viewDate]||{};
   const root=$('view-day');root.innerHTML='';
   const [ht,hs,har,hctx,hwhy]=hadithFor(viewDate);
-  if(ht){const more=har||hctx||hwhy;const f=el('figure',{class:'hadith'},`<div class="hd-top">Хадис дня · ${esc(hs)}</div><blockquote>«${esc(ht)}»</blockquote>${more?`<details class="hd-more"><summary>Арабский текст · когда и почему · смысл</summary>${har?`<div class="ar hd-ar" lang="ar" dir="rtl">${esc(har.replace(/\s*[،؛]\s*/g,' '))}</div>`:''}${hctx?`<div class="sr-k">Когда и почему сказано</div><p>${explHtml(hctx)}</p>`:''}${hwhy?`<div class="sr-k">В чём смысл</div><p>${explHtml(hwhy)}</p>`:''}</details>`:''}`);root.appendChild(f);} // на виду только перевод, остальное — по нажатию
+  if(ht){const more=har||hctx||hwhy;const f=el('figure',{class:'hadith'},`<div class="hd-top">Хадис дня · ${esc(hs)}</div><blockquote>${esc(ht)}</blockquote>${more?`<details class="hd-more"><summary>Арабский текст · когда и почему · смысл</summary>${har?`<div class="ar hd-ar" lang="ar" dir="rtl">${esc(har.replace(/\s*[،؛]\s*/g,' '))}</div>`:''}${hctx?`<div class="sr-k">Когда и почему сказано</div><p>${explHtml(hctx)}</p>`:''}${hwhy?`<div class="sr-k">В чём смысл</div><p>${explHtml(hwhy)}</p>`:''}</details>`:''}`);root.appendChild(f);} // на виду только перевод, остальное — по нажатию
   const nowOpen=new Set();
   yesterdayReview(root);
   trackerPlan(root,viewDate,nowOpen);

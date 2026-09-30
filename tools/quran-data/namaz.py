@@ -111,7 +111,7 @@ for i,w in enumerate(W2):
     ss=SN.get(str(i),[])
     if len(ss)>=2:w[12:]=[ss]
 out=js[:mW.start(1)]+json.dumps(W2,ensure_ascii=False,separators=(',',':'))+js[mW.end(1):]
-out='\n'.join(l for l in out.split('\n') if not l.startswith(('window.QNAMAZ=','window.QCOV=','window.QSTUDY=','window.QSURA=','window.QGLOSS=')))
+out='\n'.join(l for l in out.split('\n') if not l.startswith(('window.QNAMAZ=','window.QCOV=','window.QSTUDY=','window.QSURA=','window.QGLOSS=','window.QHAFS=')))
 out=out.rstrip('\n')+'\nwindow.QNAMAZ='+json.dumps(NAMAZ,ensure_ascii=False,separators=(',',':'))+';\n'
 out+='window.QCOV={total:'+str(total)+',g:'+json.dumps(QCOV,separators=(',',':'))+'};\n'
 # вкладка «Сура»: текст по словам, сведения, тафсир (sura<N>.json), подстрочник всех аятов (gloss_ru.json)
@@ -119,6 +119,14 @@ D=__file__.rsplit('/',1)[0]
 info={str(s):json.load(open(f'{D}/sura{s}.json',encoding='utf8')) for s,_ in STUDY}
 out+='window.QSTUDY='+json.dumps(STUDYD,ensure_ascii=False,separators=(',',':'))+';\n'
 out+='window.QSURA='+json.dumps(info,ensure_ascii=False,separators=(',',':'))+';\n'
+# текст KFGQPC Hafs пословно (со знаками таджвида: малый мим, знаки остановки…) — hafs.json из quran.com text_qpc_hafs;
+# берём только аяты, где число слов совпадает с разметкой, иначе остаётся quran-simple
+HF=json.load(open(f'{D}/hafs.json',encoding='utf8'));QH={}
+for s_,_,ays in NAMAZ+STUDYD:
+    for a,_,tks in ays:
+        h=HF.get(f'{s_}:{a}')
+        if h and len(h)==len(tks):QH[f'{s_}:{a}']=h
+out+='window.QHAFS='+json.dumps(QH,ensure_ascii=False,separators=(',',':'))+';\n'
 out+='window.QGLOSS='+json.dumps(json.load(open(f'{D}/gloss_ru.json',encoding='utf8')),ensure_ascii=False,separators=(',',':'))+';\n'
 open(DATA,'w',encoding='utf8').write(out)
 print('новых слов',len(new),'всего',len(W2),'групп покрытия',len(QCOV),'слов в Коране',total,

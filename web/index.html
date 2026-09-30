@@ -931,9 +931,9 @@ function openReader(su){
     const g=GLOSS[su[0]+':'+ay[0]]||[];
     const d=el('div',{class:'rd-ay'});
     const line=el('div',{class:'ar ay rd-line',lang:'ar',dir:'rtl'});
-    for(const tok of ay[2]){
-      const b=el('button',{class:'rw'+(!tokIds(tok).length||tokKnown(tok,K)?'':' new')},`<span>${esc(arText(tok[0]))}</span>${g.length===ay[2].length?`<span class="ilg">${esc(g[ay[2].indexOf(tok)])}</span>`:''}`);
-      b.onclick=()=>{if(sel)sel.classList.remove('sel');sel=b;b.classList.add('sel');showTok(info,tok,K);};
+    for(const [k,tok] of ay[2].entries()){
+      const b=el('button',{class:'rw'+(!tokIds(tok).length||tokKnown(tok,K)?'':' new')},`<span>${esc(arText(hafsTok(su[0]+':'+ay[0],k,tok[0])))}</span>${g.length===ay[2].length?`<span class="ilg">${esc(g[k])}</span>`:''}`);
+      b.onclick=()=>{if(sel)sel.classList.remove('sel');sel=b;b.classList.add('sel');showTok(info,tok,K,hafsTok(su[0]+':'+ay[0],k,tok[0]));};
       line.appendChild(b);line.appendChild(document.createTextNode(' '));
     }
     line.appendChild(el('span',{class:'rd-n'},'﴿'+String(ay[0]).replace(/\d/g,c=>'٠١٢٣٤٥٦٧٨٩'[c])+'﴾'));
@@ -946,18 +946,20 @@ function openReader(su){
   if(left){const lb=el('button',{class:'lbtn'},`Учить слова суры · осталось ${left}`);lb.onclick=()=>startNamaz(su);f.appendChild(lb);}
   box.appendChild(f);
 }
-function showTok(info,tok,K){
+function showTok(info,tok,K,disp){
   const parts=tok[1].map(sg=>{
     const [surf,ref,own]=sg,isW=typeof ref==='number'&&ref>=0,w=isW?WORDS[ref]:null;
     const mean=own?esc(own):isW?`${bareAr(w[0])===bareAr(surf)?'':arSpan(w[0])+' '}«${esc(w[2])}»`:esc(ref);
     const st=isW&&!own?(K.has(ref)?'':' <span class="rd-nw">не изучено</span>'):'';
     return `<div class="rd-p"><span class="ar rd-s" lang="ar" dir="rtl">${esc(surf)}</span><span class="rd-m">${mean}${st}</span></div>`;
   }).join('');
-  info.innerHTML=`<div class="rd-w">${arSpan(tok[0])}</div>${parts}`;
+  info.innerHTML=`<div class="rd-w">${arSpan(disp||tok[0])}</div>${parts}`;
 }
 // ---------- «Сура»: изучаемая сура целиком — подстрочник, перевод, толкование, история, хадисы
 const STUDY=window.QSTUDY||[],SURA=window.QSURA||{};
 const arNum=n=>String(n).replace(/\d/g,c=>'٠١٢٣٤٥٦٧٨٩'[c]);
+const HAFS=window.QHAFS||{}; // слова в редакции KFGQPC Hafs — со знаками таджвида (малый мим и др.)
+const hafsTok=(key,k,fb)=>{const h=HAFS[key];return h&&h[k]?h[k]:fb;};
 function renderSura(){
   const root=$('view-sura');root.innerHTML='';
   const su=STUDY[0];if(!su){root.appendChild(el('div',{class:'lnote'},'Сура не загружена.'));return;}
@@ -978,7 +980,7 @@ function renderSura(){
   for(const [a,ru,toks] of su[2]){
     const g=GLOSS[su[0]+':'+a]||[];
     const d=el('div',{class:'sr-ay'});
-    d.appendChild(el('div',{class:'il sr-il',dir:'rtl'},toks.map((tk,k)=>`<span class="ilw"><span class="ar" lang="ar">${esc(arText(tk[0]))}</span><span class="ilg">${esc(g[k]||'')}</span></span>`).join('')+`<span class="ar sr-n" lang="ar">﴿${arNum(a)}﴾</span>`));
+    d.appendChild(el('div',{class:'il sr-il',dir:'rtl'},toks.map((tk,k)=>`<span class="ilw"><span class="ar" lang="ar">${esc(arText(hafsTok(su[0]+':'+a,k,tk[0])))}</span><span class="ilg">${esc(g[k]||'')}</span></span>`).join('')+`<span class="ar sr-n" lang="ar">﴿${arNum(a)}﴾</span>`));
     d.appendChild(el('div',{class:'sr-ru'},`<b>${a}.</b> ${esc(ru)}`));
     const tf=(inf.tafsir||{})[a];
     if(tf){const det=el('details',{class:'sr-tf'},`<summary>Толкование</summary><p>${explHtml(tf)}</p>`);tafs.push(det);d.appendChild(det);}

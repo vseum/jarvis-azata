@@ -1155,7 +1155,6 @@ function finishSession(box){
   if(Object.keys(L()._w||{}).length>=4){const m=el('button',{class:'lbtn'+(nu?' ghost':'')},'Ещё тренировка');m.onclick=()=>startSession('free');f.appendChild(m);}
   const b=el('button',{class:'lbtn ghost'},'Готово');b.onclick=closeSession;f.appendChild(b);box.appendChild(f);
 }
-let wordCard=null;
 const openState={};
 let shownOpen=new Set(); // blocks open on screen right now
 function renderDay(){
@@ -1163,11 +1162,6 @@ function renderDay(){
   const root=$('view-day');root.innerHTML='';
   const [ht,hs]=hadithFor(viewDate);
   if(ht)root.appendChild(el('figure',{class:'hadith'},`<blockquote>«${esc(ht)}»</blockquote><figcaption>Хадис дня · ${esc(hs)}</figcaption>`));
-  const [wi,[wa,wt,wm,ea,er,ehl,,,,wk,wx]]=wordFor(viewDate);
-  if(WORDS.length)root.appendChild(wordCard=el('section',{class:'word',role:'button',title:'Открыть «Слова»'},`<div class="wtop"><span class="wlab">Слово дня · ${wi+1} из ${MAIN_N}</span></div>
-    <div class="wmain"><div class="wtr"><b>${meanHtml(wi)}</b><span>${esc(wk||'')} · ${esc(wt)}</span></div><div class="war" lang="ar" dir="rtl">${esc(arText(wa))}</div></div>
-    <div class="wex"><div class="wexa" lang="ar" dir="rtl">${ilHtml(wi)}</div><div class="wexr">${ruHl(wi)}</div></div>${wx?`<div class="wx">${explHtml(wx)}</div>`:''}${sensesHtml(wi)}`));
-  if(wordCard){wordCard.onclick=()=>switchTab('learn');wordCard=null;}
   const nowOpen=new Set();
   yesterdayReview(root);
   trackerPlan(root,viewDate,nowOpen);

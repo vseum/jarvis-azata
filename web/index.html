@@ -318,6 +318,9 @@ button,textarea{touch-action:manipulation}
 .sr-tf summary::before{content:'▸ ';color:var(--ink-3)}.sr-tf[open] summary::before{content:'▾ '}
 .sr-tf p{background:var(--fill);border-radius:12px;padding:10px 12px;margin:6px 0 0;font-size:14px;line-height:1.55}
 .sr-hd{margin:0 0 10px;background:var(--fill);border-radius:12px;padding:10px 12px}.sr-hd blockquote{margin:0;font-size:14px;line-height:1.5}.sr-hd figcaption{font-size:12px;color:var(--ink-3);margin-top:4px}
+.sr-k{font-size:11.5px;font-weight:700;color:var(--ink-3);letter-spacing:.04em;text-transform:uppercase;margin:6px 0 4px}
+.sr-hd p{font-size:14px!important;line-height:1.55;margin:0 0 6px!important}
+.sr-hd blockquote{font-weight:600}
 .sr-hda{font-size:24px;line-height:1.9;text-align:right;margin-bottom:4px}
 .sr-note{font-size:12.5px!important;color:var(--ink-3)}
 .sr-ls{margin:0;padding-left:18px;font-size:14.5px;line-height:1.55}.sr-ls li{margin-bottom:6px}
@@ -989,7 +992,7 @@ function renderSura(){
   tg.onclick=()=>{const open=!tafs.every(x=>x.open);tafs.forEach(x=>x.open=open);tg.textContent=open?'Свернуть толкование':'Раскрыть всё толкование';};
   root.appendChild(sec);
   if(inf.story)root.appendChild(el('section',{class:'sr-sec'},`<h3 class="wk">${esc(inf.story.title)}</h3>${inf.story.text.map(x=>`<p>${explHtml(x)}</p>`).join('')}`));
-  if(inf.hadith)root.appendChild(el('section',{class:'sr-sec'},`<h3 class="wk">Хадисы о суре</h3>${inf.hadith.map(([x,g,a])=>`<figure class="sr-hd">${a?`<div class="ar sr-hda" lang="ar" dir="rtl">${esc(a)}</div>`:''}<blockquote>${esc(x)}</blockquote><figcaption>${esc(g)}</figcaption></figure>`).join('')}`));
+  if(inf.hadith)root.appendChild(el('section',{class:'sr-sec'},`<h3 class="wk">Хадисы о суре</h3>${inf.hadith.map(h=>`<figure class="sr-hd">${h.ctx?`<div class="sr-k">Когда и почему сказано</div><p>${explHtml(h.ctx)}</p>`:''}<div class="ar sr-hda" lang="ar" dir="rtl">${esc(h.ar||'')}</div><blockquote>${esc(h.ru)}</blockquote><figcaption>${esc(h.grade)}</figcaption>${h.why?`<div class="sr-k">В чём смысл</div><p>${explHtml(h.why)}</p>`:''}</figure>`).join('')}`));
   if(inf.lessons)root.appendChild(el('section',{class:'sr-sec'},`<h3 class="wk">${esc(inf.lessons_title||'Выводы из суры')}</h3>${inf.lessons_note?`<p class="sr-note">${esc(inf.lessons_note)}</p>`:''}<ul class="sr-ls">${inf.lessons.map(x=>`<li>${explHtml(x)}</li>`).join('')}</ul>`));
 }
 function renderLearn(){

@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-09-30T06:38:24.440Z",
+ "updatedAt": "2026-09-30T13:32:08.381Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -438,8 +438,9 @@
      {
       "id": "munqgs0cmwo3",
       "t": "Прогулка с семьей",
-      "done": false,
-      "g": "c"
+      "done": true,
+      "g": "c",
+      "up": "2026-09-30T13:31:52.825Z"
      },
      {
       "id": "munqhhwy894x",
@@ -470,11 +471,21 @@
      "t": "Привести дела в порядок перед выездом в Зеленодольск"
     },
     "diary": true,
-    "_da": true
+    "_da": true,
+    "jamaat": [
+     "Зухр",
+     "Аср"
+    ],
+    "work": 0.5,
+    "pm_azkar": true,
+    "pm_vit_mg": true,
+    "walk": true,
+    "am_abs": false,
+    "am_back": false
    },
-   "score": 14,
-   "pct": 45,
-   "updatedAt": "2026-09-30T06:38:09.436Z"
+   "score": 17.13,
+   "pct": 55,
+   "updatedAt": "2026-09-30T13:31:53.380Z"
   }
  }
 }

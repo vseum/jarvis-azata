@@ -110,6 +110,13 @@ SN=json.load(open(__file__.rsplit('/',1)[0]+'/senses.json',encoding='utf8'))
 for i,w in enumerate(W2):
     ss=SN.get(str(i),[])
     if len(ss)>=2:w[12:]=[ss]
+HF=json.load(open(__file__.rsplit('/',1)[0]+'/hafs.json',encoding='utf8'))  # KFGQPC Hafs пословно (quran.com text_qpc_hafs)
+def stoks(t):return [x for x in t.split(' ') if x and not MARK.match(x)]
+for w in W2:  # фрагменты-примеры к значениям: поле 8 — фрагмент в Hafs
+    for x in (w[12] if len(w)>12 else []):
+        s_,a_=map(int,x[4].split(':'));st=stoks(S[(s_,a_)]);ft=x[1].split(' ');h=HF.get(x[4])
+        j=next((i for i in range(len(st)) if st[i:i+len(ft)]==ft),None)
+        if h and len(h)==len(st) and j is not None:x[8:]=[' '.join(h[j:j+len(ft)])]
 out=js[:mW.start(1)]+json.dumps(W2,ensure_ascii=False,separators=(',',':'))+js[mW.end(1):]
 out='\n'.join(l for l in out.split('\n') if not l.startswith(('window.QNAMAZ=','window.QCOV=','window.QSTUDY=','window.QSURA=','window.QGLOSS=','window.QHAFS=')))
 out=out.rstrip('\n')+'\nwindow.QNAMAZ='+json.dumps(NAMAZ,ensure_ascii=False,separators=(',',':'))+';\n'
@@ -121,11 +128,14 @@ out+='window.QSTUDY='+json.dumps(STUDYD,ensure_ascii=False,separators=(',',':'))
 out+='window.QSURA='+json.dumps(info,ensure_ascii=False,separators=(',',':'))+';\n'
 # текст KFGQPC Hafs пословно (со знаками таджвида: малый мим, знаки остановки…) — hafs.json из quran.com text_qpc_hafs;
 # берём только аяты, где число слов совпадает с разметкой, иначе остаётся quran-simple
-HF=json.load(open(f'{D}/hafs.json',encoding='utf8'));QH={}
+QH={}
 for s_,_,ays in NAMAZ+STUDYD:
     for a,_,tks in ays:
         h=HF.get(f'{s_}:{a}')
         if h and len(h)==len(tks):QH[f'{s_}:{a}']=h
+for w in W2:  # аяты-примеры слов
+    h=HF.get(w[8])
+    if h and len(h)==len(stoks(w[3])):QH[w[8]]=h
 out+='window.QHAFS='+json.dumps(QH,ensure_ascii=False,separators=(',',':'))+';\n'
 out+='window.QGLOSS='+json.dumps(json.load(open(f'{D}/gloss_ru.json',encoding='utf8')),ensure_ascii=False,separators=(',',':'))+';\n'
 open(DATA,'w',encoding='utf8').write(out)

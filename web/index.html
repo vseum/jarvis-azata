@@ -958,8 +958,6 @@ function showTok(info,tok,K,disp){
 // ---------- «Сура»: изучаемая сура целиком — подстрочник, перевод, толкование, история, хадисы
 const STUDY=window.QSTUDY||[],SURA=window.QSURA||{};
 const arNum=n=>String(n).replace(/\d/g,c=>'٠١٢٣٤٥٦٧٨٩'[c]);
-const HAFS=window.QHAFS||{}; // слова в редакции KFGQPC Hafs — со знаками таджвида (малый мим и др.)
-const hafsTok=(key,k,fb)=>{const h=HAFS[key];return h&&h[k]?h[k]:fb;};
 function renderSura(){
   const root=$('view-sura');root.innerHTML='';
   const su=STUDY[0];if(!su){root.appendChild(el('div',{class:'lnote'},'Сура не загружена.'));return;}
@@ -1113,9 +1111,13 @@ function drawStep(){
 function explHtml(t){return esc(t).replace(/[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]+(?:[\s\u200c]*[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]+)*/g,m=>`<span class="ar ex" lang="ar" dir="rtl">${m}</span>`);}
 // подстрочник: под каждым арабским словом — русский перевод этого слова (QGLOSS[ссылка] по словам аята)
 const GLOSS=window.QGLOSS||{};
+const HAFS=window.QHAFS||{}; // слова в редакции KFGQPC Hafs — со знаками таджвида (малый мим, знаки остановки…)
+const hafsTok=(key,k,fb)=>{const h=HAFS[key];return h&&h[k]?h[k]:fb;};
+function exToks(i){const w=WORDS[i],h=HAFS[w[8]],st=tokensOf(w[3]);return h&&h.length===st.length?h:st;} // слова аята-примера
+function exHl(i){const w=WORDS[i];return exToks(i).map((x,k)=>k===w[5]?`<span class="hlw">${esc(arText(x))}</span>`:esc(arText(x))).join(' ');}
 function ilToks(t){const out=[];for(const x of t.split(' ')){if(!x)continue;if(MARKRE.test(x)&&out.length)out[out.length-1]+=' '+x;else out.push(x);}return out;}
-function ilHtml(i){const w=WORDS[i],g=GLOSS[w[8]],tk=ilToks(w[3]);
-  if(!g||g.length!==tk.length)return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;
+function ilHtml(i){const w=WORDS[i],g=GLOSS[w[8]],tk=HAFS[w[8]]&&HAFS[w[8]].length===ilToks(w[3]).length?HAFS[w[8]]:ilToks(w[3]);
+  if(!g||g.length!==tk.length)return `<span class="ar ay" lang="ar" dir="rtl">${exHl(i)}</span>`;
   return `<div class="il" dir="rtl">${tk.map((t,k)=>`<span class="ilw${k===w[5]?' ilhl':''}"><span class="ar" lang="ar">${esc(arText(t))}</span><span class="ilg">${esc(g[k])}</span></span>`).join('')}</div>`;}
 // значения слова с примером на каждое: поле 12 = [[значение, фрагмент аята, № слова во фрагменте, перевод, ссылка]]
 // значение слова: разные значения — нумерованным списком, синонимы — через «/»
@@ -1125,13 +1127,13 @@ function meanHtml(i){const w=WORDS[i],ss=w[12];
   if(groups.length<2)return `<span class="mn1">${syn(groups[0])}</span>`;
   return `<ol class="mn">${groups.map((g,k)=>`<li><i>${k+1}</i>${syn(g)}</li>`).join('')}</ol>`;}
 function sensesHtml(i){const ss=WORDS[i][12];if(!ss||ss.length<2)return '';
-  return `<div class="ls"><div class="ls-h">Когда как переводится</div>${ss.map(([m,fr,h,ru,ref,gl,hint,rh],k)=>{
-    const tk=fr.split(' '),il=gl&&gl.length===tk.length?`<div class="il" dir="rtl">${tk.map((t,n)=>`<span class="ilw${n===h?' ilhl':''}"><span class="ar" lang="ar">${esc(arText(t))}</span><span class="ilg">${esc(gl[n])}</span></span>`).join('')}</div>`:`<span class="ar ls-a" lang="ar" dir="rtl">${arHl(fr,h)}</span>`;
+  return `<div class="ls"><div class="ls-h">Когда как переводится</div>${ss.map(([m,fr,h,ru,ref,gl,hint,rh,frH],k)=>{
+    const tk=(frH&&frH.split(' ').length===fr.split(' ').length?frH:fr).split(' '),il=gl&&gl.length===tk.length?`<div class="il" dir="rtl">${tk.map((t,n)=>`<span class="ilw${n===h?' ilhl':''}"><span class="ar" lang="ar">${esc(arText(t))}</span><span class="ilg">${esc(gl[n])}</span></span>`).join('')}</div>`:`<span class="ar ls-a" lang="ar" dir="rtl">${tk.map((t,n)=>n===h?`<span class="hlw">${esc(arText(t))}</span>`:esc(arText(t))).join(' ')}</span>`;
     return `<div class="ls-r"><div class="ls-t"><i>${k+1}</i><div><b>«${esc(m)}»</b>${hint?`<span>${esc(hint)}</span>`:''}</div></div>${il}<div class="ls-ru">${rh?esc(ru.slice(0,rh[0]))+`<span class="hlw">${esc(ru.slice(rh[0],rh[1]))}</span>`+esc(ru.slice(rh[1])):esc(ru)} <i>${esc(ref)}</i></div></div>`;}).join('')}</div>`;}
-function ayahHtml(i){const w=WORDS[i];return `<span class="ar ay" lang="ar" dir="rtl">${arHl(w[3],w[5])}</span>`;}
+function ayahHtml(i){return `<span class="ar ay" lang="ar" dir="rtl">${exHl(i)}</span>`;}
 function drawBuild(body,box,st){ // «собери аят»: слова по порядку, как в Duolingo
   const i=st.i,[a,,m,ea,er]=WORDS[i];
-  const tk=tokensOf(ea);
+  const tk=exToks(i);
   body.innerHTML=`<div class="lx-kind">Собери аят</div><div class="lx-q small">${ruHl(i)}</div>`;
   const ans=el('div',{class:'bl-ans',dir:'rtl'}),pool=el('div',{class:'bl-pool',dir:'rtl'});
   body.append(ans,pool);

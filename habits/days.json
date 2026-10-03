@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-03T08:25:40.752Z",
+ "updatedAt": "2026-10-03T08:26:22.950Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -650,11 +650,12 @@
     "am_azkar": true,
     "quran": true,
     "arabic": true,
-    "am_shower": true
+    "am_shower": true,
+    "am_back": true
    },
-   "score": 8,
-   "pct": 25,
-   "updatedAt": "2026-10-03T08:25:25.742Z"
+   "score": 9,
+   "pct": 28,
+   "updatedAt": "2026-10-03T08:26:07.948Z"
   }
  }
 }

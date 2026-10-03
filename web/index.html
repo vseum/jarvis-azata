@@ -330,6 +330,42 @@ button,textarea{touch-action:manipulation}
 .sr-note{font-size:12.5px!important;color:var(--ink-3)}
 .sr-ls{margin:0;padding-left:18px;font-size:14.5px;line-height:1.55}.sr-ls li{margin-bottom:6px}
 .il{display:flex;flex-wrap:wrap;gap:6px 12px;padding:4px 0}
+.quran,.azkar{display:flex;flex-direction:column;gap:14px;margin-top:6px;padding-bottom:30px}
+.q-tgs{display:flex;gap:6px;flex-wrap:wrap}
+.q-nav{display:flex;align-items:center;gap:8px}
+.q-btn{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);font-size:22px;color:var(--ink-2);display:grid;place-items:center;flex:none}
+.q-btn:disabled{opacity:.35}
+.q-mid{flex:1;min-width:0;text-align:center}.q-mid b{display:block;font-size:15px}.q-mid span{font-size:12px;color:var(--ink-3)}
+.q-sel{width:100%;font:inherit;font-size:13.5px;padding:9px 10px;border-radius:11px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
+.q-bm{font-size:13px;font-weight:600;color:var(--ink);text-decoration:underline;text-underline-offset:3px;align-self:center}
+.q-sura{text-align:center;padding:10px;border-radius:12px;background:var(--fill);font-size:14.5px;margin-top:8px}
+.q-bsm{text-align:center;font-size:26px;line-height:1.9}
+.q-ay{padding:8px 0 10px;border-bottom:1px solid var(--line)}
+.q-line{font-size:27px;line-height:2.05;text-align:right}
+.q-il{gap:6px 12px}.q-il .ilw .ar{font-size:27px;line-height:1.8}
+.q-tr{font-size:13px;color:var(--ink-3);font-style:italic;line-height:1.45;margin-top:4px}
+.q-load{min-height:50vh}
+.az-seg{display:flex;gap:6px}
+.az-seg button{flex:1;padding:8px 4px;border-radius:12px;border:1.5px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-2);display:flex;flex-direction:column;align-items:center;gap:1px}
+.az-seg button small{font-size:11px;font-weight:500;color:var(--ink-3)}
+.az-seg button.on{background:var(--ink);color:#fff;border-color:var(--ink)}.az-seg button.on small{color:#cfcfcf}
+.az-seg button.ok:not(.on){border-color:#1E7F4F;color:#1E7F4F}
+.az{border:1.5px solid var(--line);border-radius:16px;padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px;scroll-margin-top:110px}
+.az.done{background:var(--fill);border-color:var(--fill)}
+.az-top{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--ink-3);font-weight:600}
+.az-ar{font-size:26px;line-height:1.95;text-align:center}
+.az-pre{font-size:22px;line-height:1.8;text-align:center;color:var(--ink-2)}
+.az-tr{font-size:13px;color:var(--ink-3);text-align:center;line-height:1.45}
+.az-ru{font-size:14.5px;line-height:1.5;text-align:center}
+.az-c{align-self:center;width:84px;height:84px;border-radius:50%;background:#E3F1EA;color:#1E7F4F;font-size:28px;font-weight:600;display:grid;place-items:center;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.az-c:active{transform:scale(.96)}
+.az.done .az-c{background:#1E7F4F;color:#fff}
+.az-sub{text-align:center;font-size:13px;color:var(--ink-2);margin-top:-2px}
+.az-subl{display:flex;flex-direction:column;align-items:center;gap:2px}.az-subl .ar{font-size:26px;line-height:1.7}.az-subl span{font-size:12px;color:var(--ink-3)}
+.az-reset{font-size:12px;color:var(--ink-3);padding:2px 0}
+.az .hd-more{margin-top:0}.az .hd-more p{font-size:14px;line-height:1.55;margin:0 0 6px}
+.az-g{font-size:12.5px;color:var(--ink-3)}
+.az-open{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .ilw{display:inline-flex;flex-direction:column;align-items:center}
 .ilw .ar{font-size:27px;line-height:1.75}
 .ilg{font-family:var(--f);font-size:11.5px;font-weight:500;color:var(--ink-2);line-height:1.25;max-width:120px;text-align:center;direction:ltr}
@@ -431,6 +467,8 @@ button,textarea{touch-action:manipulation}
       <button id="tab-notes" role="tab" aria-selected="false">Заметки</button>
       <button id="tab-learn" role="tab" aria-selected="false">Слова</button>
       <button id="tab-sura" role="tab" aria-selected="false">Сура</button>
+      <button id="tab-quran" role="tab" aria-selected="false">Коран</button>
+      <button id="tab-azkar" role="tab" aria-selected="false">Азкары</button>
       <button id="tab-stats" role="tab" aria-selected="false">Статистика</button>
     </div>
     <div class="datebar" id="datebar">
@@ -458,6 +496,8 @@ button,textarea{touch-action:manipulation}
   <main id="view-notes" class="notes" hidden></main>
   <main id="view-learn" class="learn" hidden></main>
   <main id="view-sura" class="sura" hidden></main>
+  <main id="view-quran" class="quran" hidden></main>
+  <main id="view-azkar" class="azkar" hidden></main>
   <main id="view-stats" hidden></main>
   <div class="lx" id="lx" hidden></div>
   <div class="toast" id="toast" role="status" hidden></div>
@@ -506,7 +546,8 @@ const BLOCKS=[
   {id:'pm_abs',n:'Пресс',note:'30 раз'},
   {id:'pm_back',n:'Поясница'},
   {id:'pm_shower',n:'Душ'},
-  {id:'pm_minox',n:'Миноксидил'}]}
+  {id:'pm_minox',n:'Миноксидил'},
+  {id:'sleep_azkar',n:'Азкары перед сном'}]}
 ];
 const ALL=BLOCKS.flatMap(b=>b.items.map(h=>Object.assign({block:b.id},h)));
 const TOTAL=ALL.length;
@@ -965,6 +1006,162 @@ function showTok(info,tok,K,disp){
   }).join('');
   info.innerHTML=`<div class="rd-w">${arSpan(disp||tok[0])}</div>${parts}`;
 }
+// ---------- «Коран»: чтение по страницам мусхафа (KFGQPC Hafs) с транскрипцией, переводом Кулиева и подстрочником.
+// Прочитанные страницы — в документе дня: _qp {страница: [1|0, время]}; 5 страниц за день отмечают пункт «Коран».
+const QM=window.QMETA||{names:[],start:[],juz:[],bsm:['','']},QDAY=5,QSTART=363;
+const qpCache={};let qCur=null,qTok=0;
+function qPage(n){
+  if(qpCache[n])return Promise.resolve(qpCache[n]);
+  return fetch(`/quran/p${String(n).padStart(3,'0')}.json?v=${QM.v}`).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}).then(d=>qpCache[n]=d);
+}
+try{caches.open('quran').then(c=>c.keys().then(ks=>ks.forEach(r=>{if(!r.url.includes('v='+QM.v))c.delete(r);})));}catch(e){} // старые версии страниц
+function qRead(v){const o=(v&&v._qp)||{};return Object.keys(o).filter(k=>o[k]&&o[k][0]).map(Number).sort((a,b)=>a-b);}
+function qLast(){ // последняя отмеченная страница — закладка
+  let best=null;
+  for(const d in state){if(!/^\d{4}-\d{2}-\d{2}$/.test(d))continue;const o=state[d]._qp||{};for(const k in o)if(o[k]&&o[k][0]&&(!best||o[k][1]>best[1]||(o[k][1]===best[1]&&+k>best[0])))best=[+k,o[k][1]];}
+  return best?best[0]:null;
+}
+function qNext(){const l=qLast();return l?l%604+1:QSTART;}
+function qStreak(){let n=0,d=today;if((state[d]||{}).quran!==true)d=addDays(d,-1);while((state[d]||{}).quran===true){n++;d=addDays(d,-1);}return n;}
+function qOpts(){let o=null;try{o=JSON.parse(localStorage.getItem('q-opts'));}catch(e){}return o||{tr:true,ru:true,gl:true};}
+function qMark(n,on){mutate(today,v=>{v._qp=Object.assign({},v._qp);v._qp[n]=[on?1:0,Date.now()];if(qRead(v).length>=QDAY)v.quran=true;});}
+function qSuraOf(p){let s=1;for(let i=0;i<QM.start.length;i++)if(QM.start[i]<=p)s=i+1;return s;}
+function renderQuran(){
+  const root=$('view-quran');root.innerHTML='';
+  if(qCur==null)qCur=qNext();
+  const v=state[today]||{},rd=qRead(v),nx=qNext(),pos=nx===QSTART&&!qLast()?QSTART-1:(nx+602)%604+1,o=qOpts();
+  root.appendChild(el('div',{class:'lhead'},`
+    <div class="lstat"><b class="num">${rd.length}<small>/${QDAY}</small></b><span>страниц сегодня</span></div>
+    <div class="lstat"><b class="num">${pos}<small>/604</small></b><span>хатм · ${Math.floor(pos/604*100)}%</span></div>
+    <div class="lstat"><b class="num">${qStreak()}</b><span>дней подряд</span></div>`));
+  root.appendChild(el('div',{class:'lgoal'},`<i style="width:${Math.min(100,rd.length/QDAY*100)}%"></i>`));
+  const tgs=el('div',{class:'q-tgs'});
+  for(const [k,t] of [['gl','Подстрочник'],['tr','Транскрипция'],['ru','Перевод']]){
+    const b=el('button',{class:'rd-tg'+(o[k]?' on':''),'aria-pressed':String(!!o[k])},t);
+    b.onclick=()=>{const x=qOpts();x[k]=!x[k];try{localStorage.setItem('q-opts',JSON.stringify(x));}catch(e){}renderQuran();};
+    tgs.appendChild(b);
+  }
+  root.appendChild(tgs);
+  const su=qSuraOf(qCur);
+  const sel=el('select',{class:'q-sel','aria-label':'Сура'},QM.names.map((n,i)=>`<option value="${i+1}"${i+1===su?' selected':''}>${i+1}. ${esc(n)} · с. ${QM.start[i]}</option>`).join(''));
+  sel.onchange=()=>{qCur=QM.start[+sel.value-1];renderQuran();window.scrollTo(0,0);};
+  const nav=()=>{
+    const n=el('div',{class:'q-nav'});
+    const pv=el('button',{class:'q-btn','aria-label':'Предыдущая страница'},'‹'),nxb=el('button',{class:'q-btn','aria-label':'Следующая страница'},'›');
+    pv.disabled=qCur<=1;nxb.disabled=qCur>=604;
+    pv.onclick=()=>{qCur--;renderQuran();window.scrollTo(0,0);};nxb.onclick=()=>{qCur++;renderQuran();window.scrollTo(0,0);};
+    n.append(pv,el('div',{class:'q-mid'},`<b>Страница ${qCur}</b><span>${esc(QM.names[su-1]||'')} · джуз ${QM.juz.filter(p=>p<=qCur).length}${rd.includes(qCur)?' · прочитана сегодня':''}</span>`),nxb);
+    return n;
+  };
+  root.appendChild(sel);root.appendChild(nav());
+  if(qCur!==nx){const bm=el('button',{class:'q-bm'},`К закладке · страница ${nx}`);bm.onclick=()=>{qCur=nx;renderQuran();window.scrollTo(0,0);};root.appendChild(bm);}
+  const box=el('section',{class:'q-load'},'<div class="lnote">Загружаю страницу…</div>');root.appendChild(box);
+  const tok=++qTok,page=qCur;
+  qPage(page).then(d=>{
+    if(tok!==qTok)return;
+    box.className='q-page';box.innerHTML='';
+    if(o.gl&&d.a.some(x=>!x[5]))box.appendChild(el('div',{class:'lnote left'},'Подстрочник для этой страницы ещё готовится — сейчас он есть для страниц 363–604 и сур из намаза.'));
+    for(const [s,a,ws,tr,ru,g] of d.a){
+      if(a===1){box.appendChild(el('div',{class:'q-sura'},`<b>Сура ${s} · ${esc(QM.names[s-1])}</b>`));if(s!==1&&s!==9)box.appendChild(el('div',{class:'ar q-bsm',lang:'ar',dir:'rtl'},esc(QM.bsm[0])));}
+      const ay=el('div',{class:'q-ay'});
+      if(o.gl&&g)ay.appendChild(el('div',{class:'il q-il',dir:'rtl'},ws.map((w,k)=>`<span class="ilw"><span class="ar" lang="ar">${esc(arText(w))}</span><span class="ilg">${esc(g[k]||'')}</span></span>`).join('')+`<span class="ar sr-n" lang="ar">﴿${arNum(a)}﴾</span>`));
+      else ay.appendChild(el('div',{class:'ar q-line',lang:'ar',dir:'rtl'},`${esc(arText(ws.join(' ')))} <span class="sr-n">﴿${arNum(a)}﴾</span>`));
+      if(o.tr)ay.appendChild(el('div',{class:'q-tr'},esc(tr)));
+      if(o.ru)ay.appendChild(el('div',{class:'sr-ru'},`<b>${s}:${a}.</b> ${esc(ru)}`));
+      box.appendChild(ay);
+    }
+    const done=rd.includes(page);
+    const mk=el('button',{class:'lbtn'+(done?' ghost':'')},done?`Страница ${page} прочитана · снять отметку`:`Прочитал страницу ${page}`);
+    mk.onclick=()=>{if(done)qMark(page,false);else{if(page<604)qCur=page+1;qMark(page,true);window.scrollTo(0,0);}};
+    box.appendChild(mk);box.appendChild(nav());
+    for(let i=1;i<=3;i++)if(page+i<=604)qPage(page+i).catch(()=>{}); // наперёд — чтобы читалось без сети
+  }).catch(()=>{if(tok===qTok)box.innerHTML='<div class="lnote">Нет сети, а эта страница ещё не сохранена на телефоне. Прочитанные и следующие три страницы открываются без сети.</div>';});
+}
+// ---------- «Азкары»: утренние, вечерние, перед сном — счётчик повторов, отметка в трекере, когда пройден весь список.
+// Счёт — в документе дня: _az {"am:kursi": [сделано раз, время]}.
+const AZ=window.QAZKAR||{am:[],pm:[],sl:[]};
+const AZK={am:{t:'Утро',id:'am_azkar',h:'после Фаджра'},pm:{t:'Вечер',id:'pm_azkar',h:'после Асра'},sl:{t:'Перед сном',id:'sleep_azkar',h:'ложась спать'}};
+let azSet=null;
+function azDefault(){const h=new Date().getHours();return h>=4&&h<12?'am':h>=12&&h<21?'pm':'sl';}
+function azGet(v,set,id){const x=((v&&v._az)||{})[set+':'+id];return x?x[0]:0;}
+function azDone(v,set){return (AZ[set]||[]).filter(z=>azGet(v,set,z.id)>=z.n).length;}
+function azSetCount(set,z,c){
+  const v=state[today]||(state[today]={});
+  v._az=Object.assign({},v._az);v._az[set+':'+z.id]=[c,Date.now()];
+  if(AZ[set].length&&azDone(v,set)===AZ[set].length)v[AZK[set].id]=true;
+  touch(today);
+}
+function azSubAt(z,c){let acc=0;for(const x of z.sub){if(c<acc+x[0])return [x,c-acc];acc+=x[0];}const x=z.sub[z.sub.length-1];return [x,x[0]];}
+function azArHtml(z){
+  if(z.sub)return `<div class="az-subl">${z.sub.map(x=>`<div class="ar" lang="ar" dir="rtl">${esc(x[1])}</div><span>${esc(x[2])} — ${x[0]} раз</span>`).join('')}</div>`;
+  if(!z.q)return z.ar?`<div class="ar az-ar" lang="ar" dir="rtl">${esc(arText(z.ar))}</div>`:'';
+  let h=z.pre?`<div class="ar az-pre" lang="ar" dir="rtl">${esc(z.pre)}</div>`:'';
+  for(const grp of z.q){
+    if(z.bsm)h+=`<div class="ar az-pre" lang="ar" dir="rtl">${esc(z.bsm[0])}</div>`;
+    h+=`<div class="ar az-ar" lang="ar" dir="rtl">${grp.map(([t,,n])=>`${esc(arText(t))} <span class="sr-n">﴿${arNum(n)}﴾</span>`).join(' ')}</div>`;
+  }
+  return h;
+}
+function azTr(z){
+  if(!z.q)return z.tr||'';
+  return z.q.map(grp=>[z.tr_pre,z.bsm&&z.bsm[1]].filter(Boolean).concat(grp.map(x=>x[1])).join(' · ')).join(' / ');
+}
+function renderAzkar(){
+  const root=$('view-azkar');root.innerHTML='';
+  if(!azSet)azSet=azDefault();
+  const v=state[today]||{},L=AZ[azSet]||[];
+  const seg=el('div',{class:'az-seg'});
+  for(const k of ['am','pm','sl']){
+    const d=azDone(v,k),t=(AZ[k]||[]).length;
+    const b=el('button',{class:(k===azSet?'on':'')+(t&&d===t?' ok':'')},`${AZK[k].t}<small class="num">${d===t&&t?'готово':d+'/'+t}</small>`);
+    b.onclick=()=>{azSet=k;renderAzkar();window.scrollTo(0,0);};seg.appendChild(b);
+  }
+  root.appendChild(seg);
+  const dn=azDone(v,azSet);
+  const head=el('div',{class:'lcov'},`<div><b class="num" id="az-cnt">${dn}<small>/${L.length}</small></b><span>${esc(AZK[azSet].h)}</span></div><div class="lcov-t">Нажимай на круг при каждом повторе. Когда пройдены все — пункт «${esc(AZK[azSet].t==='Перед сном'?'Азкары перед сном':'Азкары '+(azSet==='am'?'утра':'вечера'))}» в трекере отметится сам.</div>`);
+  root.appendChild(head);
+  L.forEach((z,i)=>{
+    const c=azGet(v,azSet,z.id),done=c>=z.n;
+    const card=el('article',{class:'az'+(done?' done':''),id:'az-'+z.id});
+    card.appendChild(el('div',{class:'az-top'},`<span class="num">${i+1}/${L.length}</span><span>${z.n>1?z.n+' раз':''}</span>`));
+    card.insertAdjacentHTML('beforeend',azArHtml(z));
+    const btn=el('button',{class:'az-c num','aria-label':'Повтор'});
+    const sub=z.sub?el('div',{class:'az-sub'}):null;
+    const paint=c=>{
+      const left=Math.max(0,z.n-c);btn.textContent=left?String(left):'✓';card.classList.toggle('done',!left);
+      if(sub){const [x,k]=azSubAt(z,Math.min(c,z.n-1));sub.textContent=left?`${x[2]} · ${k+1}/${x[0]}`:'Готово';}
+    };
+    let cnt=c;paint(cnt);
+    btn.onclick=()=>{
+      if(cnt>=z.n)return;
+      cnt++;azSetCount(azSet,z,cnt);paint(cnt);
+      try{navigator.vibrate&&navigator.vibrate(cnt>=z.n?30:8);}catch(e){}
+      if(cnt>=z.n){
+        const dd=azDone(state[today],azSet),hc=$('az-cnt');if(hc)hc.innerHTML=`${dd}<small>/${L.length}</small>`;
+        const nxt=L.slice(i+1).find(y=>azGet(state[today],azSet,y.id)<y.n);
+        if(nxt)setTimeout(()=>{const e=$('az-'+nxt.id);if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},350);
+        else setTimeout(renderAzkar,400);
+      }
+    };
+    card.appendChild(btn);if(sub)card.appendChild(sub);
+    const tr=azTr(z);if(tr)card.appendChild(el('div',{class:'az-tr'},esc(tr)));
+    if(z.ru)card.appendChild(el('div',{class:'az-ru'},esc(z.ru)));
+    if(z.open){
+      const ob=el('div',{class:'az-open'});
+      for(const [s,p] of z.open){const b=el('button',{class:'nbtn ghost'},`Открыть ${esc(QM.names[s-1]||'суру '+s)}`);b.onclick=()=>{qCur=p;switchTab('quran');};ob.appendChild(b);}
+      card.appendChild(ob);
+    }
+    if(z.ctx||z.why)card.appendChild(el('details',{class:'hd-more'},`<summary>Когда и почему · смысл</summary>${z.ctx?`<div class="sr-k">Когда и почему сказано</div><p>${explHtml(z.ctx)}</p>`:''}${z.why?`<div class="sr-k">В чём смысл</div><p>${explHtml(z.why)}</p>`:''}${z.grade?`<div class="az-g">Оценка: ${esc(z.grade)}</div>`:''}`));
+    if(c>0){const r=el('button',{class:'az-reset'},'↺ начать этот зикр заново');r.onclick=()=>{cnt=0;azSetCount(azSet,z,0);renderAzkar();};card.appendChild(r);}
+    root.appendChild(card);
+  });
+}
+// Живой прогресс в подписи пункта на вкладке «День»
+function liveNote(h,v){
+  if(h.id==='quran'){const n=qRead(v).length;return `${QDAY} страниц${n?` · прочитано ${n}`:''} · вкладка «Коран»`;}
+  for(const k in AZK)if(AZK[k].id===h.id&&(AZ[k]||[]).length){const d=azDone(v,k);return `${d}/${AZ[k].length} · вкладка «Азкары»`;}
+  return h.note||'';
+}
 // ---------- «Сура»: изучаемая сура целиком — подстрочник, перевод, толкование, история, хадисы
 const STUDY=window.QSTUDY||[],SURA=window.QSURA||{};
 const arNum=n=>String(n).replace(/\d/g,c=>'٠١٢٣٤٥٦٧٨٩'[c]);
@@ -1260,7 +1457,7 @@ function renderDay(){
     }
     const body=el('div',{class:'body'});sec.appendChild(body);
     for(const h of b.items){
-      const note=h.note?`<div class="note">${esc(h.note)}</div>`:'';
+      const nt=liveNote(h,v),note=nt?`<div class="note">${esc(nt)}</div>`:'';
       if(!h.type){
         body.appendChild(triRow(v,h.id,h.n,note,''));
       }else if(h.type==='group'){
@@ -1519,14 +1716,14 @@ let tab='day';
 let calMonth=key(new Date()).slice(0,7);
 function switchTab(t){
   tab=t;
-  for(const x of ['day','plan','notes','learn','sura','stats']){$('tab-'+x).setAttribute('aria-selected',String(t===x));$('view-'+x).hidden=t!==x;}
-  const flat=t==='stats'||t==='notes'||t==='learn'||t==='sura';
+  for(const x of ['day','plan','notes','learn','sura','quran','azkar','stats']){$('tab-'+x).setAttribute('aria-selected',String(t===x));$('view-'+x).hidden=t!==x;}
+  const flat=t==='stats'||t==='notes'||t==='learn'||t==='sura'||t==='quran'||t==='azkar';
   $('datebar').hidden=flat;$('progrow').hidden=t!=='day';$('planrow').hidden=flat;
   const tb=$('tab-'+t);if(tb&&tb.scrollIntoView)tb.scrollIntoView({block:'nearest',inline:'nearest'});
   try{localStorage.setItem('fajr-witr-tab',t);}catch(e){}
   render();window.scrollTo(0,0);
 }
-function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else if(tab==='notes')renderNotes();else if(tab==='learn')renderLearn();else if(tab==='sura')renderSura();else renderStats();growAll();}
+function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else if(tab==='notes')renderNotes();else if(tab==='learn')renderLearn();else if(tab==='sura')renderSura();else if(tab==='quran')renderQuran();else if(tab==='azkar')renderAzkar();else renderStats();growAll();}
 addEventListener('resize',()=>growAll());
 
 function go(n){const d=addDays(viewDate,n);if(d>today)return;viewDate=d;render();}
@@ -1545,6 +1742,8 @@ $('tab-stats').onclick=()=>switchTab('stats');
 $('tab-plan').onclick=()=>switchTab('plan');
 $('tab-learn').onclick=()=>switchTab('learn');
 $('tab-sura').onclick=()=>switchTab('sura');
+$('tab-quran').onclick=()=>{qCur=null;switchTab('quran');};
+$('tab-azkar').onclick=()=>{azSet=null;switchTab('azkar');};
 $('tab-notes').onclick=()=>{switchTab('notes');const c=$('note-new');if(c)c.focus();};
 $('planrow').onclick=()=>{if(tab!=='plan')switchTab('plan');};
 document.addEventListener('visibilitychange',()=>{
@@ -1554,7 +1753,7 @@ document.addEventListener('visibilitychange',()=>{
   pull(); // pick up marks made on the other device
 });
 
-try{const t=localStorage.getItem('fajr-witr-tab');if(['stats','plan','notes','learn','sura'].includes(t))tab=t;}catch(e){}
+try{const t=localStorage.getItem('fajr-witr-tab');if(['stats','plan','notes','learn','sura','quran','azkar'].includes(t))tab=t;}catch(e){}
 if(location.hash==='#notes')tab='notes';
 lsLoad();
 switchTab(tab);

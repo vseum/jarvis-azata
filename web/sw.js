@@ -1,5 +1,5 @@
 // Офлайн-оболочка: страница открывается без сети, отметки ждут в localStorage до связи.
-const CACHE = 'shell-v48';
+const CACHE = 'shell-v49';
 const SHELL = [
   '/',
   '/data.js',
@@ -23,7 +23,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
-    .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    .then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== 'quran').map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
@@ -40,6 +40,12 @@ self.addEventListener('fetch', e => {
       caches.open(CACHE).then(c => c.put(k, copy));
       return r;
     }).catch(() => caches.match(k)));
+    return;
+  }
+
+  // Страницы Корана: из кэша, иначе из сети с сохранением — прочитанное и подгруженное наперёд открывается без сети
+  if (url.pathname.startsWith('/quran/')) {
+    e.respondWith(caches.open('quran').then(c => c.match(e.request).then(hit => hit || fetch(e.request).then(r => { if (r.ok) c.put(e.request, r.clone()); return r; }))));
     return;
   }
 

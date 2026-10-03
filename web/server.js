@@ -146,6 +146,12 @@ function mergeV(key, old, inc) {
     for (const x of old[f] || []) if (x && x.id && !n.has(x.id) && !gone.has(x.id)) res.push(x);
     out[f] = res;
   }
+  // отметки с меткой времени {ключ: [значение, ts]} — побеждает более поздняя (снятие отметки тоже доходит)
+  for (const f of ['_qp', '_az']) {
+    if (!old[f] && !inc[f]) continue;
+    out[f] = Object.assign({}, old[f]);
+    for (const k in inc[f] || {}) { const a = out[f][k], b = inc[f][k]; if (!a || (b && b[1] >= a[1])) out[f][k] = b; }
+  }
   if (key === 'learn') {
     out._w = Object.assign({}, old._w);
     for (const k in inc._w || {}) { const a = out._w[k], b = inc._w[k]; out._w[k] = !a || (b.ok || 0) + (b.bad || 0) >= (a.ok || 0) + (a.bad || 0) ? b : a; }
@@ -207,6 +213,16 @@ async function handle(req, res) {
     try {
       const buf = fs.readFileSync(path.join(__dirname, 'fonts', font[1]));
       res.writeHead(200, { 'Content-Type': 'font/woff2', 'Cache-Control': 'public, max-age=31536000, immutable' });
+      return res.end(buf);
+    } catch (e) { return send(res, 404, 'Not found', 'text/plain; charset=utf-8'); }
+  }
+
+  // страницы Корана для вкладки «Коран»: текст, транскрипция, перевод, подстрочник
+  const qp = p.match(/^\/quran\/(p\d{3}\.json)$/);
+  if (qp && req.method === 'GET') {
+    try {
+      const buf = fs.readFileSync(path.join(__dirname, 'quran', qp[1]));
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=86400' });
       return res.end(buf);
     } catch (e) { return send(res, 404, 'Not found', 'text/plain; charset=utf-8'); }
   }

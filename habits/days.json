@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-03T08:27:10.299Z",
+ "updatedAt": "2026-10-03T08:27:41.829Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -653,11 +653,19 @@
     "am_shower": true,
     "am_back": true,
     "am_squat": true,
-    "am_push": true
+    "am_push": true,
+    "am_minox": true,
+    "am_abs": true,
+    "am_vit_mg": true,
+    "am_vit_zn": true,
+    "walk": true,
+    "duha": true,
+    "breakfast": true,
+    "diary": true
    },
-   "score": 11,
-   "pct": 34,
-   "updatedAt": "2026-10-03T08:26:55.286Z"
+   "score": 17.67,
+   "pct": 55,
+   "updatedAt": "2026-10-03T08:27:26.826Z"
   }
  }
 }

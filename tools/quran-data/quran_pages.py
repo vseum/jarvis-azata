@@ -10,7 +10,7 @@ H=json.load(open('hafs_full.json'));P=json.load(open('pages.json'))
 K={f"{s['number']}:{a['numberInSurah']}":a['text'].strip() for s in json.load(open('kuliev.json'))['data']['surahs'] for a in s['ayahs']}
 G={}
 D=__file__.rsplit('/',1)[0]
-for f in sorted(glob.glob(D+'/gloss/out*.json')):G.update(json.load(open(f)))   # страницы 363–604 (25:33–114:6)
+for f in sorted(glob.glob(D+'/gloss/out*.json')):G.update(json.load(open(f)))   # весь Коран, по словам Hafs
 GR=json.load(open(D+'/gloss_ru.json'))   # подстрочник сур намаза и изучаемых сур (по словам quran-simple)
 pages=collections.defaultdict(list);juz={}
 def clean(w):return w.replace('۞','').replace('،','').strip()

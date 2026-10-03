@@ -1060,7 +1060,7 @@ function renderQuran(){
   qPage(page).then(d=>{
     if(tok!==qTok)return;
     box.className='q-page';box.innerHTML='';
-    if(o.gl&&d.a.some(x=>!x[5]))box.appendChild(el('div',{class:'lnote left'},'Подстрочник для этой страницы ещё готовится — сейчас он есть для страниц 363–604 и сур из намаза.'));
+    if(o.gl&&d.a.some(x=>!x[5]))box.appendChild(el('div',{class:'lnote left'},'Для части аятов этой страницы подстрочника нет.'));
     for(const [s,a,ws,tr,ru,g] of d.a){
       if(a===1){box.appendChild(el('div',{class:'q-sura'},`<b>Сура ${s} · ${esc(QM.names[s-1])}</b>`));if(s!==1&&s!==9)box.appendChild(el('div',{class:'ar q-bsm',lang:'ar',dir:'rtl'},esc(QM.bsm[0])));}
       const ay=el('div',{class:'q-ay'});

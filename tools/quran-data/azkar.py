@@ -11,7 +11,9 @@ A=json.load(open(f'{D}/azkar.json',encoding='utf8'));BY={a['id']:a for a in A}
 def clean(w):return w.replace('۞','').replace('،','').strip()
 def ayah(ref):ws=[w for w in (clean(x) for x in H[ref]) if w];return [' '.join(ws),ayah_tr(ws),int(ref.split(':')[1])]
 BSM=ayah('1:1')
+APP=json.load(open(f'{D}/azkar_app.json',encoding='utf8'))  # транскрипция, перевод и достоинство — как в приложении Азата
 def item(a,pm):
+    ap=APP.get(a['id'])or APP.get(a.get('ref'))or{}
     if a.get('ref'):b=dict(BY[a['ref']]);b.update({k:v for k,v in a.items() if k!='ref'});a=b
     g=lambda k:a.get(k+'_pm',a.get(k)) if pm else a.get(k)
     o={'id':a['id'],'n':a['n'],'ru':g('ru'),'ctx':a.get('ctx',''),'why':a.get('why',''),'grade':a.get('grade','')}
@@ -21,6 +23,11 @@ def item(a,pm):
     else:o['ar']=g('ar');o['tr']=g('tr')
     for k in ('pre','tr_pre','sub','open'):
         if a.get(k):o[k]=a[k]
+    for k in ('tr','ru','fadl'):
+        v=ap.get(k+'_pm',ap.get(k)) if pm else ap.get(k)
+        if v:o[k]=v
+    for k in ('tr_pre','sub'):
+        if k in ap:o[k]=ap[k]
     return o
 out={'am':[item(a,False) for a in A if a['when'] in('am','both')],
      'pm':[item(a,True) for a in A if a['when'] in('pm','both')],

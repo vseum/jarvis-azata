@@ -345,6 +345,10 @@ button,textarea{touch-action:manipulation}
 .q-il{gap:6px 12px}.q-il .ilw .ar{font-size:27px;line-height:1.8}
 .q-tr{font-size:13px;color:var(--ink-3);font-style:italic;line-height:1.45;margin-top:4px}
 .q-load{min-height:50vh}
+#q-prog{position:fixed;left:0;right:0;bottom:0;z-index:6;height:calc(5px + env(safe-area-inset-bottom));background:var(--fill);pointer-events:none}
+#q-prog i{display:block;height:5px;width:0;background:#1E7F4F;transition:width .1s linear}
+#q-prog span{position:absolute;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));font-size:11.5px;font-weight:600;color:var(--ink-2);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:2px 8px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+#q-prog[hidden]{display:none}
 .az-seg{display:flex;gap:6px}
 .az-seg button{flex:1;padding:8px 4px;border-radius:12px;border:1.5px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-2);display:flex;flex-direction:column;align-items:center;gap:1px}
 .az-seg button small{font-size:11px;font-weight:500;color:var(--ink-3)}
@@ -365,6 +369,8 @@ button,textarea{touch-action:manipulation}
 .az-reset{font-size:12px;color:var(--ink-3);padding:2px 0}
 .az .hd-more{margin-top:0}.az .hd-more p{font-size:14px;line-height:1.55;margin:0 0 6px}
 .az-g{font-size:12.5px;color:var(--ink-3)}
+.az-fadl{font-size:13.5px;line-height:1.5;text-align:center;color:var(--ink-2);background:var(--fill);border-radius:12px;padding:8px 10px}
+.az.done .az-fadl{background:var(--bg)}
 .az-open{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .ilw{display:inline-flex;flex-direction:column;align-items:center}
 .ilw .ar{font-size:27px;line-height:1.75}
@@ -1025,6 +1031,17 @@ function qNext(){const l=qLast();return l?l%604+1:QSTART;}
 function qStreak(){let n=0,d=today;if((state[d]||{}).quran!==true)d=addDays(d,-1);while((state[d]||{}).quran===true){n++;d=addDays(d,-1);}return n;}
 function qOpts(){let o=null;try{o=JSON.parse(localStorage.getItem('q-opts'));}catch(e){}return o||{tr:true,ru:true,gl:true};}
 function qMark(n,on){mutate(today,v=>{v._qp=Object.assign({},v._qp);v._qp[n]=[on?1:0,Date.now()];if(qRead(v).length>=QDAY)v.quran=true;});}
+// полоса прогресса чтения текущей страницы (внизу экрана)
+function qProg(){
+  let b=$('q-prog');
+  if(!b){b=el('div',{id:'q-prog',hidden:''},'<i></i><span class="num"></span>');document.body.appendChild(b);}
+  const pg=document.querySelector('#view-quran .q-page');
+  if(tab!=='quran'||!pg){b.hidden=true;return;}
+  const r=pg.getBoundingClientRect(),p=Math.max(0,Math.min(1,(innerHeight-r.top)/r.height)); // доля страницы, которая уже была на экране
+  b.hidden=false;b.firstChild.style.width=(p*100)+'%';b.lastChild.textContent=`с. ${qCur} · ${Math.round(p*100)}%`;
+}
+addEventListener('scroll',()=>{if(tab==='quran')qProg();},{passive:true});
+addEventListener('resize',()=>{if(tab==='quran')qProg();});
 function qSuraOf(p){let s=1;for(let i=0;i<QM.start.length;i++)if(QM.start[i]<=p)s=i+1;return s;}
 function renderQuran(){
   const root=$('view-quran');root.innerHTML='';
@@ -1074,6 +1091,7 @@ function renderQuran(){
     const mk=el('button',{class:'lbtn'+(done?' ghost':'')},done?`Страница ${page} прочитана · снять отметку`:`Прочитал страницу ${page}`);
     mk.onclick=()=>{if(done)qMark(page,false);else{if(page<604)qCur=page+1;qMark(page,true);window.scrollTo(0,0);}};
     box.appendChild(mk);box.appendChild(nav());
+    qProg();
     for(let i=1;i<=3;i++)if(page+i<=604)qPage(page+i).catch(()=>{}); // наперёд — чтобы читалось без сети
   }).catch(()=>{if(tok===qTok)box.innerHTML='<div class="lnote">Нет сети, а эта страница ещё не сохранена на телефоне. Прочитанные и следующие три страницы открываются без сети.</div>';});
 }
@@ -1103,8 +1121,7 @@ function azArHtml(z){
   return h;
 }
 function azTr(z){
-  if(!z.q)return z.tr||'';
-  return z.q.map(grp=>[z.tr_pre,z.bsm&&z.bsm[1]].filter(Boolean).concat(grp.map(x=>x[1])).join(' · ')).join(' / ');
+  return z.q?z.tr_pre||'':z.tr||''; // у аятов транскрипции нет — как в сборнике
 }
 function renderAzkar(){
   const root=$('view-azkar');root.innerHTML='';
@@ -1146,6 +1163,7 @@ function renderAzkar(){
     card.appendChild(btn);if(sub)card.appendChild(sub);
     const tr=azTr(z);if(tr)card.appendChild(el('div',{class:'az-tr'},esc(tr)));
     if(z.ru)card.appendChild(el('div',{class:'az-ru'},esc(z.ru)));
+    if(z.fadl)card.appendChild(el('div',{class:'az-fadl'},esc(z.fadl)));
     if(z.open){
       const ob=el('div',{class:'az-open'});
       for(const [s,p] of z.open){const b=el('button',{class:'nbtn ghost'},`Открыть ${esc(QM.names[s-1]||'суру '+s)}`);b.onclick=()=>{qCur=p;switchTab('quran');};ob.appendChild(b);}
@@ -1721,7 +1739,7 @@ function switchTab(t){
   $('datebar').hidden=flat;$('progrow').hidden=t!=='day';$('planrow').hidden=flat;
   const tb=$('tab-'+t);if(tb&&tb.scrollIntoView)tb.scrollIntoView({block:'nearest',inline:'nearest'});
   try{localStorage.setItem('fajr-witr-tab',t);}catch(e){}
-  render();window.scrollTo(0,0);
+  render();window.scrollTo(0,0);if(typeof qProg==='function')qProg();
 }
 function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else if(tab==='notes')renderNotes();else if(tab==='learn')renderLearn();else if(tab==='sura')renderSura();else if(tab==='quran')renderQuran();else if(tab==='azkar')renderAzkar();else renderStats();growAll();}
 addEventListener('resize',()=>growAll());

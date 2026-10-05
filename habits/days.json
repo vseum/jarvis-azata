@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-05T08:19:11.908Z",
+ "updatedAt": "2026-10-05T08:19:44.862Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -809,11 +809,31 @@
     "am_vit_d": true,
     "arabic": true,
     "am_back": true,
-    "duha": true
+    "duha": true,
+    "_tasks": [
+     {
+      "id": "muuzaraojw0n",
+      "t": "Зубной Алана",
+      "done": false,
+      "g": "c"
+     },
+     {
+      "id": "muuzaxci7sxk",
+      "t": "Вещи Уралу",
+      "done": false,
+      "g": "c"
+     },
+     {
+      "id": "muuzb34nvydb",
+      "t": "Бла бла кар",
+      "done": false,
+      "g": "c"
+     }
+    ]
    },
    "score": 11.93,
    "pct": 37,
-   "updatedAt": "2026-10-05T08:18:56.898Z"
+   "updatedAt": "2026-10-05T08:19:29.852Z"
   }
  }
 }

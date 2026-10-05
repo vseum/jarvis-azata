@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-05T06:40:21.330Z",
+ "updatedAt": "2026-10-05T08:19:11.908Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -808,11 +808,12 @@
     "am_vit_multi": true,
     "am_vit_d": true,
     "arabic": true,
-    "am_back": true
+    "am_back": true,
+    "duha": true
    },
-   "score": 10.93,
-   "pct": 34,
-   "updatedAt": "2026-10-05T06:40:06.294Z"
+   "score": 11.93,
+   "pct": 37,
+   "updatedAt": "2026-10-05T08:18:56.898Z"
   }
  }
 }

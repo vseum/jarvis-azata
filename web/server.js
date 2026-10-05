@@ -13,6 +13,34 @@ const GH_REPO = process.env.GITHUB_REPO || 'vseum/jarvis-azata';
 const GH_BRANCH = process.env.DATA_BRANCH || 'data';
 const GH_PATH = 'habits/days.json';
 const LOCAL = path.join(process.env.DATA_DIR || '/tmp', 'days.json');
+// Вкладка «ИИ»: разбор отметок через Claude. Без ANTHROPIC_API_KEY вкладка показывает, что ключа нет.
+const AI_KEY = process.env.ANTHROPIC_API_KEY || '';
+let ai = null;
+const aiUse = { day: '', n: 0 };
+if (AI_KEY) { try { const A = require('@anthropic-ai/sdk'); ai = new (A.default || A)({ apiKey: AI_KEY }); } catch (e) { console.error('anthropic sdk:', e.message); } }
+const AI_SYSTEM = `Ты — «Джарвис», напарник Азата по личной дисциплине. Азат — мусульманин, предприниматель и разработчик, ведёт трекер привычек: намазы и азкары, Коран (цель — 5 страниц в день), арабский, упражнения, витамины, сон, работа (цель 4–5 часов), план дня.
+Тебе дают сводку его отметок за последние дни. Сделай разбор по-русски, коротко и по делу, без предисловий и без морализаторства.
+Структура:
+## Главное — 2–3 строки: как прошёл период в целом, в цифрах.
+## Что держится — привычки с лучшим процентом и сериями.
+## Что выпадает системно — привычки, которые чаще всего пропущены или не отмечены; заметь закономерности (дни недели, связь со сном/тахаджудом, с часами работы, с выходными).
+## Коран и азкары — темп страниц (в среднем за день и за неделю), прогноз хатма от текущей страницы, сколько дней выполнено 5 страниц; утренние/вечерние/перед сном азкары.
+## 3 шага на неделю — конкретные, измеримые, реалистичные; не больше трёх.
+Считай в цифрах. Помечай выводы: [ФАКТ] — прямо из данных, [ОЦЕНКА] — расчёт или прогноз, [ГИПОТЕЗА] — предположение о причине. Пустая отметка значит «не отмечено», а не обязательно «не сделано» — учитывай это. Если Азат задал вопрос — ответь на него в первую очередь.`;
+
+async function aiAnalyze(summary, question) {
+  const res = await ai.beta.messages.create({
+    model: 'claude-opus-5-5',
+    max_tokens: 16000,
+    output_config: { effort: 'medium' },
+    betas: ['server-side-fallback-2026-07-01'],
+    fallbacks: 'default',
+    system: AI_SYSTEM,
+    messages: [{ role: 'user', content: `Сводка трекера:\n\n${summary}${question ? `\n\nВопрос Азата: ${question}` : ''}` }],
+  });
+  if (res.stop_reason === 'refusal') throw new Error('модель отказалась отвечать');
+  return res.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+}
 
 let days = {};       // 'YYYY-MM-DD' -> { v, score, pct, updatedAt }
 let sha = null;      // sha of GH_PATH on GH_BRANCH
@@ -125,7 +153,7 @@ function sync() {
 }
 
 // ---------- слияние: телефон и Mac не перетирают заметки, цели, дела и прогресс друг друга
-const ARR = ['_notes', '_goals', '_tasks', '_fun'];
+const ARR = ['_notes', '_goals', '_tasks', '_fun', '_runs'];
 const byId = a => { const m = new Map(); for (const x of a || []) if (x && x.id) m.set(x.id, x); return m; };
 const stamp = x => x.up || x.at || '';
 function mergeV(key, old, inc) {
@@ -238,12 +266,25 @@ async function handle(req, res) {
 
     if (p === '/api/days' && req.method === 'GET') return send(res, 200, { days });
 
+    if (p === '/api/ai' && req.method === 'POST') {
+      if (!ai) return send(res, 503, { error: 'no_key' });
+      const day = new Date().toISOString().slice(0, 10);   // не больше 20 разборов в сутки: сайт может быть открыт без TRACKER_KEY
+      if (aiUse.day !== day) { aiUse.day = day; aiUse.n = 0; }
+      if (++aiUse.n > 20) return send(res, 429, { error: 'limit' });
+      let body;
+      try { body = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'bad json' }); }
+      const summary = String(body.summary || '').slice(0, 200000), question = String(body.question || '').slice(0, 2000);
+      if (!summary) return send(res, 400, { error: 'empty summary' });
+      try { return send(res, 200, { text: await aiAnalyze(summary, question), at: new Date().toISOString() }); }
+      catch (e) { console.error('ai failed:', e && e.message); return send(res, 502, { error: 'ai_failed', detail: String(e && e.message || e).slice(0, 300) }); }
+    }
+
     if (p === '/api/status' && req.method === 'GET') {
       return send(res, 200, { days: Object.keys(days).length, github: !!GH_TOKEN, branch: GH_BRANCH, pending: changed.size, lastSync, lastError });
     }
 
     // day YYYY-MM-DD, week plan YYYY-Www, month plan + notes YYYY-MM, word-learning progress `learn`
-    const m = p.match(/^\/api\/days\/(\d{4}-\d{2}-\d{2}|\d{4}-W\d{2}|\d{4}-\d{2}|learn)$/); // + learn: progress in words
+    const m = p.match(/^\/api\/days\/(\d{4}-\d{2}-\d{2}|\d{4}-W\d{2}|\d{4}-\d{2}|learn|ai)$/); // + learn: progress in words
     if (m && req.method === 'PUT') {
       let body;
       try { body = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'bad json' }); }

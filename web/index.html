@@ -371,6 +371,12 @@ button,textarea{touch-action:manipulation}
 .az-g{font-size:12.5px;color:var(--ink-3)}
 .az-fadl{font-size:13.5px;line-height:1.5;text-align:center;color:var(--ink-2);background:var(--fill);border-radius:12px;padding:8px 10px}
 .az.done .az-fadl{background:var(--bg)}
+.aiv{display:flex;flex-direction:column;gap:14px;margin-top:6px;padding-bottom:30px}
+.ai-q{width:100%;min-height:64px;font:inherit;font-size:14px;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;resize:vertical;background:var(--bg);color:var(--ink)}
+.ai-out{font-size:14.5px;line-height:1.55}.ai-out h3{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:16px 0 6px}
+.ai-out p{margin:0 0 8px}.ai-out ul{margin:0 0 8px;padding-left:18px}.ai-out li{margin-bottom:4px}
+.ai-meta{font-size:12px;color:var(--ink-3)}
+.ai-old summary{font-size:13px;font-weight:600;cursor:pointer}
 .az-open{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .ilw{display:inline-flex;flex-direction:column;align-items:center}
 .ilw .ar{font-size:27px;line-height:1.75}
@@ -476,6 +482,7 @@ button,textarea{touch-action:manipulation}
       <button id="tab-quran" role="tab" aria-selected="false">Коран</button>
       <button id="tab-azkar" role="tab" aria-selected="false">Азкары</button>
       <button id="tab-stats" role="tab" aria-selected="false">Статистика</button>
+      <button id="tab-ai" role="tab" aria-selected="false">ИИ</button>
     </div>
     <div class="datebar" id="datebar">
       <button class="nav" id="prev" aria-label="Предыдущий день">‹</button>
@@ -505,6 +512,7 @@ button,textarea{touch-action:manipulation}
   <main id="view-quran" class="quran" hidden></main>
   <main id="view-azkar" class="azkar" hidden></main>
   <main id="view-stats" hidden></main>
+  <main id="view-ai" class="aiv" hidden></main>
   <div class="lx" id="lx" hidden></div>
   <div class="toast" id="toast" role="status" hidden></div>
 </div>
@@ -1174,6 +1182,67 @@ function renderAzkar(){
     root.appendChild(card);
   });
 }
+// ---------- «ИИ»: разбор отметок через Claude (запрос идёт на сервер; ключ — ANTHROPIC_API_KEY в настройках хостинга).
+// Сводку собирает клиент: он знает названия пунктов. Разборы хранятся в документе `ai` (_runs) и видны на всех устройствах.
+const WDN=['вс','пн','вт','ср','чт','пт','сб'];
+function aiSummary(days){
+  const L=[],start=firstDate();
+  L.push(`Сегодня: ${today}. Данные с ${start}.`);
+  L.push('\nПо дням (✓ сделано, ✗ отмечено «не сделал», пусто — не отмечено):');
+  for(let i=days-1;i>=0;i--){
+    const d=addDays(today,-i);if(d<start)continue;const v=state[d]||{};
+    const yes=[],no=[];
+    for(const h of ALL){
+      if(h.type==='hours'||h.type==='multi')continue;
+      for(const x of h.type==='group'?h.subs.map(s=>({id:s.id,n:h.n+': '+s.n})):[h])(v[x.id]===true?yes:v[x.id]===false?no:null)?.push(x.n);
+    }
+    const jam=Array.isArray(v.jamaat)?v.jamaat.length:0,az=k=>`${azDone(v,k)}/${(AZ[k]||[]).length}`;
+    L.push(`${d} (${WDN[parse(d).getDay()]}): ${Math.round(dayScore(v)/TOTAL*100)}% | работа ${+v.work||0} ч | джамаат ${jam}/4 | Коран ${qRead(v).length} стр | азкары утро ${az('am')}, вечер ${az('pm')}, сон ${az('sl')}\n  ✓ ${yes.join(', ')||'—'}\n  ✗ ${no.join(', ')||'—'}`);
+  }
+  L.push('\nПо привычкам за 30 дней (процент выполнения / текущая серия дней):');
+  for(const b of BLOCKS)L.push(`${b.name}: `+b.items.map(h=>`${h.n} ${pctWindow(h,30)}%/${streak(h)}`).join('; '));
+  L.push(`\nКоран: следующая страница ${qNext()} из 604; страниц сегодня ${qRead(state[today]).length}.`);
+  return L.join('\n');
+}
+function mdLite(t){ // ## заголовки, - списки, **жирный**
+  const out=[];let ul=false;
+  for(const raw of t.split('\n')){
+    const l=raw.trim();
+    const inl=x=>esc(x).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+    if(/^[-*•] /.test(l)){if(!ul){out.push('<ul>');ul=true;}out.push(`<li>${inl(l.slice(2))}</li>`);continue;}
+    if(ul){out.push('</ul>');ul=false;}
+    if(/^#{1,4} /.test(l))out.push(`<h3>${inl(l.replace(/^#+ /,''))}</h3>`);
+    else if(l)out.push(`<p>${inl(l)}</p>`);
+  }
+  if(ul)out.push('</ul>');
+  return out.join('');
+}
+let aiBusy=false,aiErr='';
+function renderAi(){
+  const root=$('view-ai');root.innerHTML='';
+  const runs=((state.ai||{})._runs||[]).slice().sort((a,b)=>a.at<b.at?1:-1);
+  root.appendChild(el('div',{class:'lcov'},`<div class="lcov-t">ИИ смотрит твои отметки за последние 30 дней — привычки, намазы, Коран, азкары, работу — и пишет разбор: что держится, что выпадает и почему, темп хатма и 3 шага на неделю. Можно задать свой вопрос. Один разбор ≈ 5–10 ₽.</div>`));
+  const q=el('textarea',{class:'ai-q',placeholder:'Вопрос (необязательно): например, «почему проваливается тахаджуд?»'});
+  const b=el('button',{class:'lbtn'},aiBusy?'Думаю… до минуты':'Сделать разбор');b.disabled=aiBusy;
+  b.onclick=()=>{
+    aiBusy=true;aiErr='';renderAi();
+    fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json','X-Key':KEY},body:JSON.stringify({summary:aiSummary(30),question:q.value.trim()})}) // без 12-секундного лимита api(): ответ ИИ идёт до минуты
+      .then(r=>{if(r.status===401)throw {auth:true};if(!r.ok)throw new Error(r.status);return r.json();})
+      .then(r=>{aiBusy=false;const at=r.at||new Date().toISOString();mutate('ai',v=>{v._runs=((v._runs||[]).concat([{id:'r'+Date.now().toString(36),at,up:at,q:q.value.trim(),text:r.text}])).slice(-30);});})
+      .catch(e=>{aiBusy=false;aiErr=e&&e.auth?'Нужен ключ доступа к трекеру.':String(e&&e.message)==='429'?'Лимит — 20 разборов в сутки. Завтра снова.':String(e&&e.message)==='503'?'На сервере не задан ключ ИИ. В Timeweb App Platform → приложение → Переменные окружения добавь ANTHROPIC_API_KEY (ключ из console.anthropic.com) и перезапусти — вкладка заработает.':'Не получилось: нет сети или ИИ не ответил. Попробуй ещё раз.';renderAi();});
+  };
+  root.append(q,b);
+  if(aiErr)root.appendChild(el('div',{class:'lnote left'},esc(aiErr)));
+  if(runs[0]){
+    const r=runs[0];
+    root.appendChild(el('section',{class:'ai-out'},`<div class="ai-meta">${esc(fmtDay.format(new Date(r.at)))}${r.q?' · вопрос: '+esc(r.q):''}</div>${mdLite(r.text)}`));
+  }
+  if(runs.length>1){
+    const d=el('details',{class:'ai-old'},`<summary>Прошлые разборы · ${runs.length-1}</summary>`);
+    for(const r of runs.slice(1))d.appendChild(el('section',{class:'ai-out'},`<div class="ai-meta">${esc(fmtDay.format(new Date(r.at)))}${r.q?' · вопрос: '+esc(r.q):''}</div>${mdLite(r.text)}`));
+    root.appendChild(d);
+  }
+}
 // Живой прогресс в подписи пункта на вкладке «День»
 function liveNote(h,v){
   if(h.id==='quran'){const n=qRead(v).length;return `${QDAY} страниц${n?` · прочитано ${n}`:''} · вкладка «Коран»`;}
@@ -1734,14 +1803,14 @@ let tab='day';
 let calMonth=key(new Date()).slice(0,7);
 function switchTab(t){
   tab=t;
-  for(const x of ['day','plan','notes','learn','sura','quran','azkar','stats']){$('tab-'+x).setAttribute('aria-selected',String(t===x));$('view-'+x).hidden=t!==x;}
-  const flat=t==='stats'||t==='notes'||t==='learn'||t==='sura'||t==='quran'||t==='azkar';
+  for(const x of ['day','plan','notes','learn','sura','quran','azkar','stats','ai']){$('tab-'+x).setAttribute('aria-selected',String(t===x));$('view-'+x).hidden=t!==x;}
+  const flat=t==='stats'||t==='notes'||t==='learn'||t==='sura'||t==='quran'||t==='azkar'||t==='ai';
   $('datebar').hidden=flat;$('progrow').hidden=t!=='day';$('planrow').hidden=flat;
   const tb=$('tab-'+t);if(tb&&tb.scrollIntoView)tb.scrollIntoView({block:'nearest',inline:'nearest'});
   try{localStorage.setItem('fajr-witr-tab',t);}catch(e){}
   render();window.scrollTo(0,0);if(typeof qProg==='function')qProg();
 }
-function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else if(tab==='notes')renderNotes();else if(tab==='learn')renderLearn();else if(tab==='sura')renderSura();else if(tab==='quran')renderQuran();else if(tab==='azkar')renderAzkar();else renderStats();growAll();}
+function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else if(tab==='notes')renderNotes();else if(tab==='learn')renderLearn();else if(tab==='sura')renderSura();else if(tab==='quran')renderQuran();else if(tab==='azkar')renderAzkar();else if(tab==='ai')renderAi();else renderStats();growAll();}
 addEventListener('resize',()=>growAll());
 
 function go(n){const d=addDays(viewDate,n);if(d>today)return;viewDate=d;render();}
@@ -1757,6 +1826,7 @@ $('view-day').addEventListener('touchend',e=>{
 $('next').onclick=()=>go(1);
 $('tab-day').onclick=()=>switchTab('day');
 $('tab-stats').onclick=()=>switchTab('stats');
+$('tab-ai').onclick=()=>switchTab('ai');
 $('tab-plan').onclick=()=>switchTab('plan');
 $('tab-learn').onclick=()=>switchTab('learn');
 $('tab-sura').onclick=()=>switchTab('sura');
@@ -1771,7 +1841,7 @@ document.addEventListener('visibilitychange',()=>{
   pull(); // pick up marks made on the other device
 });
 
-try{const t=localStorage.getItem('fajr-witr-tab');if(['stats','plan','notes','learn','sura','quran','azkar'].includes(t))tab=t;}catch(e){}
+try{const t=localStorage.getItem('fajr-witr-tab');if(['stats','plan','notes','learn','sura','quran','azkar','ai'].includes(t))tab=t;}catch(e){}
 if(location.hash==='#notes')tab='notes';
 lsLoad();
 switchTab(tab);

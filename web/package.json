@@ -1,0 +1,8 @@
+{
+  "name": "tracker",
+  "private": true,
+  "description": "Трекер (рахмат.рус). Сервер без фреймворков; единственная зависимость — Anthropic SDK для вкладки «ИИ».",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "@anthropic-ai/sdk": "^0.131.0" }
+}

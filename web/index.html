@@ -482,7 +482,7 @@ button,textarea{touch-action:manipulation}
       <button id="tab-quran" role="tab" aria-selected="false">Коран</button>
       <button id="tab-azkar" role="tab" aria-selected="false">Азкары</button>
       <button id="tab-stats" role="tab" aria-selected="false">Статистика</button>
-      <button id="tab-ai" role="tab" aria-selected="false">ИИ</button>
+      <button id="tab-ai" role="tab" aria-selected="false">Аналитика</button>
     </div>
     <div class="datebar" id="datebar">
       <button class="nav" id="prev" aria-label="Предыдущий день">‹</button>
@@ -1217,31 +1217,48 @@ function mdLite(t){ // ## заголовки, - списки, **жирный**
   if(ul)out.push('</ul>');
   return out.join('');
 }
-let aiBusy=false,aiErr='';
+let aiBusy=false,aiErr='',aiReports=null;
+// Разборы Джарвиса: Азат пишет в чат «разбор» (или кидает выгрузку) → разбор коммитится в web/analysis.json → виден здесь после деплоя.
+function aiExport(withRaw){
+  let t='Трекер — статистика для Джарвиса\n\n'+aiSummary(60);
+  if(withRaw){const raw={};for(const k of Object.keys(state).sort())if(isDay(k)&&addDays(today,-60)<=k)raw[k]=state[k];t+='\n\n--- данные (JSON) ---\n'+JSON.stringify(raw);}
+  return t;
+}
+function aiReport(r){return el('section',{class:'ai-out'},`<div class="ai-meta">${esc(r.title||'Разбор')}${r.period?' · '+esc(r.period):''}${r.q?' · вопрос: '+esc(r.q):''}</div>${mdLite(r.text)}`);}
 function renderAi(){
   const root=$('view-ai');root.innerHTML='';
-  const runs=((state.ai||{})._runs||[]).slice().sort((a,b)=>a.at<b.at?1:-1);
-  root.appendChild(el('div',{class:'lcov'},`<div class="lcov-t">ИИ смотрит твои отметки за последние 30 дней — привычки, намазы, Коран, азкары, работу — и пишет разбор: что держится, что выпадает и почему, темп хатма и 3 шага на неделю. Можно задать свой вопрос. Один разбор ≈ 5–10 ₽.</div>`));
-  const q=el('textarea',{class:'ai-q',placeholder:'Вопрос (необязательно): например, «почему проваливается тахаджуд?»'});
-  const b=el('button',{class:'lbtn'},aiBusy?'Думаю… до минуты':'Сделать разбор');b.disabled=aiBusy;
+  root.appendChild(el('div',{class:'lcov'},`<div class="lcov-t">Напиши Джарвису в чат <b>«разбор»</b> — он сам возьмёт твои отметки с сервера и через пару минут разбор появится здесь. Можно и вручную: скопируй статистику и вставь в чат.</div>`));
+  const bb=el('div',{class:'sr-btns'});
+  const cp=el('button',{class:'nbtn'},'Скопировать статистику');
+  cp.onclick=()=>{const t=aiExport(false);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Скопировано — вставь в чат Джарвису')).catch(()=>{const ta=el('textarea',{class:'ai-q'});ta.value=t;root.insertBefore(ta,bb.nextSibling);ta.select();});};
+  const dl=el('button',{class:'nbtn ghost'},'Скачать файл');
+  dl.onclick=()=>{const a=el('a',{href:URL.createObjectURL(new Blob([aiExport(true)],{type:'text/plain;charset=utf-8'})),download:`tracker-${today}.txt`});document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);};
+  bb.append(cp,dl);root.appendChild(bb);
+  const box=el('div',{class:'aiv'});root.appendChild(box);
+  const paint=()=>{
+    box.innerHTML='';
+    const reps=(aiReports||[]).slice().sort((a,b)=>a.at<b.at?1:-1);
+    const runs=((state.ai||{})._runs||[]).map(r=>({at:r.at,title:'Разбор через API · '+fmtDay.format(new Date(r.at)),q:r.q,text:r.text}));
+    const all=reps.concat(runs).sort((a,b)=>a.at<b.at?1:-1);
+    if(!all.length){box.appendChild(el('div',{class:'lnote'},aiReports===null?'Загружаю разборы…':'Разборов пока нет.'));return;}
+    box.appendChild(aiReport(all[0]));
+    if(all.length>1){const d=el('details',{class:'ai-old'},`<summary>Прошлые разборы · ${all.length-1}</summary>`);for(const r of all.slice(1))d.appendChild(aiReport(r));box.appendChild(d);}
+  };
+  paint();
+  if(aiReports===null)fetch('/analysis.json',{cache:'no-store'}).then(r=>r.ok?r.json():[]).catch(()=>[]).then(x=>{aiReports=Array.isArray(x)?x:[];if(tab==='ai')paint();});
+  // запасной путь — разбор через API (нужен ANTHROPIC_API_KEY на сервере)
+  const more=el('details',{class:'ai-old'},'<summary>Разбор через API (нужен ключ)</summary>');
+  const q=el('textarea',{class:'ai-q',placeholder:'Вопрос (необязательно)'});
+  const b=el('button',{class:'lbtn ghost'},aiBusy?'Думаю… до минуты':'Сделать разбор через API');b.disabled=aiBusy;
   b.onclick=()=>{
     aiBusy=true;aiErr='';renderAi();
     fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json','X-Key':KEY},body:JSON.stringify({summary:aiSummary(30),question:q.value.trim()})}) // без 12-секундного лимита api(): ответ ИИ идёт до минуты
       .then(r=>{if(r.status===401)throw {auth:true};if(!r.ok)throw new Error(r.status);return r.json();})
       .then(r=>{aiBusy=false;const at=r.at||new Date().toISOString();mutate('ai',v=>{v._runs=((v._runs||[]).concat([{id:'r'+Date.now().toString(36),at,up:at,q:q.value.trim(),text:r.text}])).slice(-30);});})
-      .catch(e=>{aiBusy=false;aiErr=e&&e.auth?'Нужен ключ доступа к трекеру.':String(e&&e.message)==='429'?'Лимит — 20 разборов в сутки. Завтра снова.':String(e&&e.message)==='503'?'На сервере не задан ключ ИИ. В Timeweb App Platform → приложение → Переменные окружения добавь ANTHROPIC_API_KEY (ключ из console.anthropic.com) и перезапусти — вкладка заработает.':'Не получилось: нет сети или ИИ не ответил. Попробуй ещё раз.';renderAi();});
+      .catch(e=>{aiBusy=false;aiErr=e&&e.auth?'Нужен ключ доступа к трекеру.':String(e&&e.message)==='429'?'Лимит — 20 разборов в сутки.':String(e&&e.message)==='503'?'На сервере не задан ANTHROPIC_API_KEY (Timeweb → приложение → переменные окружения). Проще — напиши Джарвису «разбор» в чат.':'Не получилось: нет сети или ИИ не ответил.';renderAi();});
   };
-  root.append(q,b);
-  if(aiErr)root.appendChild(el('div',{class:'lnote left'},esc(aiErr)));
-  if(runs[0]){
-    const r=runs[0];
-    root.appendChild(el('section',{class:'ai-out'},`<div class="ai-meta">${esc(fmtDay.format(new Date(r.at)))}${r.q?' · вопрос: '+esc(r.q):''}</div>${mdLite(r.text)}`));
-  }
-  if(runs.length>1){
-    const d=el('details',{class:'ai-old'},`<summary>Прошлые разборы · ${runs.length-1}</summary>`);
-    for(const r of runs.slice(1))d.appendChild(el('section',{class:'ai-out'},`<div class="ai-meta">${esc(fmtDay.format(new Date(r.at)))}${r.q?' · вопрос: '+esc(r.q):''}</div>${mdLite(r.text)}`));
-    root.appendChild(d);
-  }
+  more.append(q,b);if(aiErr)more.appendChild(el('div',{class:'lnote left'},esc(aiErr)));if(aiBusy||aiErr)more.open=true;
+  root.appendChild(more);
 }
 // Живой прогресс в подписи пункта на вкладке «День»
 function liveNote(h,v){

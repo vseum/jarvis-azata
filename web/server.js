@@ -201,6 +201,7 @@ const STATIC = {
   '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json; charset=utf-8'],
   '/sw.js': ['sw.js', 'text/javascript; charset=utf-8'],
   '/data.js': ['data.js', 'text/javascript; charset=utf-8'],
+  '/analysis.json': ['analysis.json', 'application/json; charset=utf-8'],   // разборы Джарвиса для вкладки «Аналитика»
 };
 
 function send(res, status, body, type) {

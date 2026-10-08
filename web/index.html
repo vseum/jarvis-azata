@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="robots" content="noindex,nofollow">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Трекер">
@@ -33,19 +33,25 @@
   --h0:#F2F2F2; --h1:#D9D9D9; --h2:#ADADAD; --h3:#6F6F6F; --h4:#111111;
   --f:"Montserrat",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
   padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --gl:max(20px,env(safe-area-inset-left,0px));--gr:max(20px,env(safe-area-inset-right,0px)); /* поля с учётом выреза в альбомной ориентации */
+  --qf:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
 }
+/* «Коран»: кремовый лист, как в приложении для чтения */
+html.qmode{--bg:#FAF5EC;--fill:#F1E9DB;--line:#E8DECD}
+html.qmode .wrap{max-width:880px}
 *{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%} /* iOS не раздувает шрифт при повороте в альбомную ориентацию */
 html,body{background:var(--bg)}
-body{margin:0;color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body{margin:0;color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;touch-action:manipulation} /* без зума двойным тапом (счётчик азкаров) */
 [hidden]{display:none!important}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 button:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:8px}
 .num{font-variant-numeric:tabular-nums}
-.wrap{max-width:520px;margin:0 auto;padding:0 20px 56px}
+.wrap{max-width:520px;margin:0 auto;padding:0 var(--gr) 56px var(--gl)}
 
 /* header */
-.top{position:sticky;top:0;z-index:5;background:var(--bg);margin:0 -20px;padding:10px 20px 10px}
-.tabs{display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;margin-left:-20px;margin-right:-20px;padding-left:20px;padding-right:20px;margin-bottom:10px}
+.top{position:sticky;top:0;z-index:5;background:var(--bg);margin:0 calc(-1*var(--gr)) 0 calc(-1*var(--gl));padding:10px var(--gr) 10px var(--gl)}
+.tabs{display:flex;gap:14px;overflow-x:auto;scrollbar-width:none;margin-left:calc(-1*var(--gl));margin-right:calc(-1*var(--gr));padding-left:var(--gl);padding-right:var(--gr);margin-bottom:10px}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{flex:none;font-size:12px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-3);padding:4px 0;border-bottom:2px solid transparent}
 .tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--ink)}
@@ -338,12 +344,25 @@ button,textarea{touch-action:manipulation}
 .q-mid{flex:1;min-width:0;text-align:center}.q-mid b{display:block;font-size:15px}.q-mid span{font-size:12px;color:var(--ink-3)}
 .q-sel{width:100%;font:inherit;font-size:13.5px;padding:9px 10px;border-radius:11px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)}
 .q-bm{font-size:13px;font-weight:600;color:var(--ink);text-decoration:underline;text-underline-offset:3px;align-self:center}
-.q-sura{text-align:center;padding:10px;border-radius:12px;background:var(--fill);font-size:14.5px;margin-top:8px}
-.q-bsm{text-align:center;font-size:26px;line-height:1.9}
-.q-ay{padding:8px 0 10px;border-bottom:1px solid var(--line)}
-.q-line{font-size:27px;line-height:2.05;text-align:right}
-.q-il{gap:6px 12px}.q-il .ilw .ar{font-size:27px;line-height:1.8}
-.q-tr{font-size:13px;color:var(--ink-3);font-style:italic;line-height:1.45;margin-top:4px}
+.q-stat{font-family:var(--qf);font-size:13.5px;color:var(--ink-2)}.q-stat b{color:var(--ink);font-weight:600}
+.q-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 10px;margin-top:2px}
+.q-title{font-family:var(--qf);font-size:16px;font-weight:600;line-height:1.3;color:var(--ink);min-width:0}.q-title span{white-space:nowrap}
+.q-pills{display:flex;align-items:center;gap:5px;flex:none}
+.q-pill{font-family:var(--qf);font-size:12.5px;font-weight:600;color:#fff;background:#6E6A64;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.q-set summary{font-family:var(--qf);font-size:13.5px;font-weight:600;color:var(--ink-2);cursor:pointer;list-style:none;padding:2px 0}
+.q-set summary::before{content:'⚙︎ ';color:var(--ink-3)}
+.q-set[open]{display:flex;flex-direction:column;gap:10px}
+.q-pill.jz{background:linear-gradient(90deg,#6E6A64 var(--p),#A9A39A var(--p))}
+.q-page{display:flex;flex-direction:column}
+.q-sura{text-align:center;padding:10px;border-radius:12px;background:var(--fill);font-family:var(--qf);font-size:15px;margin:6px 0 4px}
+.q-bsm{text-align:center;font-size:28px;line-height:2;margin-bottom:10px}
+.q-ay{padding:2px 0 34px}
+.q-ref{font-family:var(--qf);font-size:13px;color:#8E8A84;margin-bottom:4px}
+.q-line{font-size:30px;line-height:2.1;text-align:right;color:var(--ink)}
+.q-il{gap:4px 12px}.q-il .ilw .ar{font-size:29px;line-height:1.85}.q-il .ilg{font-family:var(--qf);font-size:12px;color:#8E8A84}
+.q-an{align-self:center}.q-an .ar{font-size:29px}
+.q-tr{font-family:var(--qf);font-size:17px;font-weight:500;line-height:1.45;color:var(--ink);margin-top:16px}
+.q-ru{font-family:var(--qf);font-size:17px;line-height:1.45;color:#8E8A84;margin-top:4px}
 .q-load{min-height:50vh}
 #q-prog{position:fixed;left:0;right:0;bottom:0;z-index:6;height:calc(5px + env(safe-area-inset-bottom));background:var(--fill);pointer-events:none}
 #q-prog i{display:block;height:5px;width:0;background:#1E7F4F;transition:width .1s linear}
@@ -358,6 +377,7 @@ button,textarea{touch-action:manipulation}
 .az.done{background:var(--fill);border-color:var(--fill)}
 .az-top{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--ink-3);font-weight:600}
 .az-ar{font-size:26px;line-height:1.95;text-align:center}
+.az-ar .sr-n{font-size:inherit;color:var(--ink-2)}
 .az-pre{font-size:22px;line-height:1.8;text-align:center;color:var(--ink-2)}
 .az-tr{font-size:13px;color:var(--ink-3);text-align:center;line-height:1.45}
 .az-ru{font-size:14.5px;line-height:1.5;text-align:center}
@@ -1001,7 +1021,7 @@ function openReader(su){
       b.onclick=()=>{if(sel)sel.classList.remove('sel');sel=b;b.classList.add('sel');showTok(info,tok,K,hafsTok(su[0]+':'+ay[0],k,tok[0]));};
       line.appendChild(b);line.appendChild(document.createTextNode(' '));
     }
-    line.appendChild(el('span',{class:'rd-n'},'﴿'+String(ay[0]).replace(/\d/g,c=>'٠١٢٣٤٥٦٧٨٩'[c])+'﴾'));
+    line.appendChild(el('span',{class:'rd-n'},String(ay[0]).replace(/\d/g,c=>'٠١٢٣٤٥٦٧٨٩'[c])));
     d.appendChild(line);d.appendChild(el('div',{class:'rd-ru',hidden:''},esc(ay[1])));
     body.appendChild(d);
   }
@@ -1051,14 +1071,16 @@ function qProg(){
 addEventListener('scroll',()=>{if(tab==='quran')qProg();},{passive:true});
 addEventListener('resize',()=>{if(tab==='quran')qProg();});
 function qSuraOf(p){let s=1;for(let i=0;i<QM.start.length;i++)if(QM.start[i]<=p)s=i+1;return s;}
+function qHead(d){ // «Аль-Касас: 71–77» — суры и аяты страницы
+  const g=[];for(const [su,a] of d.a){const l=g[g.length-1];if(l&&l[0]===su)l[2]=a;else g.push([su,a,a]);}
+  return g.map(([su,a,b])=>`${QM.names[su-1]}: ${a===b?a:a+'–'+b}`).join(' · ');
+}
+function qJuz(p){const j=QM.juz.filter(x=>x<=p).length,st=QM.juz[j-1]||1,en=QM.juz[j]||605;return [j,Math.round((p-st+1)/(en-st)*100)];}
 function renderQuran(){
   const root=$('view-quran');root.innerHTML='';
   if(qCur==null)qCur=qNext();
-  const v=state[today]||{},rd=qRead(v),nx=qNext(),pos=nx===QSTART&&!qLast()?QSTART-1:(nx+602)%604+1,o=qOpts();
-  root.appendChild(el('div',{class:'lhead'},`
-    <div class="lstat"><b class="num">${rd.length}<small>/${QDAY}</small></b><span>страниц сегодня</span></div>
-    <div class="lstat"><b class="num">${pos}<small>/604</small></b><span>хатм · ${Math.floor(pos/604*100)}%</span></div>
-    <div class="lstat"><b class="num">${qStreak()}</b><span>дней подряд</span></div>`));
+  const v=state[today]||{},rd=qRead(v),nx=qNext(),pos=nx===QSTART&&!qLast()?QSTART-1:(nx+602)%604+1,o=qOpts(),st=qStreak();
+  root.appendChild(el('div',{class:'q-stat'},`Сегодня <b class="num">${rd.length} из ${QDAY}</b> стр. · хатм <b class="num">${Math.floor(pos/604*100)}%</b> (${pos} из 604)${st?` · <b class="num">${st}</b> ${st%10===1&&st%100!==11?'день':st%10>=2&&st%10<=4&&(st%100<12||st%100>14)?'дня':'дней'} подряд`:''}`));
   root.appendChild(el('div',{class:'lgoal'},`<i style="width:${Math.min(100,rd.length/QDAY*100)}%"></i>`));
   const tgs=el('div',{class:'q-tgs'});
   for(const [k,t] of [['gl','Подстрочник'],['tr','Транскрипция'],['ru','Перевод']]){
@@ -1066,39 +1088,49 @@ function renderQuran(){
     b.onclick=()=>{const x=qOpts();x[k]=!x[k];try{localStorage.setItem('q-opts',JSON.stringify(x));}catch(e){}renderQuran();};
     tgs.appendChild(b);
   }
-  root.appendChild(tgs);
   const su=qSuraOf(qCur);
   const sel=el('select',{class:'q-sel','aria-label':'Сура'},QM.names.map((n,i)=>`<option value="${i+1}"${i+1===su?' selected':''}>${i+1}. ${esc(n)} · с. ${QM.start[i]}</option>`).join(''));
   sel.onchange=()=>{qCur=QM.start[+sel.value-1];renderQuran();window.scrollTo(0,0);};
-  const nav=()=>{
-    const n=el('div',{class:'q-nav'});
-    const pv=el('button',{class:'q-btn','aria-label':'Предыдущая страница'},'‹'),nxb=el('button',{class:'q-btn','aria-label':'Следующая страница'},'›');
-    pv.disabled=qCur<=1;nxb.disabled=qCur>=604;
-    pv.onclick=()=>{qCur--;renderQuran();window.scrollTo(0,0);};nxb.onclick=()=>{qCur++;renderQuran();window.scrollTo(0,0);};
-    n.append(pv,el('div',{class:'q-mid'},`<b>Страница ${qCur}</b><span>${esc(QM.names[su-1]||'')} · джуз ${QM.juz.filter(p=>p<=qCur).length}${rd.includes(qCur)?' · прочитана сегодня':''}</span>`),nxb);
-    return n;
-  };
-  root.appendChild(sel);root.appendChild(nav());
+  // вид и выбор суры — под одной кнопкой, чтобы страница начиналась сразу с текста, как в приложении
+  const set=el('details',{class:'q-set'},`<summary>Вид и сура · ${['gl','tr','ru'].filter(k=>o[k]).map(k=>({gl:'подстрочник',tr:'транскрипция',ru:'перевод'})[k]).join(', ')||'только арабский'}</summary>`);
+  try{set.open=localStorage.getItem('q-set')==='1';}catch(e){}
+  set.addEventListener('toggle',()=>{try{localStorage.setItem('q-set',set.open?'1':'0');}catch(e){}});
+  set.append(tgs,sel);root.appendChild(set);
   if(qCur!==nx){const bm=el('button',{class:'q-bm'},`К закладке · страница ${nx}`);bm.onclick=()=>{qCur=nx;renderQuran();window.scrollTo(0,0);};root.appendChild(bm);}
+  const go=n=>{qCur=n;renderQuran();window.scrollTo(0,0);};
+  // шапка страницы — как в приложении: «Аль-Касас: 71–77» и плашки «394 стр.», «20 джуз» (заливка — сколько джуза пройдено)
+  const [jz,jp]=qJuz(qCur);
+  const top=el('div',{class:'q-top'},`<b class="q-title">${esc(QM.names[su-1]||'')}</b>`);
+  const pills=el('div',{class:'q-pills'});
+  pills.append(el('span',{class:'q-pill num'},`${qCur} стр.`),el('span',{class:'q-pill jz num',style:`--p:${jp}%`},`${jz} джуз`));
+  top.appendChild(pills);root.appendChild(top);
   const box=el('section',{class:'q-load'},'<div class="lnote">Загружаю страницу…</div>');root.appendChild(box);
   const tok=++qTok,page=qCur;
   qPage(page).then(d=>{
     if(tok!==qTok)return;
+    top.firstChild.innerHTML=qHead(d).split(' · ').map(x=>`<span>${esc(x)}</span>`).join(' · ');
     box.className='q-page';box.innerHTML='';
     if(o.gl&&d.a.some(x=>!x[5]))box.appendChild(el('div',{class:'lnote left'},'Для части аятов этой страницы подстрочника нет.'));
     for(const [s,a,ws,tr,ru,g] of d.a){
       if(a===1){box.appendChild(el('div',{class:'q-sura'},`<b>Сура ${s} · ${esc(QM.names[s-1])}</b>`));if(s!==1&&s!==9)box.appendChild(el('div',{class:'ar q-bsm',lang:'ar',dir:'rtl'},esc(QM.bsm[0])));}
-      const ay=el('div',{class:'q-ay'});
-      if(o.gl&&g)ay.appendChild(el('div',{class:'il q-il',dir:'rtl'},ws.map((w,k)=>`<span class="ilw"><span class="ar" lang="ar">${esc(arText(w))}</span><span class="ilg">${esc(g[k]||'')}</span></span>`).join('')+`<span class="ar sr-n" lang="ar">﴿${arNum(a)}﴾</span>`));
-      else ay.appendChild(el('div',{class:'ar q-line',lang:'ar',dir:'rtl'},`${esc(arText(ws.join(' ')))} <span class="sr-n">﴿${arNum(a)}﴾</span>`));
+      const ay=el('div',{class:'q-ay',id:'q-'+s+'-'+a});
+      ay.appendChild(el('div',{class:'q-ref num'},`${s}:${a}`));
+      // номер аята — цифры шрифта Hafs сами рисуются в орнаментальном кружке; неразрывный пробел держит его со словом
+      if(o.gl&&g)ay.appendChild(el('div',{class:'il q-il',dir:'rtl'},ws.map((w,k)=>`<span class="ilw"><span class="ar" lang="ar">${esc(arText(w))}</span><span class="ilg">${esc(g[k]||'')}</span></span>`).join('')+`<span class="ilw q-an"><span class="ar" lang="ar">${arNum(a)}</span></span>`));
+      else ay.appendChild(el('div',{class:'ar q-line',lang:'ar',dir:'rtl'},`${esc(arText(ws.join(' ')))} ${arNum(a)}`));
       if(o.tr)ay.appendChild(el('div',{class:'q-tr'},esc(tr)));
-      if(o.ru)ay.appendChild(el('div',{class:'sr-ru'},`<b>${s}:${a}.</b> ${esc(ru)}`));
+      if(o.ru)ay.appendChild(el('div',{class:'q-ru'},esc(ru)));
       box.appendChild(ay);
     }
     const done=rd.includes(page);
     const mk=el('button',{class:'lbtn'+(done?' ghost':'')},done?`Страница ${page} прочитана · снять отметку`:`Прочитал страницу ${page}`);
     mk.onclick=()=>{if(done)qMark(page,false);else{if(page<604)qCur=page+1;qMark(page,true);window.scrollTo(0,0);}};
-    box.appendChild(mk);box.appendChild(nav());
+    box.appendChild(mk);
+    const n=el('div',{class:'q-nav'});
+    const p2=el('button',{class:'q-btn','aria-label':'Предыдущая страница'},'‹'),n2=el('button',{class:'q-btn','aria-label':'Следующая страница'},'›');
+    p2.disabled=page<=1;n2.disabled=page>=604;p2.onclick=()=>go(page-1);n2.onclick=()=>go(page+1);
+    n.append(p2,el('div',{class:'q-mid'},`<b>Страница ${page}</b><span>${esc(qHead(d))} · джуз ${jz}${done?' · прочитана сегодня':''}</span>`),n2);
+    box.appendChild(n);
     qProg();
     for(let i=1;i<=3;i++)if(page+i<=604)qPage(page+i).catch(()=>{}); // наперёд — чтобы читалось без сети
   }).catch(()=>{if(tok===qTok)box.innerHTML='<div class="lnote">Нет сети, а эта страница ещё не сохранена на телефоне. Прочитанные и следующие три страницы открываются без сети.</div>';});
@@ -1124,7 +1156,7 @@ function azArHtml(z){
   let h=z.pre?`<div class="ar az-pre" lang="ar" dir="rtl">${esc(z.pre)}</div>`:'';
   for(const grp of z.q){
     if(z.bsm)h+=`<div class="ar az-pre" lang="ar" dir="rtl">${esc(z.bsm[0])}</div>`;
-    h+=`<div class="ar az-ar" lang="ar" dir="rtl">${grp.map(([t,,n])=>`${esc(arText(t))} <span class="sr-n">﴿${arNum(n)}﴾</span>`).join(' ')}</div>`;
+    h+=`<div class="ar az-ar" lang="ar" dir="rtl">${grp.map(([t,,n])=>`${esc(arText(t))} <span class="sr-n">${arNum(n)}</span>`).join(' ')}</div>`;
   }
   return h;
 }
@@ -1289,7 +1321,7 @@ function renderSura(){
   for(const [a,ru,toks] of su[2]){
     const g=GLOSS[su[0]+':'+a]||[];
     const d=el('div',{class:'sr-ay'});
-    d.appendChild(el('div',{class:'il sr-il',dir:'rtl'},toks.map((tk,k)=>`<span class="ilw"><span class="ar" lang="ar">${esc(arText(hafsTok(su[0]+':'+a,k,tk[0])))}</span><span class="ilg">${esc(g[k]||'')}</span></span>`).join('')+`<span class="ar sr-n" lang="ar">﴿${arNum(a)}﴾</span>`));
+    d.appendChild(el('div',{class:'il sr-il',dir:'rtl'},toks.map((tk,k)=>`<span class="ilw"><span class="ar" lang="ar">${esc(arText(hafsTok(su[0]+':'+a,k,tk[0])))}</span><span class="ilg">${esc(g[k]||'')}</span></span>`).join('')+`<span class="ar sr-n" lang="ar">${arNum(a)}</span>`));
     d.appendChild(el('div',{class:'sr-ru'},`<b>${a}.</b> ${esc(ru)}`));
     const tf=(inf.tafsir||{})[a];
     if(tf){const det=el('details',{class:'sr-tf'},`<summary>Толкование</summary><p>${explHtml(tf)}</p>`);tafs.push(det);d.appendChild(det);}
@@ -1825,6 +1857,8 @@ function switchTab(t){
   $('datebar').hidden=flat;$('progrow').hidden=t!=='day';$('planrow').hidden=flat;
   const tb=$('tab-'+t);if(tb&&tb.scrollIntoView)tb.scrollIntoView({block:'nearest',inline:'nearest'});
   try{localStorage.setItem('fajr-witr-tab',t);}catch(e){}
+  document.documentElement.classList.toggle('qmode',t==='quran');
+  const tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.content=t==='quran'?'#FAF5EC':'#FFFFFF';
   render();window.scrollTo(0,0);if(typeof qProg==='function')qProg();
 }
 function render(){renderHeader();if(tab==='day')renderDay();else if(tab==='plan')renderPlan();else if(tab==='notes')renderNotes();else if(tab==='learn')renderLearn();else if(tab==='sura')renderSura();else if(tab==='quran')renderQuran();else if(tab==='azkar')renderAzkar();else if(tab==='ai')renderAi();else renderStats();growAll();}

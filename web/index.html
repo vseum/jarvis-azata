@@ -363,6 +363,21 @@ button,textarea{touch-action:manipulation}
 .q-an{align-self:center}.q-an .ar{font-size:29px}
 .q-tr{font-family:var(--qf);font-size:17px;font-weight:500;line-height:1.45;color:var(--ink);margin-top:16px}
 .q-ru{font-family:var(--qf);font-size:17px;line-height:1.45;color:#8E8A84;margin-top:4px}
+html.qmode.mspread .wrap{max-width:1240px}
+.mbox{gap:14px}
+.mspr{display:flex;gap:12px;justify-content:center}
+.mp{flex:1;min-width:0;max-width:620px;background:#FFFCF5;border:1px solid #E3D6BE;border-radius:6px;box-shadow:0 1px 0 #EADFC9,0 6px 18px rgba(80,60,20,.08);padding:12px 12px 6px;display:flex;flex-direction:column}
+.mp-l{display:flex;flex-direction:column;line-height:2.05;color:#1A1A1A}
+.ml{display:flex;justify-content:space-between;align-items:baseline;white-space:nowrap}
+.ml.mfree,.ml.mc{justify-content:center;gap:.28em}
+.mw{border-radius:4px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.mw.on{background:#F3E2B3;color:#7A4A00}
+.mh{justify-content:center;margin:.15em 0;border:1px solid #CDB88E;border-radius:10px;background:linear-gradient(#FBF4E3,#F3E7CB);line-height:1.6;font-size:1.05em}
+.mb{justify-content:center}
+.mp-n{text-align:center;font-family:var(--qf);font-size:12px;color:#8E8A84;padding-top:4px}
+.mtip{position:fixed;z-index:50;transform:translate(-50%,-100%);max-width:min(72vw,320px);background:#2A2620;color:#fff;font-family:var(--qf);font-size:15px;line-height:1.3;padding:7px 12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.18);pointer-events:none;opacity:0;transition:opacity .15s;text-align:center}
+.mtip.below{transform:translate(-50%,0)}
+.mtip.show{opacity:1}
 .q-load{min-height:50vh}
 #q-prog{position:fixed;left:0;right:0;bottom:0;z-index:6;height:calc(5px + env(safe-area-inset-bottom));background:var(--fill);pointer-events:none}
 #q-prog i{display:block;height:5px;width:0;background:#1E7F4F;transition:width .1s linear}
@@ -1053,7 +1068,7 @@ function qLast(){ // последняя отмеченная страница �
 }
 function qNext(){const l=qLast();return l?l%604+1:QSTART;}
 function qStreak(){let n=0,d=today;if((state[d]||{}).quran!==true)d=addDays(d,-1);while((state[d]||{}).quran===true){n++;d=addDays(d,-1);}return n;}
-function qOpts(){let o=null;try{o=JSON.parse(localStorage.getItem('q-opts'));}catch(e){}return o||{tr:true,ru:true,gl:true};}
+function qOpts(){let o=null;try{o=JSON.parse(localStorage.getItem('q-opts'));}catch(e){}return Object.assign({tr:true,ru:true,gl:true,m:false},o||{});}
 function qMark(n,on){mutate(today,v=>{v._qp=Object.assign({},v._qp);v._qp[n]=[on?1:0,Date.now()];if(qRead(v).length>=QDAY)v.quran=true;});}
 // полоса прогресса чтения текущей страницы (внизу экрана)
 function qProg(){
@@ -1079,7 +1094,7 @@ function renderQuran(){
   root.appendChild(el('div',{class:'q-stat'},`Сегодня <b class="num">${rd.length} из ${QDAY}</b> стр. · хатм <b class="num">${Math.floor(pos/604*100)}%</b> (${pos} из 604)${st?` · <b class="num">${st}</b> ${st%10===1&&st%100!==11?'день':st%10>=2&&st%10<=4&&(st%100<12||st%100>14)?'дня':'дней'} подряд`:''}`));
   root.appendChild(el('div',{class:'lgoal'},`<i style="width:${Math.min(100,rd.length/QDAY*100)}%"></i>`));
   const tgs=el('div',{class:'q-tgs'});
-  for(const [k,t] of [['gl','Подстрочник'],['tr','Транскрипция'],['ru','Перевод']]){
+  for(const [k,t] of [['m','Мусхаф'],['gl','Подстрочник'],['tr','Транскрипция'],['ru','Перевод']]){
     const b=el('button',{class:'rd-tg'+(o[k]?' on':''),'aria-pressed':String(!!o[k])},t);
     b.onclick=()=>{const x=qOpts();x[k]=!x[k];try{localStorage.setItem('q-opts',JSON.stringify(x));}catch(e){}renderQuran();};
     tgs.appendChild(b);
@@ -1088,7 +1103,7 @@ function renderQuran(){
   const sel=el('select',{class:'q-sel','aria-label':'Сура'},QM.names.map((n,i)=>`<option value="${i+1}"${i+1===su?' selected':''}>${i+1}. ${esc(n)} · с. ${QM.start[i]}</option>`).join(''));
   sel.onchange=()=>{qCur=QM.start[+sel.value-1];renderQuran();window.scrollTo(0,0);};
   // вид и выбор суры — под одной кнопкой, чтобы страница начиналась сразу с текста, как в приложении
-  const set=el('details',{class:'q-set'},`<summary>Вид и сура · ${['gl','tr','ru'].filter(k=>o[k]).map(k=>({gl:'подстрочник',tr:'транскрипция',ru:'перевод'})[k]).join(', ')||'только арабский'}</summary>`);
+  const set=el('details',{class:'q-set'},`<summary>Вид и сура · ${o.m?'мусхаф':['gl','tr','ru'].filter(k=>o[k]).map(k=>({gl:'подстрочник',tr:'транскрипция',ru:'перевод'})[k]).join(', ')||'только арабский'}</summary>`);
   try{set.open=localStorage.getItem('q-set')==='1';}catch(e){}
   set.addEventListener('toggle',()=>{try{localStorage.setItem('q-set',set.open?'1':'0');}catch(e){}});
   set.append(tgs,sel);root.appendChild(set);
@@ -1100,6 +1115,7 @@ function renderQuran(){
   const pills=el('div',{class:'q-pills'});
   pills.append(el('span',{class:'q-pill num'},`${qCur} стр.`),el('span',{class:'q-pill jz num',style:`--p:${jp}%`},`${jz} джуз`));
   top.appendChild(pills);root.appendChild(top);
+  if(o.m)return renderMushaf(root,top,rd,go);
   const box=el('section',{class:'q-load'},'<div class="lnote">Загружаю страницу…</div>');root.appendChild(box);
   const tok=++qTok,page=qCur;
   qPage(page).then(d=>{
@@ -1113,7 +1129,7 @@ function renderQuran(){
       ay.appendChild(el('div',{class:'q-ref num'},`${s}:${a}`));
       // номер аята — цифры шрифта Hafs сами рисуются в орнаментальном кружке; неразрывный пробел держит его со словом
       if(o.gl&&g)ay.appendChild(el('div',{class:'il q-il',dir:'rtl'},ws.map((w,k)=>`<span class="ilw"><span class="ar" lang="ar">${esc(arText(w))}</span><span class="ilg">${esc(g[k]||'')}</span></span>`).join('')+`<span class="ilw q-an"><span class="ar" lang="ar">${arNum(a)}</span></span>`));
-      else ay.appendChild(el('div',{class:'ar q-line',lang:'ar',dir:'rtl'},`${esc(arText(ws.join(' ')))} ${arNum(a)}`));
+      else ay.appendChild(el('div',{class:'ar q-line',lang:'ar',dir:'rtl'},ws.map((w,k)=>`<span class="mw"${g&&g[k]?` data-g="${esc(g[k])}"`:''}>${esc(arText(w))}</span>`).join(' ')+` ${arNum(a)}`));
       if(o.tr)ay.appendChild(el('div',{class:'q-tr'},esc(tr)));
       if(o.ru)ay.appendChild(el('div',{class:'q-ru'},esc(ru)));
       box.appendChild(ay);
@@ -1131,6 +1147,81 @@ function renderQuran(){
     for(let i=1;i<=3;i++)if(page+i<=604)qPage(page+i).catch(()=>{}); // наперёд — чтобы читалось без сети
   }).catch(()=>{if(tok===qTok)box.innerHTML='<div class="lnote">Нет сети, а эта страница ещё не сохранена на телефоне. Прочитанные и следующие три страницы открываются без сети.</div>';});
 }
+// ---------- режим «Мусхаф»: страница как в печатном Мединском мусхафе — 15 строк, разбивка слово в слово (данные quran.com).
+// На широком экране (раскрытый Galaxy Fold, планшет, телефон в альбомной ориентации) — разворот: нечётная страница справа.
+function qSpread(){return innerWidth>=600&&innerWidth>innerHeight*0.95;}
+function mPage(d){
+  const pg=el('div',{class:'mp'+(d.p<=2?' mp-open':'')});
+  const body=el('div',{class:'mp-l',dir:'rtl',lang:'ar'});
+  for(const ln of d.m){
+    if(ln[0]==='h'){body.appendChild(el('div',{class:'ml mh'},`<span class="ar">${esc(QM.ar&&QM.ar[ln[1]-1]||'سورة')}</span>`));continue;}
+    if(ln[0]==='b'){body.appendChild(el('div',{class:'ml mb ar'},esc(QM.bsm[0])));continue;}
+    body.appendChild(el('div',{class:'ml ar'},ln.map(x=>x.length===1?`<span class="me">${arNum(x[0])}</span>`:`<span class="mw"${x[1]?` data-g="${esc(x[1])}"`:''}>${esc(x[0])}</span>`).join('')));
+  }
+  pg.append(body,el('div',{class:'mp-n num'},String(d.p)));
+  return pg;
+}
+function mFitAll(spread){ // кегль — по самой длинной строке разворота (одинаковый на обеих страницах); строки — по ширине, короткие (конец суры) — по центру
+  const ps=[...spread.querySelectorAll('.mp')].map(pg=>{
+    const body=pg.querySelector('.mp-l'),W=body.clientWidth;
+    body.style.fontSize='20px';const ls=[...body.querySelectorAll('.ml:not(.mh):not(.mb)')];
+    ls.forEach(l=>l.classList.add('mfree'));
+    const nat=ls.map(l=>[...l.children].reduce((s,c)=>s+c.getBoundingClientRect().width,0)+(l.children.length-1)*20*0.28);
+    return {pg,body,W,ls,nat,f:20*W/Math.max(...nat.filter((x,i)=>!pg.classList.contains('mp-open')||true),1)*0.98};
+  }).filter(x=>x.W);
+  if(!ps.length)return;
+  const f=Math.min(44,...ps.map(x=>x.f));
+  for(const {pg,body,W,ls,nat} of ps){body.style.fontSize=f+'px';ls.forEach((l,i)=>{l.classList.remove('mfree');l.classList.toggle('mc',pg.classList.contains('mp-open')||nat[i]*f/20<W*0.55);});}
+}
+function renderMushaf(root,top,rd,go){
+  const sp=qSpread(),base=sp?qCur-(qCur%2===0?1:0):qCur,pgs=sp&&base<604?[base,base+1]:[base];
+  document.documentElement.classList.toggle('mspread',sp);
+  const box=el('section',{class:'q-load'},'<div class="lnote">Загружаю страницу…</div>');root.appendChild(box);
+  const tok=++qTok;
+  if(sp)top.querySelector('.q-pill').textContent=`${pgs.join('–')} стр.`;
+  Promise.all(pgs.map(qPage)).then(ds=>{
+    if(tok!==qTok)return;
+    top.firstChild.innerHTML=ds.map(qHead).join(' · ').split(' · ').filter((x,i,a)=>a.indexOf(x)===i).map(x=>`<span>${esc(x)}</span>`).join(' · ');
+    box.className='q-page mbox';box.innerHTML='';
+    const spread=el('div',{class:'mspr',dir:'rtl'});ds.forEach(d=>spread.appendChild(mPage(d)));box.appendChild(spread);
+    const fit=()=>mFitAll(spread);
+    fit();if(document.fonts&&document.fonts.ready)document.fonts.ready.then(fit);
+    // свайп: вправо — следующая страница (книга листается справа налево), влево — предыдущая
+    let tx=0,ty=0;
+    spread.addEventListener('touchstart',e=>{const t=e.touches[0];tx=t.clientX;ty=t.clientY;},{passive:true});
+    spread.addEventListener('touchend',e=>{const t=e.changedTouches[0],dx=t.clientX-tx,dy=t.clientY-ty;if(Math.abs(dx)>60&&Math.abs(dy)<50){const n=dx>0?pgs[pgs.length-1]+1:base-pgs.length;if(n>=1&&n<=604)go(n);}},{passive:true});
+    const done=pgs.every(p=>rd.includes(p)),lbl=pgs.length>1?`страницы ${pgs[0]}–${pgs[1]}`:`страницу ${pgs[0]}`;
+    const mk=el('button',{class:'lbtn'+(done?' ghost':'')},done?`Прочитал ${lbl} · снять отметку`:`Прочитал ${lbl}`);
+    mk.onclick=()=>{
+      if(!done){const n=pgs[pgs.length-1]+1;if(n<=604)qCur=n;}
+      mutate(today,v=>{v._qp=Object.assign({},v._qp);const t=Date.now();pgs.forEach((p,i)=>{v._qp[p]=[done?0:1,t+i];});if(qRead(v).length>=QDAY)v.quran=true;});
+      if(!done)window.scrollTo(0,0);
+    };
+    box.appendChild(mk);
+    const n=el('div',{class:'q-nav'});
+    const p2=el('button',{class:'q-btn','aria-label':'Предыдущая страница'},'‹'),n2=el('button',{class:'q-btn','aria-label':'Следующая страница'},'›');
+    p2.disabled=base<=1;n2.disabled=pgs[pgs.length-1]>=604;p2.onclick=()=>go(Math.max(1,base-pgs.length));n2.onclick=()=>go(pgs[pgs.length-1]+1);
+    n.append(p2,el('div',{class:'q-mid'},`<b>${pgs.length>1?'Страницы '+pgs.join('–'):'Страница '+base}</b><span>свайп вправо — дальше · нажми на слово — перевод</span>`),n2);
+    box.appendChild(n);
+    qProg();
+    for(let i=1;i<=4;i++)if(pgs[pgs.length-1]+i<=604)qPage(pgs[pgs.length-1]+i).catch(()=>{});
+  }).catch(()=>{if(tok===qTok)box.innerHTML='<div class="lnote">Нет сети, а эта страница ещё не сохранена на телефоне.</div>';});
+}
+addEventListener('resize',()=>{if(tab==='quran'&&qOpts().m){if(qSpread()!==document.documentElement.classList.contains('mspread'))renderQuran();else{const sp=document.querySelector('.mspr');if(sp)mFitAll(sp);}}});
+// нажатие на слово (мусхаф и обычный вид без подстрочника) — перевод над словом, исчезает через 2,5 с
+let mTip=null,mTipT=0;
+document.addEventListener('click',e=>{
+  const w=e.target.closest&&e.target.closest('#view-quran .mw');if(!w)return;
+  if(!mTip){mTip=el('div',{class:'mtip'});document.body.appendChild(mTip);}
+  document.querySelectorAll('.mw.on').forEach(x=>x.classList.remove('on'));
+  mTip.textContent=w.dataset.g||'перевода нет';
+  const r=w.getBoundingClientRect(),up=r.top>70;
+  mTip.style.left=Math.max(80,Math.min(innerWidth-80,r.left+r.width/2))+'px';
+  mTip.style.top=(up?r.top-6:r.bottom+6)+'px';mTip.classList.toggle('below',!up);
+  mTip.classList.add('show');w.classList.add('on');mTip._y=scrollY;
+  clearTimeout(mTipT);mTipT=setTimeout(()=>{mTip.classList.remove('show');w.classList.remove('on');},2500);
+});
+addEventListener('scroll',()=>{if(mTip&&mTip.classList.contains('show')&&Math.abs(scrollY-mTip._y)>40){mTip.classList.remove('show');document.querySelectorAll('.mw.on').forEach(x=>x.classList.remove('on'));}},{passive:true});
 // ---------- «Азкары»: утренние, вечерние, перед сном — счётчик повторов, отметка в трекере, когда пройден весь список.
 // Счёт — в документе дня: _az {"am:kursi": [сделано раз, время]}.
 const AZ=window.QAZKAR||{am:[],pm:[],sl:[]};
@@ -1853,7 +1944,7 @@ function switchTab(t){
   $('datebar').hidden=flat;$('progrow').hidden=t!=='day';$('planrow').hidden=flat;
   const tb=$('tab-'+t);if(tb&&tb.scrollIntoView)tb.scrollIntoView({block:'nearest',inline:'nearest'});
   try{localStorage.setItem('fajr-witr-tab',t);}catch(e){}
-  document.documentElement.classList.toggle('qmode',t==='quran');
+  document.documentElement.classList.toggle('qmode',t==='quran');if(t!=='quran')document.documentElement.classList.remove('mspread');
   const tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.content=t==='quran'?'#FAF5EC':'#FFFFFF';
   render();window.scrollTo(0,0);if(typeof qProg==='function')qProg();
 }

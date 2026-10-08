@@ -41,7 +41,8 @@ for ref,(pg,j) in P.items():
     juz.setdefault(j,pg);juz[j]=min(juz[j],pg)
 import hashlib,glob,os
 QV=hashlib.md5(b''.join(open(f,'rb').read() for f in sorted(glob.glob(os.path.join(os.path.dirname(os.path.abspath(DATA)),'quran','p*.json'))))).hexdigest()[:8]  # версия файлов страниц для кэша
-meta={'v':QV,'names':NAMES,'start':[start[s] for s in range(1,115)],'juz':[juz[j] for j in range(1,31)],'bsm':BSM}
+AR=[x['name'] for x in json.load(open('simple.json'))['data']['surahs']]   # арабские названия для заставок мусхафа
+meta={'v':QV,'names':NAMES,'ar':AR,'start':[start[s] for s in range(1,115)],'juz':[juz[j] for j in range(1,31)],'bsm':BSM}
 # долгие гласные — удвоением, как в транскрипции Корана (аа, уу, ии)
 LONG=str.maketrans({'ā':'аа','ӯ':'уу','ӣ':'ии','Ā':'Аа'})
 def fix(x):

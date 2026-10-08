@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-08T05:11:47.850Z",
+ "updatedAt": "2026-10-08T05:12:45.471Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -935,11 +935,21 @@
     "am_pull": false,
     "am_minox": false,
     "am_vit_cr": false,
-    "walk": true
+    "walk": true,
+    "pm_azkar": true,
+    "pm_vit_mg": false,
+    "pm_vit_zn": false,
+    "pm_squat": false,
+    "pm_push": false,
+    "pm_abs": false,
+    "pm_back": false,
+    "pm_shower": false,
+    "pm_minox": false,
+    "sleep_azkar": true
    },
-   "score": 15.3,
-   "pct": 48,
-   "updatedAt": "2026-10-08T05:11:37.522Z"
+   "score": 17.3,
+   "pct": 54,
+   "updatedAt": "2026-10-08T05:12:08.666Z"
   },
   "2026-10-06": {
    "v": {
@@ -1038,6 +1048,22 @@
    "score": 14.8,
    "pct": 46,
    "updatedAt": "2026-10-08T05:10:20.045Z"
+  },
+  "2026-10-08": {
+   "v": {
+    "sleep_isha": true,
+    "tahajjud": true,
+    "witr": true,
+    "sleep_back": true,
+    "wake_fajr": true,
+    "fajr_masjid": true,
+    "am_azkar": true,
+    "quran": true,
+    "arabic": true
+   },
+   "score": 9,
+   "pct": 28,
+   "updatedAt": "2026-10-08T05:12:30.461Z"
   }
  }
 }

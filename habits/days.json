@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-08T05:09:29.633Z",
+ "updatedAt": "2026-10-08T05:10:00.148Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -1004,11 +1004,12 @@
     "pm_squat": false,
     "pm_push": false,
     "pm_abs": false,
-    "pm_back": false
+    "pm_back": false,
+    "pm_shower": true
    },
-   "score": 14.8,
-   "pct": 46,
-   "updatedAt": "2026-10-08T05:09:14.629Z"
+   "score": 15.8,
+   "pct": 49,
+   "updatedAt": "2026-10-08T05:09:45.144Z"
   }
  }
 }

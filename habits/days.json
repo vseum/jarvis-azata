@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-08T05:10:45.996Z",
+ "updatedAt": "2026-10-08T05:11:47.850Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -902,8 +902,9 @@
      {
       "id": "muuzaraojw0n",
       "t": "Зубной Алана",
-      "done": false,
-      "g": "c"
+      "done": true,
+      "g": "c",
+      "up": "2026-10-08T05:11:16.444Z"
      },
      {
       "id": "muuzaxci7sxk",
@@ -915,22 +916,30 @@
      {
       "id": "muuzb34nvydb",
       "t": "Бла бла кар",
-      "done": false,
-      "g": "c"
+      "done": true,
+      "g": "c",
+      "up": "2026-10-08T05:11:18.127Z"
      }
     ],
     "_focus": {
-     "t": "Разобраться с заявками и чтобы был быстрый ответ"
+     "t": "Разобраться с заявками и чтобы был быстрый ответ",
+     "done": true
     },
     "diary": true,
     "_da": true,
     "jamaat": [
      "Зухр"
-    ]
+    ],
+    "quran": true,
+    "am_abs": false,
+    "am_pull": false,
+    "am_minox": false,
+    "am_vit_cr": false,
+    "walk": true
    },
-   "score": 13.3,
-   "pct": 42,
-   "updatedAt": "2026-10-05T13:52:36.453Z"
+   "score": 15.3,
+   "pct": 48,
+   "updatedAt": "2026-10-08T05:11:37.522Z"
   },
   "2026-10-06": {
    "v": {
@@ -961,11 +970,25 @@
     "diary": false,
     "pm_shower": false,
     "pm_minox": false,
-    "sleep_azkar": true
+    "sleep_azkar": true,
+    "pm_back": false,
+    "pm_abs": false,
+    "pm_push": false,
+    "pm_squat": false,
+    "pm_vit_mg": true,
+    "pm_vit_zn": true,
+    "pm_azkar": true,
+    "jamaat": [
+     "Зухр",
+     "Аср",
+     "Магриб",
+     "Иша"
+    ],
+    "work": 1
    },
-   "score": 12.6,
-   "pct": 39,
-   "updatedAt": "2026-10-08T05:10:30.986Z"
+   "score": 15.85,
+   "pct": 50,
+   "updatedAt": "2026-10-08T05:11:05.675Z"
   },
   "2026-10-07": {
    "v": {

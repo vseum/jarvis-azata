@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-08T05:10:00.148Z",
+ "updatedAt": "2026-10-08T05:10:45.996Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -958,11 +958,14 @@
     "walk": true,
     "duha": true,
     "breakfast": true,
-    "diary": false
+    "diary": false,
+    "pm_shower": false,
+    "pm_minox": false,
+    "sleep_azkar": true
    },
-   "score": 11.6,
-   "pct": 36,
-   "updatedAt": "2026-10-08T05:06:19.264Z"
+   "score": 12.6,
+   "pct": 39,
+   "updatedAt": "2026-10-08T05:10:30.986Z"
   },
   "2026-10-07": {
    "v": {
@@ -1005,11 +1008,13 @@
     "pm_push": false,
     "pm_abs": false,
     "pm_back": false,
-    "pm_shower": true
+    "pm_shower": false,
+    "pm_minox": false,
+    "sleep_azkar": false
    },
-   "score": 15.8,
-   "pct": 49,
-   "updatedAt": "2026-10-08T05:09:45.144Z"
+   "score": 14.8,
+   "pct": 46,
+   "updatedAt": "2026-10-08T05:10:20.045Z"
   }
  }
 }

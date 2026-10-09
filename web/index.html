@@ -591,8 +591,7 @@ const BLOCKS=[
   {id:'diary',n:'Заполнить ежедневник',note:'фокус дня, дела, развлечения'}]},
  {id:'day',name:'День',hint:'работа и намазы',items:[
   {id:'work',n:'Работа',note:'цель 4–5 часов',type:'hours',target:4,max:10},
-  {id:'jamaat',n:'Намазы в джамаате',type:'multi',opts:['Зухр','Аср','Магриб','Иша']},
-  {id:'dhikr',n:'Зикр дня',note:'5 зикров по 33',go:'dz',from:'2026-10-09'}]},
+  {id:'jamaat',n:'Намазы в джамаате',type:'multi',opts:['Зухр','Аср','Магриб','Иша']}]},
  {id:'evening',name:'Вечер',hint:'после Асра',items:[
   {id:'pm_azkar',n:'Азкары вечера'},
   {id:'pm_vit',n:'Витамины',type:'group',subs:[{id:'pm_vit_mg',n:'Магний'},{id:'pm_vit_zn',n:'Цинк'}]},
@@ -1253,11 +1252,9 @@ document.addEventListener('click',e=>{
 addEventListener('scroll',()=>{if(mTip&&mTip.classList.contains('show')&&Math.abs(scrollY-mTip._y)>40){mTip.classList.remove('show');document.querySelectorAll('.mw.on').forEach(x=>x.classList.remove('on'));}},{passive:true});
 // ---------- «Азкары»: утренние, вечерние, перед сном — счётчик повторов, отметка в трекере, когда пройден весь список.
 // Счёт — в документе дня: _az {"am:kursi": [сделано раз, время]}.
-const AZ=window.QAZKAR||{am:[],pm:[],sl:[],dz:[]};
-const AZK={am:{t:'Утро',id:'am_azkar',n:'Азкары утра',h:'после Фаджра'},pm:{t:'Вечер',id:'pm_azkar',n:'Азкары вечера',h:'после Асра'},sl:{t:'Перед сном',id:'sleep_azkar',n:'Азкары перед сном',h:'ложась спать'},
-           dz:{t:'День',id:'dhikr',n:'Зикр дня',h:'в течение дня'}};
+const AZ=window.QAZKAR||{am:[],pm:[],sl:[]};
+const AZK={am:{t:'Утро',id:'am_azkar',n:'Азкары утра',h:'после Фаджра'},pm:{t:'Вечер',id:'pm_azkar',n:'Азкары вечера',h:'после Асра'},sl:{t:'Перед сном',id:'sleep_azkar',n:'Азкары перед сном',h:'ложась спать'}};
 let azSet=null;
-function openAz(set){azSet=set;if(viewDate!==today)viewDate=today;switchTab('azkar');}
 function azDefault(){const h=new Date().getHours();return h>=4&&h<12?'am':h>=12&&h<21?'pm':'sl';}
 function azGet(v,set,id){const x=((v&&v._az)||{})[set+':'+id];return x?x[0]:0;}
 function azDone(v,set){return (AZ[set]||[]).filter(z=>azGet(v,set,z.id)>=z.n).length;}
@@ -1347,7 +1344,7 @@ function aiSummary(days){
       for(const x of h.type==='group'?h.subs.map(s=>({id:s.id,n:h.n+': '+s.n})):[h])(v[x.id]===true?yes:v[x.id]===false?no:null)?.push(x.n);
     }
     const jam=Array.isArray(v.jamaat)?v.jamaat.length:0,az=k=>`${azDone(v,k)}/${(AZ[k]||[]).length}`;
-    L.push(`${d} (${WDN[parse(d).getDay()]}): ${Math.round(dayScore(v,d)/totalOn(d)*100)}% | работа ${+v.work||0} ч | джамаат ${jam}/4 | Коран ${qRead(v).length} стр | азкары утро ${az('am')}, вечер ${az('pm')}, сон ${az('sl')}, зикр дня ${az('dz')}\n  ✓ ${yes.join(', ')||'—'}\n  ✗ ${no.join(', ')||'—'}`);
+    L.push(`${d} (${WDN[parse(d).getDay()]}): ${Math.round(dayScore(v,d)/totalOn(d)*100)}% | работа ${+v.work||0} ч | джамаат ${jam}/4 | Коран ${qRead(v).length} стр | азкары утро ${az('am')}, вечер ${az('pm')}, сон ${az('sl')}\n  ✓ ${yes.join(', ')||'—'}\n  ✗ ${no.join(', ')||'—'}`);
   }
   L.push('\nПо привычкам за 30 дней (процент выполнения / текущая серия дней):');
   for(const b of BLOCKS)L.push(`${b.name}: `+b.items.map(h=>`${h.n} ${pctWindow(h,30)}%/${streak(h)}`).join('; '));
@@ -1716,7 +1713,7 @@ function renderDay(){
       const nt=liveNote(h,v),note=nt?`<div class="note">${esc(nt)}</div>`:'';
       if(!h.type){
         const row=triRow(v,h.id,h.n,note,'');
-        if(h.go){const g=el('button',{class:'rgo'},h.go==='kahf'?'Читать →':'Открыть →');g.onclick=()=>h.go==='kahf'?openKahf():openAz(h.go);row.insertBefore(g,row.children[1]);} // переход к суре / к зикрам
+        if(h.go){const g=el('button',{class:'rgo'},'Читать →');g.onclick=()=>openKahf();row.insertBefore(g,row.children[1]);} // переход к суре
         body.appendChild(row);
       }else if(h.type==='group'){
         const n=h.subs.filter(x=>v[x.id]===true).length;

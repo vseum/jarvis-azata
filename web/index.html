@@ -196,6 +196,7 @@ button.row[aria-pressed="true"] .n{color:var(--ink-3)}
 .dots{display:flex;gap:2px}
 .dots i{width:7px;height:14px;border-radius:2px;background:var(--h0)}
 .dots i.p{background:var(--h2)}.dots i.d{background:var(--h4)}
+.dots i.off{background:transparent;box-shadow:inset 0 0 0 1px var(--h0)}
 .hl .pc,.hl .sk{text-align:right;font-weight:600}
 .hl .sk{color:var(--ink-2)}
 .hl-head{font-size:11px;color:var(--ink-3);border-top:0;padding-top:0}
@@ -349,6 +350,9 @@ button,textarea{touch-action:manipulation}
 .q-title{font-family:var(--qf);font-size:16px;font-weight:600;line-height:1.3;color:var(--ink);min-width:0}.q-title span{white-space:nowrap}
 .q-pills{display:flex;align-items:center;gap:5px;flex:none}
 .q-pill{font-family:var(--qf);font-size:12.5px;font-weight:600;color:#fff;background:#6E6A64;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.rgo{flex:none;font-size:12.5px;font-weight:600;padding:7px 11px;border-radius:999px;background:var(--ink);color:#fff;white-space:nowrap}
+.q-kahf{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:#E9F3EC;border:1px solid #CFE3D5;font-family:var(--qf)}
+.q-kahf b{font-size:14.5px}.q-kahf span{font-size:13.5px;color:#1E7F4F;font-weight:600}.q-kahf small{font-size:12px;color:var(--ink-3)}
 .q-set summary{font-family:var(--qf);font-size:13.5px;font-weight:600;color:var(--ink-2);cursor:pointer;list-style:none;padding:2px 0}
 .q-set summary::before{content:'⚙︎ ';color:var(--ink-3)}
 .q-set[open]{display:flex;flex-direction:column;gap:10px}
@@ -586,7 +590,8 @@ const BLOCKS=[
   {id:'diary',n:'Заполнить ежедневник',note:'фокус дня, дела, развлечения'}]},
  {id:'day',name:'День',hint:'работа и намазы',items:[
   {id:'work',n:'Работа',note:'цель 4–5 часов',type:'hours',target:4,max:10},
-  {id:'jamaat',n:'Намазы в джамаате',type:'multi',opts:['Зухр','Аср','Магриб','Иша']}]},
+  {id:'jamaat',n:'Намазы в джамаате',type:'multi',opts:['Зухр','Аср','Магриб','Иша']},
+  {id:'kahf',n:'Сура аль-Кахф',note:'пятница · 12 страниц',days:[5],go:'kahf'}]},
  {id:'evening',name:'Вечер',hint:'после Асра',items:[
   {id:'pm_azkar',n:'Азкары вечера'},
   {id:'pm_vit',n:'Витамины',type:'group',subs:[{id:'pm_vit_mg',n:'Магний'},{id:'pm_vit_zn',n:'Цинк'}]},
@@ -612,7 +617,10 @@ function sc(h,v){ // score of one item within a day's values
 }
 function missed(h,v){v=v||{};return h.type==='group'?h.subs.every(x=>v[x.id]===false):v[h.id]===false;}
 function toggles(h){return h.type==='group'?h.subs.map(x=>x.id):!h.type?[h.id]:[];} // ids a tri-state button sets
-function dayScore(v){v=v||{};let s=0;for(const h of ALL)s+=sc(h,v);return s;}
+// пункт с days:[…] есть только в эти дни недели (0 — вс, 5 — пт): в процент дня, серии и проценты входят только они
+const onDay=(h,d)=>!h.days||h.days.includes(parse(d).getDay());
+const totalOn=d=>ALL.filter(h=>onDay(h,d)).length;
+function dayScore(v,d){v=v||{};let s=0;for(const h of ALL)if(onDay(h,d))s+=sc(h,v);return s;}
 
 // dates
 const pad=n=>String(n).padStart(2,'0');
@@ -680,9 +688,9 @@ function push(){
   const d=Object.keys(unsynced).sort()[0];
   if(!d){setStatus('Сохранено');return;}
   pushing=true;setStatus('Сохраняю…');
-  const v=state[d]||{};const s=dayScore(v);
+  const v=state[d]||{};const s=isDay(d)?dayScore(v,d):0;
   const sent=JSON.stringify(v);
-  api('/api/days/'+d,{method:'PUT',body:JSON.stringify({v,score:Math.round(s*100)/100,pct:Math.round(s/TOTAL*100)})})
+  api('/api/days/'+d,{method:'PUT',body:JSON.stringify({v,score:Math.round(s*100)/100,pct:isDay(d)?Math.round(s/totalOn(d)*100):0})})
     .then(r=>{
       pushing=false;pushedAt[d]=Date.now();
       if(JSON.stringify(state[d]||{})===sent){ // edited meanwhile — send again
@@ -1060,7 +1068,25 @@ function qPage(n){
   return fetch(`/quran/p${String(n).padStart(3,'0')}.json?v=${QM.v}`).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();}).then(d=>qpCache[n]=d);
 }
 try{caches.open('quran').then(c=>c.keys().then(ks=>ks.forEach(r=>{if(!r.url.includes('v='+QM.v))c.delete(r);})));}catch(e){} // старые версии страниц
-function qRead(v){const o=(v&&v._qp)||{};return Object.keys(o).filter(k=>o[k]&&o[k][0]).map(Number).sort((a,b)=>a-b);}
+function qRead(v){const r=new Set();for(const f of ['_qp','_kahf']){const o=(v&&v[f])||{};for(const k in o)if(o[k]&&o[k][0])r.add(+k);}return [...r].sort((a,b)=>a-b);} // страницы сегодня: хатм + аль-Кахф
+// Пятница — сура аль-Кахф (стр. 293–304). Её страницы пишутся в _kahf, а не в _qp: закладка хатма не сдвигается.
+const KAHF=[293,304];let qKahf=false;
+const inKahf=p=>p>=KAHF[0]&&p<=KAHF[1];
+function kahfRead(v){const r=qRead(v);let n=0;for(let p=KAHF[0];p<=KAHF[1];p++)if(r.includes(p))n++;return n;}
+let qScrollTo=null;
+function openKahf(){qKahf=true;qCur=KAHF[0];qScrollTo='q-18-1';if(viewDate!==today)viewDate=today;switchTab('quran');}
+function markPages(pgs,on){
+  mutate(today,v=>{
+    const t=Date.now();
+    pgs.forEach((p,i)=>{
+      const f=qKahf&&inKahf(p)?'_kahf':'_qp';
+      if(on){v[f]=Object.assign({},v[f]);v[f][p]=[1,t+i];}
+      else for(const g of ['_qp','_kahf'])if(v[g]&&v[g][p]){v[g]=Object.assign({},v[g]);v[g][p]=[0,t+i];}
+    });
+    if(qRead(v).length>=QDAY)v.quran=true;
+    if(kahfRead(v)>=KAHF[1]-KAHF[0]+1&&onDay({days:[5]},today))v.kahf=true;
+  });
+}
 function qLast(){ // последняя отмеченная страница — закладка
   let best=null;
   for(const d in state){if(!/^\d{4}-\d{2}-\d{2}$/.test(d))continue;const o=state[d]._qp||{};for(const k in o)if(o[k]&&o[k][0]&&(!best||o[k][1]>best[1]||(o[k][1]===best[1]&&+k>best[0])))best=[+k,o[k][1]];}
@@ -1069,7 +1095,7 @@ function qLast(){ // последняя отмеченная страница �
 function qNext(){const l=qLast();return l?l%604+1:QSTART;}
 function qStreak(){let n=0,d=today;if((state[d]||{}).quran!==true)d=addDays(d,-1);while((state[d]||{}).quran===true){n++;d=addDays(d,-1);}return n;}
 function qOpts(){let o=null;try{o=JSON.parse(localStorage.getItem('q-opts'));}catch(e){}return Object.assign({tr:true,ru:true,gl:true,m:false},o||{});}
-function qMark(n,on){mutate(today,v=>{v._qp=Object.assign({},v._qp);v._qp[n]=[on?1:0,Date.now()];if(qRead(v).length>=QDAY)v.quran=true;});}
+function qMark(n,on){markPages([n],on);}
 // полоса прогресса чтения текущей страницы (внизу экрана)
 function qProg(){
   let b=$('q-prog');
@@ -1107,7 +1133,8 @@ function renderQuran(){
   try{set.open=localStorage.getItem('q-set')==='1';}catch(e){}
   set.addEventListener('toggle',()=>{try{localStorage.setItem('q-set',set.open?'1':'0');}catch(e){}});
   set.append(tgs,sel);root.appendChild(set);
-  if(qCur!==nx){const bm=el('button',{class:'q-bm'},`К закладке · страница ${nx}`);bm.onclick=()=>{qCur=nx;renderQuran();window.scrollTo(0,0);};root.appendChild(bm);}
+  if(qKahf){const n=kahfRead(v),all=KAHF[1]-KAHF[0]+1;root.appendChild(el('div',{class:'q-kahf'},`<b>Пятница · сура аль-Кахф</b><span class="num">${n===all?'прочитана целиком ✓':`прочитано ${n} из ${all} стр. (${KAHF[0]}–${KAHF[1]})`}</span><small>Эти страницы не сдвигают закладку хатма</small>`));}
+  if(qCur!==nx||qKahf){const bm=el('button',{class:'q-bm'},`К закладке${qKahf?' хатма':''} · страница ${nx}`);bm.onclick=()=>{qKahf=false;qCur=nx;renderQuran();window.scrollTo(0,0);};root.appendChild(bm);}
   const go=n=>{qCur=n;renderQuran();window.scrollTo(0,0);};
   // шапка страницы — как в приложении: «Аль-Касас: 71–77» и плашки «394 стр.», «20 джуз» (заливка — сколько джуза пройдено)
   const [jz,jp]=qJuz(qCur);
@@ -1143,6 +1170,7 @@ function renderQuran(){
     p2.disabled=page<=1;n2.disabled=page>=604;p2.onclick=()=>go(page-1);n2.onclick=()=>go(page+1);
     n.append(p2,el('div',{class:'q-mid'},`<b>Страница ${page}</b><span>${esc(qHead(d))} · джуз ${jz}${done?' · прочитана сегодня':''}</span>`),n2);
     box.appendChild(n);
+    if(qScrollTo){const t=$(qScrollTo);qScrollTo=null;if(t){const h=t.previousElementSibling&&t.previousElementSibling.classList.contains('q-bsm')?t.previousElementSibling.previousElementSibling:t;setTimeout(()=>h.scrollIntoView({block:'start'}),0);setTimeout(()=>window.scrollBy(0,-110),10);}} // аль-Кахф: сразу к началу суры
     qProg();
     for(let i=1;i<=3;i++)if(page+i<=604)qPage(page+i).catch(()=>{}); // наперёд — чтобы читалось без сети
   }).catch(()=>{if(tok===qTok)box.innerHTML='<div class="lnote">Нет сети, а эта страница ещё не сохранена на телефоне. Прочитанные и следующие три страницы открываются без сети.</div>';});
@@ -1194,7 +1222,7 @@ function renderMushaf(root,top,rd,go){
     const mk=el('button',{class:'lbtn'+(done?' ghost':'')},done?`Прочитал ${lbl} · снять отметку`:`Прочитал ${lbl}`);
     mk.onclick=()=>{
       if(!done){const n=pgs[pgs.length-1]+1;if(n<=604)qCur=n;}
-      mutate(today,v=>{v._qp=Object.assign({},v._qp);const t=Date.now();pgs.forEach((p,i)=>{v._qp[p]=[done?0:1,t+i];});if(qRead(v).length>=QDAY)v.quran=true;});
+      markPages(pgs,!done);
       if(!done)window.scrollTo(0,0);
     };
     box.appendChild(mk);
@@ -1316,7 +1344,7 @@ function aiSummary(days){
       for(const x of h.type==='group'?h.subs.map(s=>({id:s.id,n:h.n+': '+s.n})):[h])(v[x.id]===true?yes:v[x.id]===false?no:null)?.push(x.n);
     }
     const jam=Array.isArray(v.jamaat)?v.jamaat.length:0,az=k=>`${azDone(v,k)}/${(AZ[k]||[]).length}`;
-    L.push(`${d} (${WDN[parse(d).getDay()]}): ${Math.round(dayScore(v)/TOTAL*100)}% | работа ${+v.work||0} ч | джамаат ${jam}/4 | Коран ${qRead(v).length} стр | азкары утро ${az('am')}, вечер ${az('pm')}, сон ${az('sl')}\n  ✓ ${yes.join(', ')||'—'}\n  ✗ ${no.join(', ')||'—'}`);
+    L.push(`${d} (${WDN[parse(d).getDay()]}): ${Math.round(dayScore(v,d)/totalOn(d)*100)}% | работа ${+v.work||0} ч | джамаат ${jam}/4 | Коран ${qRead(v).length} стр | азкары утро ${az('am')}, вечер ${az('pm')}, сон ${az('sl')}\n  ✓ ${yes.join(', ')||'—'}\n  ✗ ${no.join(', ')||'—'}`);
   }
   L.push('\nПо привычкам за 30 дней (процент выполнения / текущая серия дней):');
   for(const b of BLOCKS)L.push(`${b.name}: `+b.items.map(h=>`${h.n} ${pctWindow(h,30)}%/${streak(h)}`).join('; '));
@@ -1382,6 +1410,7 @@ function renderAi(){
 // Живой прогресс в подписи пункта на вкладке «День»
 function liveNote(h,v){
   if(h.id==='quran'){const n=qRead(v).length;return `${QDAY} страниц${n?` · прочитано ${n}`:''} · вкладка «Коран»`;}
+  if(h.id==='kahf'){const n=kahfRead(v);return `пятница · ${n?`прочитано ${n} из 12 стр.`:'12 страниц, стр. 293–304'}`;}
   for(const k in AZK)if(AZK[k].id===h.id&&(AZ[k]||[]).length){const d=azDone(v,k);return `${d}/${AZ[k].length} · вкладка «Азкары»`;}
   return h.note||'';
 }
@@ -1653,7 +1682,8 @@ function renderDay(){
   const nowOpen=new Set();
   yesterdayReview(root);
   trackerPlan(root,viewDate,nowOpen);
-  for(const b of BLOCKS){
+  for(const b0 of BLOCKS){
+    const b=Object.assign({},b0,{items:b0.items.filter(h=>onDay(h,viewDate))});
     let got=0;for(const h of b.items)got+=sc(h,v);
     const full=got>=b.items.length-1e-9;
     const ok=openState[viewDate+':'+b.id];
@@ -1682,7 +1712,9 @@ function renderDay(){
     for(const h of b.items){
       const nt=liveNote(h,v),note=nt?`<div class="note">${esc(nt)}</div>`:'';
       if(!h.type){
-        body.appendChild(triRow(v,h.id,h.n,note,''));
+        const row=triRow(v,h.id,h.n,note,'');
+        if(h.go){const g=el('button',{class:'rgo'},'Читать →');g.onclick=()=>openKahf();row.insertBefore(g,row.children[1]);} // переход к суре
+        body.appendChild(row);
       }else if(h.type==='group'){
         const n=h.subs.filter(x=>v[x.id]===true).length;
         body.appendChild(el('div',{class:'grp'},`<span class="n">${esc(h.n)}</span><span class="cnt num">${n}/${h.subs.length}</span>`));
@@ -1827,10 +1859,10 @@ function renderHeader(){
   let t=fmtDay.format(d);t=t.charAt(0).toUpperCase()+t.slice(1);
   $('dtitle').textContent=viewDate===today?'Сегодня, '+t.split(', ').slice(1).join(', '):t;
   $('next').disabled=viewDate>=today;
-  const s=dayScore(state[viewDate]);
-  $('barfill').style.width=(s/TOTAL*100).toFixed(1)+'%';
+  const s=dayScore(state[viewDate],viewDate),T=totalOn(viewDate);
+  $('barfill').style.width=(s/T*100).toFixed(1)+'%';
   const sTxt=Number.isInteger(s)?s:s.toFixed(1).replace('.',',');
-  $('progtxt').textContent=s>=TOTAL-1e-9?'Всё выполнено':`${sTxt} из ${TOTAL} · ${Math.round(s/TOTAL*100)}%`;
+  $('progtxt').textContent=s>=T-1e-9?'Всё выполнено':`${sTxt} из ${T} · ${Math.round(s/T*100)}%`;
   const ps=planStats(state[viewDate]);
   $('planfill').style.width=(ps.n?ps.done/ps.n*100:0).toFixed(1)+'%';
   $('plantxt').textContent=!ps.n?'не заполнен':ps.done===ps.n?'Всё выполнено':`${ps.done} из ${ps.n}`;
@@ -1845,27 +1877,28 @@ function planStats(v){ // what was planned for the day: focus, tasks (not moved 
 
 // ---------- stats
 function firstDate(){const ks=Object.keys(state).filter(k=>isDay(k)&&hasMarks(state[k])).sort();return ks[0]||today;}
-function streak(h){
+function streak(h){ // для пятничного пункта — пятниц подряд
+  const back=d=>{d=addDays(d,-1);while(!onDay(h,d))d=addDays(d,-1);return d;};
   let d=today,n=0;
-  if(sc(h,state[d])<1)d=addDays(d,-1);
-  while(sc(h,state[d])>=1){n++;d=addDays(d,-1);}
+  if(!onDay(h,d)||sc(h,state[d])<1)d=back(d);
+  while(sc(h,state[d])>=1){n++;d=back(d);}
   return n;
 }
 function pctWindow(h,days){
   const start=firstDate();let done=0,cnt=0;
-  for(let i=0;i<days;i++){const d=addDays(today,-i);if(d<start)break;cnt++;done+=sc(h,state[d]);}
+  for(let i=0;i<days;i++){const d=addDays(today,-i);if(d<start)break;if(!onDay(h,d))continue;cnt++;done+=sc(h,state[d]);}
   return cnt?Math.round(done/cnt*100):0;
 }
 function avgPrev(fn){ // days 8..14 back; null when the log is younger than that
   const start=firstDate();if(addDays(today,-7)<start)return null;
-  let s=0,c=0;for(let i=7;i<14;i++){const d=addDays(today,-i);if(d<start)break;c++;s+=fn(state[d]||{});}return c?s/c:null;
+  let s=0,c=0;for(let i=7;i<14;i++){const d=addDays(today,-i);if(d<start)break;c++;s+=fn(state[d]||{},d);}return c?s/c:null;
 }
-function avg(fn,days){const start=firstDate();let s=0,c=0;for(let i=0;i<days;i++){const d=addDays(today,-i);if(d<start)break;c++;s+=fn(state[d]||{});}return c?s/c:0;}
+function avg(fn,days){const start=firstDate();let s=0,c=0;for(let i=0;i<days;i++){const d=addDays(today,-i);if(d<start)break;c++;s+=fn(state[d]||{},d);}return c?s/c:0;}
 const fmt1=n=>n.toFixed(1).replace('.',',');
 
 function renderStats(){
   const root=$('view-stats');root.innerHTML='';
-  const dayPct=avg(v=>dayScore(v)/TOTAL,7)*100, dayPrev=(p=>p===null?null:p*100)(avgPrev(v=>dayScore(v)/TOTAL));
+  const dayPct=avg((v,d)=>dayScore(v,d)/totalOn(d),7)*100, dayPrev=(p=>p===null?null:p*100)(avgPrev((v,d)=>dayScore(v,d)/totalOn(d)));
   const work=avg(v=>+v.work||0,7), workPrev=avgPrev(v=>+v.work||0);
   const jam=avg(v=>Array.isArray(v.jamaat)?v.jamaat.length:0,7), jamPrev=avgPrev(v=>Array.isArray(v.jamaat)?v.jamaat.length:0);
   const delta=(a,b,f,unit)=>{if(b===null)return '';const d=a-b;if(Math.abs(d)<0.05)return '<div class="dl">как на прошлой</div>';return `<div class="dl ${d>0?'up':'down'}">${d>0?'+':'−'}${f(Math.abs(d))}${unit} к прошлой</div>`;};
@@ -1908,7 +1941,7 @@ function renderStats(){
   for(let day=1;day<=dim;day++){
     const d=calMonth+'-'+pad(day);
     const v=state[d];const has=hasMarks(v);
-    const p=has?Math.round(dayScore(v)/TOTAL*100):null;
+    const p=has?Math.round(dayScore(v,d)/totalOn(d)*100):null;
     if(p!==null){sum+=p;cnt++;if(p>=90)good++;}
     const lv=p===null?'':p>=90?'l4':p>=70?'l3':p>=40?'l2':'l1';
     const c=el('button',{class:'cal-d '+lv+(d===today?' today':'')+(d>today?' fut':'')},`<b>${day}</b><small>${p===null?'':p+'%'}</small>`);
@@ -1926,7 +1959,7 @@ function renderStats(){
     g.appendChild(el('div',{class:'hl hl-head'},'<span style="text-align:left"></span><span>14 дней</span><span>30д</span><span>серия</span>'));
     for(const h of b.items){
       let dots='';
-      for(let i=13;i>=0;i--){const d=addDays(today,-i);const s=sc(h,state[d]);dots+=`<i class="${s>=1?'d':s>0?'p':missed(h,state[d])?'x':''}"></i>`;}
+      for(let i=13;i>=0;i--){const d=addDays(today,-i);const s=sc(h,state[d]);dots+=`<i class="${!onDay(h,d)?'off':s>=1?'d':s>0?'p':missed(h,state[d])?'x':''}"></i>`;}
       g.appendChild(el('div',{class:'hl'},`<span class="nm">${esc(h.n)}${h.note&&/раз|стр|мин/.test(h.note)?' <span style="color:var(--ink-3)">'+esc(h.note.replace(' раз',''))+'</span>':''}</span><span class="dots">${dots}</span><span class="pc num">${pctWindow(h,30)}%</span><span class="sk num">${streak(h)}</span>`));
     }
     list.appendChild(g);
@@ -1968,7 +2001,7 @@ $('tab-ai').onclick=()=>switchTab('ai');
 $('tab-plan').onclick=()=>switchTab('plan');
 $('tab-learn').onclick=()=>switchTab('learn');
 $('tab-sura').onclick=()=>switchTab('sura');
-$('tab-quran').onclick=()=>{qCur=null;switchTab('quran');};
+$('tab-quran').onclick=()=>{qCur=null;qKahf=false;switchTab('quran');};
 $('tab-azkar').onclick=()=>{azSet=null;switchTab('azkar');};
 $('tab-notes').onclick=()=>{switchTab('notes');const c=$('note-new');if(c)c.focus();};
 $('planrow').onclick=()=>{if(tab!=='plan')switchTab('plan');};

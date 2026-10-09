@@ -175,7 +175,7 @@ function mergeV(key, old, inc) {
     out[f] = res;
   }
   // отметки с меткой времени {ключ: [значение, ts]} — побеждает более поздняя (снятие отметки тоже доходит)
-  for (const f of ['_qp', '_az']) {
+  for (const f of ['_qp', '_az', '_kahf']) {
     if (!old[f] && !inc[f]) continue;
     out[f] = Object.assign({}, old[f]);
     for (const k in inc[f] || {}) { const a = out[f][k], b = inc[f][k]; if (!a || (b && b[1] >= a[1])) out[f][k] = b; }

@@ -575,6 +575,7 @@ const BLOCKS=[
   {id:'fajr_masjid',n:'Фаджр в мечети'},
   {id:'am_azkar',n:'Азкары утра'},
   {id:'kahf',n:'Сура аль-Кахф',note:'пятница · 12 страниц',days:[5],go:'kahf'},
+  {id:'jm_salawat',n:'Салават 1000',note:'пятница · до джума',days:[5],go:'jm'},
   {id:'quran',n:'Коран',note:'5 страниц'},
   {id:'arabic',n:'Арабский',note:'урок или повторение во вкладке «Слова»'},
   {id:'am_squat',n:'Приседания',note:'15 раз'},
@@ -1252,12 +1253,16 @@ document.addEventListener('click',e=>{
 addEventListener('scroll',()=>{if(mTip&&mTip.classList.contains('show')&&Math.abs(scrollY-mTip._y)>40){mTip.classList.remove('show');document.querySelectorAll('.mw.on').forEach(x=>x.classList.remove('on'));}},{passive:true});
 // ---------- «Азкары»: утренние, вечерние, перед сном — счётчик повторов, отметка в трекере, когда пройден весь список.
 // Счёт — в документе дня: _az {"am:kursi": [сделано раз, время]}.
-const AZ=window.QAZKAR||{am:[],pm:[],sl:[]};
-const AZK={am:{t:'Утро',id:'am_azkar',n:'Азкары утра',h:'после Фаджра'},pm:{t:'Вечер',id:'pm_azkar',n:'Азкары вечера',h:'после Асра'},sl:{t:'Перед сном',id:'sleep_azkar',n:'Азкары перед сном',h:'ложась спать'}};
+const AZ=window.QAZKAR||{am:[],pm:[],sl:[],jm:[]};
+const AZK={am:{t:'Утро',id:'am_azkar',n:'Азкары утра',h:'после Фаджра'},pm:{t:'Вечер',id:'pm_azkar',n:'Азкары вечера',h:'после Асра'},sl:{t:'Перед сном',id:'sleep_azkar',n:'Азкары перед сном',h:'ложась спать'},
+           jm:{t:'Джума',id:'jm_salawat',n:'Салават 1000',h:'до пятничного намаза',days:[5]}};
 let azSet=null;
+const azOn=k=>!AZK[k].days||AZK[k].days.includes(parse(today).getDay()); // раздел «Джума» — только в пятницу
+function openAz(set){azSet=set;if(viewDate!==today)viewDate=today;switchTab('azkar');}
 function azDefault(){const h=new Date().getHours();return h>=4&&h<12?'am':h>=12&&h<21?'pm':'sl';}
 function azGet(v,set,id){const x=((v&&v._az)||{})[set+':'+id];return x?x[0]:0;}
 function azDone(v,set){return (AZ[set]||[]).filter(z=>azGet(v,set,z.id)>=z.n).length;}
+function azProg(v,set){const L=AZ[set]||[];return L.length===1?[Math.min(azGet(v,set,L[0].id),L[0].n),L[0].n]:[azDone(v,set),L.length];} // один зикр (салават 1000) — счёт повторов
 function azSetCount(set,z,c){
   const v=state[today]||(state[today]={});
   v._az=Object.assign({},v._az);v._az[set+':'+z.id]=[c,Date.now()];
@@ -1280,17 +1285,18 @@ function azTr(z){
 }
 function renderAzkar(){
   const root=$('view-azkar');root.innerHTML='';
-  if(!azSet)azSet=azDefault();
+  if(!azSet||!azOn(azSet))azSet=azDefault();
   const v=state[today]||{},L=AZ[azSet]||[];
   const seg=el('div',{class:'az-seg'});
   for(const k in AZK){
-    const d=azDone(v,k),t=(AZ[k]||[]).length;
+    if(!azOn(k))continue;
+    const [d,t]=azProg(v,k);
     const b=el('button',{class:(k===azSet?'on':'')+(t&&d===t?' ok':'')},`${AZK[k].t}<small class="num">${d===t&&t?'готово':d+'/'+t}</small>`);
     b.onclick=()=>{azSet=k;renderAzkar();window.scrollTo(0,0);};seg.appendChild(b);
   }
   root.appendChild(seg);
-  const dn=azDone(v,azSet);
-  const head=el('div',{class:'lcov'},`<div><b class="num" id="az-cnt">${dn}<small>/${L.length}</small></b><span>${esc(AZK[azSet].h)}</span></div><div class="lcov-t">Нажимай на круг при каждом повторе. Когда пройдены все — пункт «${esc(AZK[azSet].n)}» в трекере отметится сам.</div>`);
+  const [dn,dt]=azProg(v,azSet);
+  const head=el('div',{class:'lcov'},`<div><b class="num" id="az-cnt">${dn}<small>/${dt}</small></b><span>${esc(AZK[azSet].h)}</span></div><div class="lcov-t">Нажимай на круг при каждом повторе. Когда пройдены все — пункт «${esc(AZK[azSet].n)}» в трекере отметится сам.</div>`);
   root.appendChild(head);
   L.forEach((z,i)=>{
     const c=azGet(v,azSet,z.id),done=c>=z.n;
@@ -1307,9 +1313,10 @@ function renderAzkar(){
     btn.onclick=()=>{
       if(cnt>=z.n)return;
       cnt++;azSetCount(azSet,z,cnt);paint(cnt);
+      if(L.length===1){const hc=$('az-cnt'),sm=root.querySelector('.az-seg .on small');if(hc)hc.innerHTML=`${cnt}<small>/${z.n}</small>`;if(sm)sm.textContent=cnt>=z.n?'готово':cnt+'/'+z.n;}
       try{navigator.vibrate&&navigator.vibrate(cnt>=z.n?30:8);}catch(e){}
       if(cnt>=z.n){
-        const dd=azDone(state[today],azSet),hc=$('az-cnt');if(hc)hc.innerHTML=`${dd}<small>/${L.length}</small>`;
+        const [dd,dt2]=azProg(state[today],azSet),hc=$('az-cnt');if(hc)hc.innerHTML=`${dd}<small>/${dt2}</small>`;
         const nxt=L.slice(i+1).find(y=>azGet(state[today],azSet,y.id)<y.n);
         if(nxt)setTimeout(()=>{const e=$('az-'+nxt.id);if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},350);
         else setTimeout(renderAzkar,400);
@@ -1344,7 +1351,7 @@ function aiSummary(days){
       for(const x of h.type==='group'?h.subs.map(s=>({id:s.id,n:h.n+': '+s.n})):[h])(v[x.id]===true?yes:v[x.id]===false?no:null)?.push(x.n);
     }
     const jam=Array.isArray(v.jamaat)?v.jamaat.length:0,az=k=>`${azDone(v,k)}/${(AZ[k]||[]).length}`;
-    L.push(`${d} (${WDN[parse(d).getDay()]}): ${Math.round(dayScore(v,d)/totalOn(d)*100)}% | работа ${+v.work||0} ч | джамаат ${jam}/4 | Коран ${qRead(v).length} стр | азкары утро ${az('am')}, вечер ${az('pm')}, сон ${az('sl')}\n  ✓ ${yes.join(', ')||'—'}\n  ✗ ${no.join(', ')||'—'}`);
+    L.push(`${d} (${WDN[parse(d).getDay()]}): ${Math.round(dayScore(v,d)/totalOn(d)*100)}% | работа ${+v.work||0} ч | джамаат ${jam}/4 | Коран ${qRead(v).length} стр | азкары утро ${az('am')}, вечер ${az('pm')}, сон ${az('sl')}${parse(d).getDay()===5?`, салават ${azGet(v,'jm','salawat1000')}/1000`:''}\n  ✓ ${yes.join(', ')||'—'}\n  ✗ ${no.join(', ')||'—'}`);
   }
   L.push('\nПо привычкам за 30 дней (процент выполнения / текущая серия дней):');
   for(const b of BLOCKS)L.push(`${b.name}: `+b.items.map(h=>`${h.n} ${pctWindow(h,30)}%/${streak(h)}`).join('; '));
@@ -1411,7 +1418,9 @@ function renderAi(){
 function liveNote(h,v){
   if(h.id==='quran'){const n=qRead(v).length;return `${QDAY} страниц${n?` · прочитано ${n}`:''} · вкладка «Коран»`;}
   if(h.id==='kahf'){const n=kahfRead(v);return `пятница · ${n?`прочитано ${n} из 12 стр.`:'12 страниц, стр. 293–304'}`;}
-  for(const k in AZK)if(AZK[k].id===h.id&&(AZ[k]||[]).length){const d=azDone(v,k);return `${d}/${AZ[k].length} · вкладка «Азкары»`;}
+  for(const k in AZK)if(AZK[k].id===h.id&&(AZ[k]||[]).length){
+    if(AZ[k].length===1){const z=AZ[k][0];return `${azGet(v,k,z.id)}/${z.n} · ${AZK[k].h}`;} // один зикр — показываем счёт повторов
+    const d=azDone(v,k);return `${d}/${AZ[k].length} · вкладка «Азкары»`;}
   return h.note||'';
 }
 // ---------- «Сура»: изучаемая сура целиком — подстрочник, перевод, толкование, история, хадисы
@@ -1713,7 +1722,7 @@ function renderDay(){
       const nt=liveNote(h,v),note=nt?`<div class="note">${esc(nt)}</div>`:'';
       if(!h.type){
         const row=triRow(v,h.id,h.n,note,'');
-        if(h.go){const g=el('button',{class:'rgo'},'Читать →');g.onclick=()=>openKahf();row.insertBefore(g,row.children[1]);} // переход к суре
+        if(h.go){const g=el('button',{class:'rgo'},h.go==='kahf'?'Читать →':'Открыть →');g.onclick=()=>h.go==='kahf'?openKahf():openAz(h.go);row.insertBefore(g,row.children[1]);} // переход к суре / к азкарам
         body.appendChild(row);
       }else if(h.type==='group'){
         const n=h.subs.filter(x=>v[x.id]===true).length;

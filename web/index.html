@@ -1255,19 +1255,22 @@ addEventListener('scroll',()=>{if(mTip&&mTip.classList.contains('show')&&Math.ab
 // Счёт — в документе дня: _az {"am:kursi": [сделано раз, время]}.
 const AZ=window.QAZKAR||{am:[],pm:[],sl:[],jm:[]};
 const AZK={am:{t:'Утро',id:'am_azkar',n:'Азкары утра',h:'после Фаджра'},pm:{t:'Вечер',id:'pm_azkar',n:'Азкары вечера',h:'после Асра'},sl:{t:'Перед сном',id:'sleep_azkar',n:'Азкары перед сном',h:'ложась спать'},
-           jm:{t:'Джума',id:'jm_salawat',n:'Салават 1000',h:'до пятничного намаза',days:[5]}};
+           jm:{t:'Джума',id:'jm_salawat',n:'Салават 1000',h:'до пятничного намаза'}};
 let azSet=null;
-const azOn=k=>!AZK[k].days||AZK[k].days.includes(parse(today).getDay()); // раздел «Джума» — только в пятницу
+// «Джума» открыт с вечера четверга (с 15:00 — зимой Магриб уже около 16:00) до конца пятницы; счёт идёт в документ пятницы
+const JM_FROM=15;
+const azOn=k=>{if(k!=='jm')return true;const wd=parse(today).getDay();return wd===5||(wd===4&&new Date().getHours()>=JM_FROM);};
+const azDate=set=>set==='jm'&&parse(today).getDay()===4?addDays(today,1):today;
 function openAz(set){azSet=set;if(viewDate!==today)viewDate=today;switchTab('azkar');}
 function azDefault(){const h=new Date().getHours();return h>=4&&h<12?'am':h>=12&&h<21?'pm':'sl';}
 function azGet(v,set,id){const x=((v&&v._az)||{})[set+':'+id];return x?x[0]:0;}
 function azDone(v,set){return (AZ[set]||[]).filter(z=>azGet(v,set,z.id)>=z.n).length;}
 function azProg(v,set){const L=AZ[set]||[];return L.length===1?[Math.min(azGet(v,set,L[0].id),L[0].n),L[0].n]:[azDone(v,set),L.length];} // один зикр (салават 1000) — счёт повторов
 function azSetCount(set,z,c){
-  const v=state[today]||(state[today]={});
+  const d=azDate(set),v=state[d]||(state[d]={});
   v._az=Object.assign({},v._az);v._az[set+':'+z.id]=[c,Date.now()];
   if(AZ[set].length&&azDone(v,set)===AZ[set].length)v[AZK[set].id]=true;
-  touch(today);
+  touch(d);
 }
 function azSubAt(z,c){let acc=0;for(const x of z.sub){if(c<acc+x[0])return [x,c-acc];acc+=x[0];}const x=z.sub[z.sub.length-1];return [x,x[0]];}
 function azArHtml(z){
@@ -1286,17 +1289,17 @@ function azTr(z){
 function renderAzkar(){
   const root=$('view-azkar');root.innerHTML='';
   if(!azSet||!azOn(azSet))azSet=azDefault();
-  const v=state[today]||{},L=AZ[azSet]||[];
+  const vOf=k=>state[azDate(k)]||{},v=vOf(azSet),L=AZ[azSet]||[];
   const seg=el('div',{class:'az-seg'});
   for(const k in AZK){
     if(!azOn(k))continue;
-    const [d,t]=azProg(v,k);
+    const [d,t]=azProg(vOf(k),k);
     const b=el('button',{class:(k===azSet?'on':'')+(t&&d===t?' ok':'')},`${AZK[k].t}<small class="num">${d===t&&t?'готово':d+'/'+t}</small>`);
     b.onclick=()=>{azSet=k;renderAzkar();window.scrollTo(0,0);};seg.appendChild(b);
   }
   root.appendChild(seg);
   const [dn,dt]=azProg(v,azSet);
-  const head=el('div',{class:'lcov'},`<div><b class="num" id="az-cnt">${dn}<small>/${dt}</small></b><span>${esc(AZK[azSet].h)}</span></div><div class="lcov-t">Нажимай на круг при каждом повторе. Когда пройдены все — пункт «${esc(AZK[azSet].n)}» в трекере отметится сам.</div>`);
+  const head=el('div',{class:'lcov'},`<div><b class="num" id="az-cnt">${dn}<small>/${dt}</small></b><span>${esc(azSet==='jm'&&azDate('jm')!==today?'ночь на пятницу · счёт идёт в пятницу':AZK[azSet].h)}</span></div><div class="lcov-t">Нажимай на круг при каждом повторе. Когда пройдены все — пункт «${esc(AZK[azSet].n)}» в трекере отметится сам.</div>`);
   root.appendChild(head);
   L.forEach((z,i)=>{
     const c=azGet(v,azSet,z.id),done=c>=z.n;
@@ -1316,8 +1319,8 @@ function renderAzkar(){
       if(L.length===1){const hc=$('az-cnt'),sm=root.querySelector('.az-seg .on small');if(hc)hc.innerHTML=`${cnt}<small>/${z.n}</small>`;if(sm)sm.textContent=cnt>=z.n?'готово':cnt+'/'+z.n;}
       try{navigator.vibrate&&navigator.vibrate(cnt>=z.n?30:8);}catch(e){}
       if(cnt>=z.n){
-        const [dd,dt2]=azProg(state[today],azSet),hc=$('az-cnt');if(hc)hc.innerHTML=`${dd}<small>/${dt2}</small>`;
-        const nxt=L.slice(i+1).find(y=>azGet(state[today],azSet,y.id)<y.n);
+        const [dd,dt2]=azProg(state[azDate(azSet)],azSet),hc=$('az-cnt');if(hc)hc.innerHTML=`${dd}<small>/${dt2}</small>`;
+        const nxt=L.slice(i+1).find(y=>azGet(state[azDate(azSet)],azSet,y.id)<y.n);
         if(nxt)setTimeout(()=>{const e=$('az-'+nxt.id);if(e)e.scrollIntoView({behavior:'smooth',block:'start'});},350);
         else setTimeout(renderAzkar,400);
       }

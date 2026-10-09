@@ -574,6 +574,7 @@ const BLOCKS=[
  {id:'morning',name:'Утро',hint:'после Фаджра',items:[
   {id:'fajr_masjid',n:'Фаджр в мечети'},
   {id:'am_azkar',n:'Азкары утра'},
+  {id:'kahf',n:'Сура аль-Кахф',note:'пятница · 12 страниц',days:[5],go:'kahf'},
   {id:'quran',n:'Коран',note:'5 страниц'},
   {id:'arabic',n:'Арабский',note:'урок или повторение во вкладке «Слова»'},
   {id:'am_squat',n:'Приседания',note:'15 раз'},
@@ -590,8 +591,7 @@ const BLOCKS=[
   {id:'diary',n:'Заполнить ежедневник',note:'фокус дня, дела, развлечения'}]},
  {id:'day',name:'День',hint:'работа и намазы',items:[
   {id:'work',n:'Работа',note:'цель 4–5 часов',type:'hours',target:4,max:10},
-  {id:'jamaat',n:'Намазы в джамаате',type:'multi',opts:['Зухр','Аср','Магриб','Иша']},
-  {id:'kahf',n:'Сура аль-Кахф',note:'пятница · 12 страниц',days:[5],go:'kahf'}]},
+  {id:'jamaat',n:'Намазы в джамаате',type:'multi',opts:['Зухр','Аср','Магриб','Иша']}]},
  {id:'evening',name:'Вечер',hint:'после Асра',items:[
   {id:'pm_azkar',n:'Азкары вечера'},
   {id:'pm_vit',n:'Витамины',type:'group',subs:[{id:'pm_vit_mg',n:'Магний'},{id:'pm_vit_zn',n:'Цинк'}]},

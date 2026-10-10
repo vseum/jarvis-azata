@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-10T04:24:21.535Z",
+ "updatedAt": "2026-10-10T04:25:30.350Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -1340,11 +1340,17 @@
     "quran": true,
     "arabic": true,
     "am_squat": true,
-    "am_push": true
+    "am_push": true,
+    "am_abs": true,
+    "am_vit_mg": true,
+    "am_vit_cr": false,
+    "am_vit_zn": false,
+    "am_vit_multi": true,
+    "walk": true
    },
-   "score": 11,
-   "pct": 39,
-   "updatedAt": "2026-10-10T04:24:06.532Z"
+   "score": 13.4,
+   "pct": 48,
+   "updatedAt": "2026-10-10T04:25:15.339Z"
   }
  }
 }

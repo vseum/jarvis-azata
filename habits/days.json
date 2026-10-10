@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-10T04:22:48.441Z",
+ "updatedAt": "2026-10-10T04:24:21.535Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -1339,11 +1339,12 @@
     },
     "quran": true,
     "arabic": true,
-    "am_squat": true
+    "am_squat": true,
+    "am_push": true
    },
-   "score": 10,
-   "pct": 36,
-   "updatedAt": "2026-10-10T04:22:33.436Z"
+   "score": 11,
+   "pct": 39,
+   "updatedAt": "2026-10-10T04:24:06.532Z"
   }
  }
 }

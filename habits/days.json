@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-13T04:21:11.446Z",
+ "updatedAt": "2026-10-13T04:22:24.302Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -1397,6 +1397,44 @@
    "score": 21.8,
    "pct": 81,
    "updatedAt": "2026-10-13T04:21:01.017Z"
+  },
+  "2026-10-12": {
+   "v": {
+    "sleep_isha": true,
+    "tahajjud": false,
+    "witr": true,
+    "sleep_back": false,
+    "wake_fajr": true,
+    "fajr_masjid": true,
+    "am_azkar": true,
+    "quran": true,
+    "arabic": true,
+    "am_squat": true,
+    "am_push": true,
+    "am_abs": false,
+    "am_back": false,
+    "am_pull": false,
+    "am_shower": true,
+    "am_minox": false,
+    "am_vit_mg": true,
+    "am_vit_zn": false,
+    "am_vit_cr": false,
+    "am_vit_multi": true,
+    "am_vit_d": true,
+    "walk": true,
+    "duha": true,
+    "breakfast": true,
+    "diary": false,
+    "work": 5,
+    "pm_azkar": true,
+    "pm_vit_mg": false,
+    "pm_vit_zn": false,
+    "pm_minox": false,
+    "sleep_azkar": true
+   },
+   "score": 16.6,
+   "pct": 61,
+   "updatedAt": "2026-10-13T04:22:18.449Z"
   }
  }
 }

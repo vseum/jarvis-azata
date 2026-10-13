@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-13T04:24:40.198Z",
+ "updatedAt": "2026-10-13T04:44:57.923Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -1459,11 +1459,19 @@
     "am_vit_multi": true,
     "am_vit_d": true,
     "duha": true,
-    "breakfast": true
+    "breakfast": true,
+    "_tasks": [
+     {
+      "id": "mv675ova6cag",
+      "t": "Разместить объявление о вскрытии авто",
+      "done": false,
+      "g": "c"
+     }
+    ]
    },
    "score": 14.8,
    "pct": 55,
-   "updatedAt": "2026-10-13T04:24:25.191Z"
+   "updatedAt": "2026-10-13T04:44:42.920Z"
   }
  }
 }

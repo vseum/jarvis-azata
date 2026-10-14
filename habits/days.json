@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-14T07:50:10.633Z",
+ "updatedAt": "2026-10-14T07:51:07.285Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -1519,11 +1519,14 @@
     "am_vit_zn": true,
     "am_vit_cr": false,
     "am_vit_multi": true,
-    "am_vit_d": true
+    "am_vit_d": true,
+    "walk": true,
+    "duha": true,
+    "breakfast": true
    },
-   "score": 8.8,
-   "pct": 33,
-   "updatedAt": "2026-10-14T07:49:55.570Z"
+   "score": 11.8,
+   "pct": 44,
+   "updatedAt": "2026-10-14T07:50:52.276Z"
   }
  }
 }

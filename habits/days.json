@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-14T04:24:00.120Z",
+ "updatedAt": "2026-10-14T04:25:27.259Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -1512,11 +1512,13 @@
     "fajr_masjid": true,
     "am_azkar": true,
     "quran": true,
-    "arabic": true
+    "arabic": true,
+    "am_shower": true,
+    "am_minox": false
    },
-   "score": 7,
-   "pct": 26,
-   "updatedAt": "2026-10-14T04:23:45.111Z"
+   "score": 8,
+   "pct": 30,
+   "updatedAt": "2026-10-14T04:25:12.248Z"
   }
  }
 }

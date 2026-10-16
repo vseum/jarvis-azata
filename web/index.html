@@ -275,6 +275,7 @@ button,textarea{touch-action:manipulation}
 .item.moved input,.item.moved textarea{color:var(--ink-3)}
 .item .mv{font-size:11.5px;color:var(--ink-3);white-space:nowrap}
 .item .del{width:32px;height:32px;font-size:20px;color:#C4C4C4;flex:none}
+.mark.pdel{font-size:22px;line-height:1;color:#C4C4C4}
 .item.add .plus{width:24px;text-align:center;color:var(--ink-3);font-size:20px;flex:none}
 .sub-h{font-size:12px;font-weight:600;color:var(--ink-2);margin:14px 0 4px}
 .sub-h:first-of-type{margin-top:0}
@@ -761,7 +762,8 @@ function hasMarks(v){return !!v&&Object.keys(v).some(k=>k[0]!=='_');} // habit m
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 function docOf(k){return state[k]||(state[k]={});}
 function markGone(v,id){v._gone=(v._gone||[]).filter(x=>x!==id).concat(id).slice(-500);} // удаление не «воскреснет» при слиянии с другим устройством
-function unGone(v,ids){if(v._gone)v._gone=v._gone.filter(x=>!ids.includes(x));}
+// «Отменить» после удаления: удаление уже могло уйти на сервер (там id в _gone навсегда) — возвращаем запись под новым id
+function revive(arr,id){return arr.map(x=>x.id===id?Object.assign({},x,{id:uid(),up:new Date().toISOString()}):x);}
 function autoDiary(k){const v=state[k];if(!isDay(k)||!v||v._da||v.diary!==undefined)return;if(((v._focus||{}).t||'').trim()&&(v._tasks||[]).length){v.diary=true;v._da=true;}}
 function touch(k){autoDiary(k);unsynced[k]=true;lsSave();clearTimeout(timer);timer=setTimeout(push,800);} // typing: save without redraw
 function isoWeek(k){const d=parse(k);const th=new Date(d);th.setDate(d.getDate()-(d.getDay()+6)%7+3);const y=th.getFullYear();const j=new Date(y,0,4);return y+'-W'+pad(1+Math.round(((th-j)/864e5-3+(j.getDay()+6)%7)/7));}
@@ -781,7 +783,7 @@ function listUI(k,field,g,placeholder){
     inp.oninput=()=>{inp.value=inp.value.replace(/\n/g,' ');it.t=inp.value;it.up=new Date().toISOString();touch(k);grow(inp);};
     inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();inp.blur();}};
     const del=el('button',{class:'del','aria-label':'Удалить'},'×');
-    del.onclick=()=>{const before=(docOf(k)[field]||[]).slice();mutate(k,v=>{v[field]=(v[field]||[]).filter(x=>x.id!==it.id);markGone(v,it.id);});toast('Удалено',()=>mutate(k,v=>{v[field]=before;unGone(v,[it.id]);}));};
+    del.onclick=()=>{const before=(docOf(k)[field]||[]).slice();mutate(k,v=>{v[field]=(v[field]||[]).filter(x=>x.id!==it.id);markGone(v,it.id);});toast('Удалено',()=>mutate(k,v=>{v[field]=revive(before,it.id);}));};
     row.append(ck,inp);
     if(it.moved)row.appendChild(el('span',{class:'mv'},'→ завтра'));
     row.appendChild(del);wrap.appendChild(row);
@@ -942,7 +944,13 @@ function trackerPlan(root,k,nowOpen){
       const yes=el('button',{class:'mark yes','aria-pressed':String(r.done),'aria-label':'Сделал'},CHECK);
       const toggle=()=>mutate(k,v=>{if(r.kind==='focus'){v._focus=Object.assign({},v._focus,{done:!r.done});}else{const x=(v[r.kind]||[]).find(x=>x.id===r.id);if(x){x.done=!x.done;x.up=new Date().toISOString();}}});
       lab.onclick=toggle;yes.onclick=toggle;
-      row.append(lab,yes);body.appendChild(row);
+      const del=el('button',{class:'mark pdel','aria-label':'Удалить'},'×'); // удаление с отменой, как во вкладке «План»
+      del.onclick=()=>{
+        if(r.kind==='focus'){const before=Object.assign({},docOf(k)._focus);mutate(k,v=>{delete v._focus;});toast('Фокус удалён',()=>mutate(k,v=>{v._focus=before;}));return;}
+        const before=(docOf(k)[r.kind]||[]).slice();
+        mutate(k,v=>{v[r.kind]=(v[r.kind]||[]).filter(x=>x.id!==r.id);markGone(v,r.id);});toast('Удалено',()=>mutate(k,v=>{v[r.kind]=revive(before,r.id);}));
+      };
+      row.append(lab,del,yes);body.appendChild(row);
     }
     sec.appendChild(body);
   }
@@ -1854,7 +1862,7 @@ function renderNoteList(){
     const pin=el('button',null,n.pin?'Открепить':'Закрепить');
     pin.onclick=()=>mutate(mk,v=>{const x=(v._notes||[]).find(x=>x.id===n.id);if(x){x.pin=!x.pin;x.up=new Date().toISOString();}});
     const del=el('button',null,'Удалить');
-    del.onclick=()=>{const before=(docOf(mk)._notes||[]).slice();mutate(mk,v=>{v._notes=(v._notes||[]).filter(x=>x.id!==n.id);markGone(v,n.id);});toast('Заметка удалена',()=>mutate(mk,v=>{v._notes=before;unGone(v,[n.id]);}));};
+    del.onclick=()=>{const before=(docOf(mk)._notes||[]).slice();mutate(mk,v=>{v._notes=(v._notes||[]).filter(x=>x.id!==n.id);markGone(v,n.id);});toast('Заметка удалена',()=>mutate(mk,v=>{v._notes=revive(before,n.id);}));};
     meta.append(pin,del);
     card.append(txt,meta);box.appendChild(card);
   }

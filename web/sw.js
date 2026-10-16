@@ -1,5 +1,5 @@
 // Офлайн-оболочка: страница открывается без сети, отметки ждут в localStorage до связи.
-const CACHE = 'shell-v66';
+const CACHE = 'shell-v67';
 const SHELL = [
   '/',
   '/data.js',

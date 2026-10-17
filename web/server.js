@@ -202,6 +202,8 @@ const STATIC = {
   '/sw.js': ['sw.js', 'text/javascript; charset=utf-8'],
   '/data.js': ['data.js', 'text/javascript; charset=utf-8'],
   '/analysis.json': ['analysis.json', 'application/json; charset=utf-8'],   // разборы Джарвиса для вкладки «Аналитика»
+  '/widget': ['widget.html', 'text/html; charset=utf-8'],                  // виджет «План дня» для iPhone (Scriptable): инструкция
+  '/widget.js': ['widget.js', 'text/plain; charset=utf-8'],                //   и код скрипта
 };
 
 const IGRA_TYPES = {
@@ -298,12 +300,35 @@ async function handle(req, res) {
       catch (e) { console.error('ai failed:', e && e.message); return send(res, 502, { error: 'ai_failed', detail: String(e && e.message || e).slice(0, 300) }); }
     }
 
+    // виджет на телефоне (Scriptable): отметить фокус / дело / радость, не трогая остальной документ и процент дня
+    if (p === '/api/toggle' && req.method === 'POST') {
+      let b;
+      try { b = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'bad json' }); }
+      const d = String(b && b.d || ''), doc = /^\d{4}-\d{2}-\d{2}$/.test(d) && days[d];
+      if (!doc) return send(res, 404, { error: 'no day' });
+      const v = Object.assign({}, doc.v), done = !!b.done, up = new Date().toISOString();
+      if (b.kind === 'focus') {
+        if (!v._focus) return send(res, 404, { error: 'no focus' });
+        v._focus = Object.assign({}, v._focus, { done });
+      } else if (b.kind === '_tasks' || b.kind === '_fun') {
+        let hit = false;
+        v[b.kind] = (v[b.kind] || []).map(x => x && x.id === b.id ? (hit = true, Object.assign({}, x, { done, up })) : x);
+        if (!hit) return send(res, 404, { error: 'no item' });
+      } else return send(res, 400, { error: 'bad kind' });
+      days[d] = Object.assign({}, doc, { v, updatedAt: up });
+      changed.add(d);
+      saveLocal();
+      scheduleSync();
+      return send(res, 200, { ok: true });
+    }
+
     if (p === '/api/status' && req.method === 'GET') {
       return send(res, 200, { days: Object.keys(days).length, github: !!GH_TOKEN, branch: GH_BRANCH, pending: changed.size, lastSync, lastError });
     }
 
     // day YYYY-MM-DD, week plan YYYY-Www, month plan + notes YYYY-MM, word-learning progress `learn`
     const m = p.match(/^\/api\/days\/(\d{4}-\d{2}-\d{2}|\d{4}-W\d{2}|\d{4}-\d{2}|learn|ai)$/); // + learn: progress in words
+    if (m && req.method === 'GET') return send(res, 200, days[m[1]] || { v: {} });   // один документ — для виджета на телефоне
     if (m && req.method === 'PUT') {
       let body;
       try { body = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'bad json' }); }

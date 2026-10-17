@@ -1,5 +1,5 @@
 // Офлайн-оболочка: страница открывается без сети, отметки ждут в localStorage до связи.
-const CACHE = 'shell-v67';
+const CACHE = 'shell-v68';
 const SHELL = [
   '/',
   '/data.js',
@@ -32,7 +32,8 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/') || url.pathname.startsWith('/igra')) return;   // /igra — детская игра, своя страница
 
   // Страница: сначала сеть (свежий деплой), без сети — последняя сохранённая версия
-  if (e.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/data.js') {
+  // (только сама страница трекера: другие страницы, например /widget, не должны попасть в кэш вместо неё)
+  if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/data.js') {
     const k = url.pathname === '/data.js' ? '/data.js' : '/';
     e.respondWith(fetch(e.request).then(r => {
       if (!r.ok) return caches.match(k).then(c => c || r);   // 502 во время деплоя — отдаём сохранённое

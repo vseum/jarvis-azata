@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Виджет «План дня»</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon-32.png">
+<style>
+@font-face{font-family:Montserrat;font-weight:400;src:url(/fonts/montserrat-cyrillic-400-normal.woff2) format('woff2')}
+@font-face{font-family:Montserrat;font-weight:600;src:url(/fonts/montserrat-cyrillic-600-normal.woff2) format('woff2')}
+@font-face{font-family:Montserrat;font-weight:700;src:url(/fonts/montserrat-cyrillic-700-normal.woff2) format('woff2')}
+:root{--bg:#fff;--ink:#111;--ink-2:#6B6B6B;--line:#E8E8E8;--card:#F4F4F4;--green:#1E7F4F}
+@media (prefers-color-scheme:dark){:root{--bg:#111;--ink:#F2F2F2;--ink-2:#A0A0A0;--line:#2A2A2A;--card:#1C1C1E;--green:#34C77B}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Montserrat,-apple-system,system-ui,sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:640px;margin:0 auto;padding:28px 16px 48px}
+a{color:var(--green)}
+h1{font-size:24px;line-height:1.25;margin:0 0 6px}
+.sub{color:var(--ink-2);margin:0 0 22px}
+ol{padding-left:22px;margin:0 0 22px}
+li{margin:0 0 12px}
+b{font-weight:600}
+.btn{display:block;width:100%;padding:14px;border:0;border-radius:14px;background:var(--ink);color:var(--bg);font:600 16px Montserrat,system-ui,sans-serif;margin:0 0 10px}
+.btn.ok{background:var(--green);color:#fff}
+pre{background:var(--card);border-radius:14px;padding:14px;font:12px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto;margin:0 0 22px}
+.note{background:var(--card);border-radius:14px;padding:14px 16px;color:var(--ink-2);font-size:14px}
+.note p{margin:0 0 8px}.note p:last-child{margin:0}
+.back{display:inline-block;margin:0 0 18px;color:var(--ink-2);text-decoration:none;font-size:14px}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="/">← рахмат.рус</a>
+<h1>Виджет «План дня» на iPhone</h1>
+<p class="sub">Фокус, дела и радости сегодняшнего плана — на главном экране, как «Напоминания». Нажатие на дело отмечает его.</p>
+<ol>
+<li>Установи <a href="https://apps.apple.com/app/scriptable/id1405459188"><b>Scriptable</b></a> из App Store — бесплатно.</li>
+<li>Нажми <b>«Скопировать код»</b> ниже.</li>
+<li>Открой Scriptable → <b>«+»</b> справа вверху → вставь код → нажми на название вверху и назови скрипт <b>«Рахмат»</b> → <b>Done</b>.</li>
+<li>На главном экране удержи палец на пустом месте → <b>«Изменить»</b> → <b>«Добавить виджет»</b> → <b>Scriptable</b> → средний или большой размер → <b>«Добавить виджет»</b>.</li>
+<li>Не выходя из режима правки, нажми на новый виджет → <b>Script</b> → <b>«Рахмат»</b>. Готово.</li>
+</ol>
+<button class="btn" id="copy">Скопировать код</button>
+<pre id="code">Загружаю код…</pre>
+<div class="note">
+<p><b>Как пользоваться.</b> Нажатие на дело в виджете отмечает его и открывает список в Scriptable — там нажатие снова отмечает или снимает отметку. Нажатие на заголовок — просто список.</p>
+<p>Отметка сразу сохраняется на рахмат.рус. Сам виджет iOS обновляет примерно раз в 15–30 минут — так устроены все виджеты.</p>
+<p>Виджет можно поставить и на экран блокировки: там — число оставшихся дел и первые два.</p>
+</div>
+</main>
+<script>
+(function(){
+  var pre=document.getElementById('code'),btn=document.getElementById('copy'),code='';
+  fetch('/widget.js',{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){code=t;pre.textContent=t;})
+    .catch(function(){pre.textContent='Не удалось загрузить код — проверь связь и обнови страницу.';});
+  btn.onclick=function(){
+    if(!code)return;
+    var done=function(){btn.textContent='Скопировано ✓';btn.classList.add('ok');setTimeout(function(){btn.textContent='Скопировать код';btn.classList.remove('ok');},2500);};
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(code).then(done,fallback);else fallback();
+    function fallback(){var r=document.createRange();r.selectNodeContents(pre);var s=getSelection();s.removeAllRanges();s.addRange(r);try{document.execCommand('copy');done();}catch(e){}}
+  };
+})();
+</script>
+</body>
+</html>

@@ -142,7 +142,11 @@ const VOICES = [
   { id: "baya", name: "Бая", g: "женский" },
   { id: "kseniya", name: "Ксюша", g: "женский" },
   { id: "aidar", name: "Айдар", g: "мужской" },
-  { id: "eugene", name: "Евгений", g: "мужской" }
+  { id: "eugene", name: "Евгений", g: "мужской" },
+  { id: "alexandr", name: "Александр", g: "мужской" },
+  { id: "roman", name: "Роман", g: "мужской" },
+  { id: "denis", name: "Денис", g: "мужской" },
+  { id: "ruslan", name: "Руслан", g: "мужской" }
 ];
 const Voice = {
   on: true, sp: "xenia", have: new Set(), cache: {}, cur: null, ru: null,

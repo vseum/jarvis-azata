@@ -45,35 +45,32 @@
   </section>
 
   <section id="start">
-    <div class="hero">
-      <svg viewBox="0 0 400 420" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-        <defs>
-          <linearGradient id="hSky" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#0B2236"/><stop offset=".5" stop-color="#1D4A66"/><stop offset=".8" stop-color="#C98A6B"/><stop offset="1" stop-color="#F6D08C"/>
-          </linearGradient>
-          <radialGradient id="hGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFE7A8" stop-opacity=".5"/><stop offset="1" stop-color="#FFE7A8" stop-opacity="0"/></radialGradient>
-          <radialGradient id="hSunset" cx=".5" cy="1" r=".6"><stop offset="0" stop-color="#FFE3A3" stop-opacity=".9"/><stop offset="1" stop-color="#FFE3A3" stop-opacity="0"/></radialGradient>
-        </defs>
-        <rect width="400" height="420" fill="url(#hSky)"/>
-        <ellipse cx="200" cy="400" rx="260" ry="120" fill="url(#hSunset)"/>
-        <g class="twinkle" fill="#FFF6DD">
-          <circle cx="40" cy="60" r="1.6"/><circle cx="96" cy="120" r="1.1"/><circle cx="150" cy="40" r="1.4"/><circle cx="214" cy="96" r="1"/><circle cx="250" cy="30" r="1.7"/>
-          <circle cx="372" cy="60" r="1.2"/><circle cx="386" cy="190" r="1"/><circle cx="20" cy="180" r="1.1"/><circle cx="120" cy="200" r="1"/><circle cx="180" cy="160" r="1.2"/>
-          <circle cx="66" cy="250" r=".9"/><circle cx="340" cy="230" r="1"/>
-        </g>
-        <circle cx="322" cy="232" r="64" fill="url(#hGlow)"/>
-        <path d="M330 202a30 30 0 1 0 17 55A26 26 0 1 1 330 202z" fill="#FFE29A"/>
-        <path d="M356 212l2 4.1 4.5.7-3.3 3.2.8 4.5-4-2.1-4 2.1.8-4.5-3.3-3.2 4.5-.7z" fill="#FFE29A"/>
+    <div class="hero" aria-hidden="true">
+      <svg class="stars" viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice"><g class="twinkle" fill="#FFF6DD"><circle cx="40" cy="40" r="1.6"/><circle cx="96" cy="90" r="1.1"/><circle cx="150" cy="26" r="1.4"/><circle cx="214" cy="70" r="1"/><circle cx="250" cy="20" r="1.7"/><circle cx="372" cy="44" r="1.2"/><circle cx="386" cy="130" r="1"/><circle cx="20" cy="120" r="1.1"/><circle cx="120" cy="150" r="1"/><circle cx="180" cy="110" r="1.2"/><circle cx="66" cy="190" r="0.9"/><circle cx="340" cy="170" r="1"/><circle cx="300" cy="80" r="1.1"/><circle cx="16" cy="60" r="1"/><circle cx="280" cy="140" r="0.9"/><circle cx="60" cy="130" r="1.3"/><circle cx="232" cy="170" r="1"/><circle cx="392" cy="96" r="1.2"/></g></svg>
+      <svg class="moon" viewBox="0 0 100 100">
+        <defs><radialGradient id="hGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFE7A8" stop-opacity=".45"/><stop offset="1" stop-color="#FFE7A8" stop-opacity="0"/></radialGradient></defs>
+        <circle cx="50" cy="50" r="50" fill="url(#hGlow)"/>
+        <path d="M52 22a28 28 0 1 0 16 51A24 24 0 1 1 52 22z" fill="#FFE29A"/>
+        <path d="M72 30l2 4.1 4.5.7-3.3 3.2.8 4.5-4-2.1-4 2.1.8-4.5-3.3-3.2 4.5-.7z" fill="#FFE29A"/>
+      </svg>
+      <svg class="skyline" viewBox="0 0 240 150">
         <g fill="#163444">
-          <rect x="166" y="330" width="68" height="60" rx="3"/>
-          <path d="M170 332 Q200 280 230 332Z"/>
-          <rect x="197" y="286" width="6" height="14" rx="2"/>
-          <rect x="146" y="290" width="10" height="100" rx="3"/><path d="M144 292 L151 266 L158 292Z"/>
-          <rect x="244" y="290" width="10" height="100" rx="3"/><path d="M242 292 L249 266 L256 292Z"/>
+          <rect x="36" y="44" width="12" height="106" rx="2"/><rect x="32" y="72" width="20" height="5" rx="2"/><rect x="33" y="40" width="18" height="5" rx="2"/><path d="M35 41 L42 14 L49 41Z"/><rect x="41" y="6" width="2" height="9"/>
+          <rect x="192" y="44" width="12" height="106" rx="2"/><rect x="188" y="72" width="20" height="5" rx="2"/><rect x="189" y="40" width="18" height="5" rx="2"/><path d="M191 41 L198 14 L205 41Z"/><rect x="197" y="6" width="2" height="9"/>
+          <rect x="62" y="96" width="116" height="54" rx="2"/>
+          <path d="M78 98 C78 72 96 60 120 50 C144 60 162 72 162 98Z"/>
+          <rect x="118.6" y="34" width="2.8" height="17" rx="1"/><circle cx="120" cy="32" r="3.4"/>
+          <path d="M62 98 C62 86 70 80 76 78 C82 80 90 86 90 98Z"/><path d="M150 98 C150 86 158 80 164 78 C170 80 178 86 178 98Z"/>
         </g>
-        <g fill="#FFD98A"><rect x="186" y="350" width="8" height="13" rx="4"/><rect x="206" y="350" width="8" height="13" rx="4"/></g>
-        <path d="M0 392 Q100 368 200 386 T400 378 V420 H0Z" fill="#1E4255"/>
-        <path d="M0 404 Q130 388 250 400 T400 398 V420 H0Z" fill="#163444"/>
+        <g fill="#FFD98A">
+          <path d="M108 150 V128 a12 12 0 0 1 24 0 V150Z" opacity=".9"/>
+          <path d="M80 140 V122 a6 6 0 0 1 12 0 V140Z" opacity=".75"/><path d="M148 140 V122 a6 6 0 0 1 12 0 V140Z" opacity=".75"/>
+          <path d="M115 84 V76 a5 5 0 0 1 10 0 V84Z" opacity=".6"/>
+        </g>
+      </svg>
+      <svg class="dunes" viewBox="0 0 400 60" preserveAspectRatio="none">
+        <path d="M0 26 Q100 6 200 22 T400 14 V60 H0Z" fill="#1E4255"/>
+        <path d="M0 42 Q130 28 250 38 T400 34 V60 H0Z" fill="#163444"/>
       </svg>
     </div>
     <div class="sbox">
@@ -87,7 +84,7 @@
         <button id="goVoice" class="chip">Голос: <b>Ксения</b></button>
       </div>
       <p class="hint-sound">Играть лучше со звуком</p>
-      <p class="credits">Перевод смыслов Корана: Э. Кулиев · Чтец: Мишари аль-Афаси · Голос: Silero TTS</p>
+      <p class="credits">Перевод смыслов Корана: Э. Кулиев · Чтец: Мишари аль-Афаси · Голоса: Silero TTS, Piper</p>
     </div>
   </section>
 

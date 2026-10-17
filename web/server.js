@@ -334,7 +334,7 @@ async function handle(req, res) {
       try { body = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'bad json' }); }
       if (!body || typeof body.v !== 'object' || Array.isArray(body.v)) return send(res, 400, { error: 'v must be an object' });
       const merged = mergeV(m[1], days[m[1]] && days[m[1]].v, body.v);
-      days[m[1]] = { v: merged, score: +body.score || 0, pct: +body.pct || 0, updatedAt: new Date().toISOString() };
+      days[m[1]] = { v: merged, score: +body.score || 0, pct: +body.pct || 0, total: +body.total || 0, updatedAt: new Date().toISOString() };   // total — пунктов в дне (для виджета: «12 из 29»)
       changed.add(m[1]);
       saveLocal();
       scheduleSync();

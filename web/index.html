@@ -694,7 +694,7 @@ function push(){
   pushing=true;setStatus('Сохраняю…');
   const v=state[d]||{};const s=isDay(d)?dayScore(v,d):0;
   const sent=JSON.stringify(v);
-  api('/api/days/'+d,{method:'PUT',body:JSON.stringify({v,score:Math.round(s*100)/100,pct:isDay(d)?Math.round(s/totalOn(d)*100):0})})
+  api('/api/days/'+d,{method:'PUT',body:JSON.stringify({v,score:Math.round(s*100)/100,pct:isDay(d)?Math.round(s/totalOn(d)*100):0,total:isDay(d)?totalOn(d):0})})
     .then(r=>{
       pushing=false;pushedAt[d]=Date.now();
       if(JSON.stringify(state[d]||{})===sent){ // edited meanwhile — send again

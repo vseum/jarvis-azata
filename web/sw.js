@@ -29,7 +29,7 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/')) return;
+  if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/api/') || url.pathname.startsWith('/igra')) return;   // /igra — детская игра, своя страница
 
   // Страница: сначала сеть (свежий деплой), без сети — последняя сохранённая версия
   if (e.request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/data.js') {

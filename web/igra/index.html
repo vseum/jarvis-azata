@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Аяты вокруг нас</title>
+<meta name="description" content="Бесплатная игра для детей о единобожии: попробуй сам и пойми, что так может только Аллах.">
+<meta name="theme-color" content="#0E2A3A">
+<meta property="og:title" content="Аяты вокруг нас">
+<meta property="og:description" content="Бесплатная игра для детей о единобожии и основах ислама">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+<div id="app">
+  <div id="stage"></div>
+
+  <header id="top">
+    <button id="tHome" class="pill" aria-label="Главы">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>
+      <span>Главы</span>
+    </button>
+    <div class="tright">
+      <button id="tBag" class="pill" aria-label="Мои сокровища">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z" fill="#F5C451"/></svg>
+        <b id="bagN">0</b>
+      </button>
+      <button id="tVoice" class="pill round" aria-label="Голос" aria-pressed="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <button id="tSfx" class="pill round" aria-label="Звуки" aria-pressed="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section id="cap" class="hidden" aria-live="polite">
+    <span id="capTalk" aria-hidden="true"><i></i><i></i><i></i></span>
+    <p id="capText"></p>
+    <p id="capNote"></p>
+    <div id="capBtns"></div>
+  </section>
+
+  <section id="start">
+    <div class="hero">
+      <svg viewBox="0 0 400 420" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+        <defs>
+          <linearGradient id="hSky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#0B2236"/><stop offset=".5" stop-color="#1D4A66"/><stop offset=".8" stop-color="#C98A6B"/><stop offset="1" stop-color="#F6D08C"/>
+          </linearGradient>
+          <radialGradient id="hGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFE7A8" stop-opacity=".5"/><stop offset="1" stop-color="#FFE7A8" stop-opacity="0"/></radialGradient>
+          <radialGradient id="hSunset" cx=".5" cy="1" r=".6"><stop offset="0" stop-color="#FFE3A3" stop-opacity=".9"/><stop offset="1" stop-color="#FFE3A3" stop-opacity="0"/></radialGradient>
+        </defs>
+        <rect width="400" height="420" fill="url(#hSky)"/>
+        <ellipse cx="200" cy="400" rx="260" ry="120" fill="url(#hSunset)"/>
+        <g class="twinkle" fill="#FFF6DD">
+          <circle cx="40" cy="60" r="1.6"/><circle cx="96" cy="120" r="1.1"/><circle cx="150" cy="40" r="1.4"/><circle cx="214" cy="96" r="1"/><circle cx="250" cy="30" r="1.7"/>
+          <circle cx="372" cy="60" r="1.2"/><circle cx="386" cy="190" r="1"/><circle cx="20" cy="180" r="1.1"/><circle cx="120" cy="200" r="1"/><circle cx="180" cy="160" r="1.2"/>
+          <circle cx="66" cy="250" r=".9"/><circle cx="340" cy="230" r="1"/>
+        </g>
+        <circle cx="322" cy="232" r="64" fill="url(#hGlow)"/>
+        <path d="M330 202a30 30 0 1 0 17 55A26 26 0 1 1 330 202z" fill="#FFE29A"/>
+        <path d="M356 212l2 4.1 4.5.7-3.3 3.2.8 4.5-4-2.1-4 2.1.8-4.5-3.3-3.2 4.5-.7z" fill="#FFE29A"/>
+        <g fill="#163444">
+          <rect x="166" y="330" width="68" height="60" rx="3"/>
+          <path d="M170 332 Q200 280 230 332Z"/>
+          <rect x="197" y="286" width="6" height="14" rx="2"/>
+          <rect x="146" y="290" width="10" height="100" rx="3"/><path d="M144 292 L151 266 L158 292Z"/>
+          <rect x="244" y="290" width="10" height="100" rx="3"/><path d="M242 292 L249 266 L256 292Z"/>
+        </g>
+        <g fill="#FFD98A"><rect x="186" y="350" width="8" height="13" rx="4"/><rect x="206" y="350" width="8" height="13" rx="4"/></g>
+        <path d="M0 392 Q100 368 200 386 T400 378 V420 H0Z" fill="#1E4255"/>
+        <path d="M0 404 Q130 388 250 400 T400 398 V420 H0Z" fill="#163444"/>
+      </svg>
+    </div>
+    <div class="sbox">
+      <p class="bism" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+      <h1>Аяты<br>вокруг нас</h1>
+      <p class="sub">Игра о единобожии и основах ислама для детей</p>
+      <div class="sbtns">
+        <button id="goCont" class="btn big" hidden>Продолжить</button>
+        <button id="go" class="btn big">Начать</button>
+        <button id="goCh" class="btn glass">Главы</button>
+        <button id="goVoice" class="chip">Голос: <b>Ксения</b></button>
+      </div>
+      <p class="hint-sound">Играть лучше со звуком</p>
+      <p class="credits">Перевод смыслов Корана: Э. Кулиев · Чтец: Мишари аль-Афаси · Голос: Silero TTS</p>
+    </div>
+  </section>
+
+  <div id="fade"></div>
+</div>
+<script src="js/lines.js"></script>
+<script src="js/ayat.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/chapters.js"></script>
+</body>
+</html>

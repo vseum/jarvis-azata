@@ -204,6 +204,11 @@ const STATIC = {
   '/analysis.json': ['analysis.json', 'application/json; charset=utf-8'],   // разборы Джарвиса для вкладки «Аналитика»
 };
 
+const IGRA_TYPES = {
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8', '.mp3': 'audio/mpeg',
+};
+
 function send(res, status, body, type) {
   res.writeHead(status, {
     'Content-Type': type || 'application/json; charset=utf-8',
@@ -252,6 +257,19 @@ async function handle(req, res) {
     try {
       const buf = fs.readFileSync(path.join(__dirname, 'quran', qp[1]));
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=86400' });
+      return res.end(buf);
+    } catch (e) { return send(res, 404, 'Not found', 'text/plain; charset=utf-8'); }
+  }
+
+  // детская игра «Аяты вокруг нас» (исходники: github.com/vseum/kids_game): статика из web/igra/
+  if (p === '/igra') { res.writeHead(301, { Location: '/igra/' }); return res.end(); }
+  const ig = p.match(/^\/igra\/((?:[\w-]+\/)*[\w.-]*)$/);
+  if (ig && req.method === 'GET') {
+    const rel = ig[1] || 'index.html', type = IGRA_TYPES[path.extname(rel)];
+    if (!type) return send(res, 404, 'Not found', 'text/plain; charset=utf-8');
+    try {
+      const buf = fs.readFileSync(path.join(__dirname, 'igra', rel));
+      res.writeHead(200, { 'Content-Type': type, 'Cache-Control': rel.endsWith('.mp3') ? 'public, max-age=604800' : 'no-cache' });
       return res.end(buf);
     } catch (e) { return send(res, 404, 'Not found', 'text/plain; charset=utf-8'); }
   }

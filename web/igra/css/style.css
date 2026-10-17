@@ -395,3 +395,31 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; background: 
 /* длинная карточка аята прокручивается целиком, заголовок не уезжает вверх */
 .ayah { align-items: flex-start; }
 .acard { margin: auto 0; }
+
+/* мир 2 */
+.swave { position: absolute; border-radius: 50%; border: 4px solid transparent; border-right-color: rgba(255,255,255,.9); pointer-events: none; }
+.rain i { position: absolute; top: -10%; width: 2px; height: 18px; background: rgba(220,235,245,.6); animation: rainfall linear infinite; }
+@keyframes rainfall { to { transform: translate(-30px, 115vh); } }
+.flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 15; }
+.flash.on { animation: flash .5s ease-out; }
+@keyframes flash { 10% { opacity: .7; } 30% { opacity: .1; } 45% { opacity: .5; } }
+.storm { animation: storm 2.2s ease-in-out infinite; transform-origin: 50% 80%; }
+@keyframes storm { 25% { transform: translateY(10px) rotate(-7deg); } 75% { transform: translateY(-6px) rotate(7deg); } }
+.veil { position: absolute; inset: 0; opacity: 0; transition: opacity 1.6s; pointer-events: none; z-index: 7; }
+.veil.on { opacity: 1; }
+.obj.wslot { display: flex; align-items: center; justify-content: center; border-radius: 16px; border: 2.5px dashed rgba(255,231,160,.6); color: rgba(255,231,160,.7); font-weight: 900; font-size: 20px; }
+.obj.wslot.filled { border-color: transparent; }
+.obj.wcard { display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 16px; background: var(--parch); box-shadow: 0 6px 16px rgba(0,0,0,.35); cursor: grab; touch-action: none; }
+.obj.wcard b { font-family: "Amiri", serif; font-size: 21px; line-height: 1.1; color: var(--ink); }
+.obj.wcard small { font-size: 13px; font-weight: 800; color: var(--muted); }
+.obj.wcard.placed { background: #FFF3CC; box-shadow: 0 0 0 3px var(--gold), 0 0 24px rgba(245,196,81,.6); }
+.room .wall { position: absolute; inset: 0 0 26% 0; background: linear-gradient(180deg, #F6E9D3, #EBD9BA); }
+.room .floor { position: absolute; left: 0; right: 0; bottom: 0; height: 26%; background: linear-gradient(180deg, #C99A66, #A9784A); }
+.table { position: absolute; height: 14px; border-radius: 6px; background: #8E5A2E; box-shadow: 0 8px 0 #6E4428; z-index: 3; }
+.counter2 { position: absolute; z-index: 26; right: 14px; bottom: calc(env(safe-area-inset-bottom, 0px) + 20px); padding: 10px 16px; border-radius: 18px;
+  background: rgba(12, 38, 52, .82); color: #fff; font-weight: 900; font-size: 17px; }
+.counter2 b { color: var(--gold); font-size: 22px; }
+.counter2.bump { animation: bump .4s; }
+.counter2.big { left: 50%; right: auto; translate: -50% 0; font-size: 20px; }
+.plus { position: absolute; padding: 4px 10px; border-radius: 12px; background: rgba(12, 38, 52, .8); color: #FFE7A0; font-weight: 900; font-size: 15px; white-space: nowrap; pointer-events: none; }
+.obj.thing.got { filter: drop-shadow(0 0 10px rgba(245,196,81,.9)); }

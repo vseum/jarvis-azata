@@ -385,3 +385,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; background: 
 .grain { position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #D9B477; pointer-events: none; }
 .obj.dot.lit svg circle { fill: #FFE7A0; r: 8; }
 .obj.dot.lit { filter: drop-shadow(0 0 8px #FFE7A0); }
+
+/* подпись не перехватывает касания игровой зоны: нажимаются только её кнопки */
+#cap { pointer-events: none; }
+#capBtns { pointer-events: auto; }
+#cap.hidden #capBtns { pointer-events: none; }
+/* полоска ритма не глотает касания */
+.tbar { pointer-events: none; }
+/* длинная карточка аята прокручивается целиком, заголовок не уезжает вверх */
+.ayah { align-items: flex-start; }
+.acard { margin: auto 0; }

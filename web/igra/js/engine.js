@@ -99,7 +99,7 @@ const Snd = {
   amb(kind, level = 1) {
     if (!this.ac) return;
     const ac = this.ac, t = ac.currentTime;
-    this.ambNodes.forEach(n => { n.g.gain.setTargetAtTime(0.0001, t, 0.5); setTimeout(() => { try { n.s.stop(); } catch (e) {} }, 2500); });
+    this.ambNodes.forEach(n => { n.g.gain.setTargetAtTime(0.0001, t, 0.5); setTimeout(() => { try { n.s.stop(); if (n.l) n.l.stop(); } catch (e) {} }, 2500); });
     this.ambNodes = []; clearTimeout(this.ambTimer);
     if (!kind) return;
     const layer = (bk, type, f, q, gain, lfoF, lfoG) => {
@@ -107,8 +107,9 @@ const Snd = {
       s.buffer = this.bufs[bk]; s.loop = true; fl.type = type; fl.frequency.value = f; fl.Q.value = q;
       g.gain.value = 0.0001; g.gain.setTargetAtTime(gain * level, t, 1);
       s.connect(fl); fl.connect(g); g.connect(this.master); s.start(0, Math.random() * 2);
-      if (lfoF) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = lfoF; lg.gain.value = lfoG * level; l.connect(lg); lg.connect(g.gain); l.start(); }
-      this.ambNodes.push({ s, g });
+      const node = { s, g };
+      if (lfoF) { const l = ac.createOscillator(), lg = ac.createGain(); l.frequency.value = lfoF; lg.gain.value = lfoG * level; l.connect(lg); lg.connect(g.gain); l.start(); node.l = l; }
+      this.ambNodes.push(node);
     };
     if (kind === "wind" || kind === "meadow") layer("brown", "lowpass", 400, 0.7, 0.18, 0.07, 0.08);
     if (kind === "sea") { layer("pink", "lowpass", 700, 0.5, 0.16, 0.13, 0.12); layer("brown", "lowpass", 250, 0.7, 0.2, 0.09, 0.1); }
@@ -131,9 +132,16 @@ function unlockAudio() {
   try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
   Snd.init();
   if (!silentEl) { try { silentEl = new Audio(silentWavUrl()); silentEl.loop = true; silentEl.setAttribute("playsinline", ""); silentEl.play().catch(() => { silentEl = null; }); } catch (e) { silentEl = null; } }
+  else if (silentEl.paused) silentEl.play().catch(() => {});
 }
 ["pointerup", "touchend", "click", "keydown"].forEach(ev => document.addEventListener(ev, unlockAudio, true));
-document.addEventListener("visibilitychange", () => { if (Snd.ac && !document.hidden) Snd.ac.resume(); });
+/* игру свернули (другое приложение, свёрнутый Telegram) — звук и голос на паузу, вернулись — продолжаем */
+document.addEventListener("visibilitychange", () => {
+  const hid = document.hidden;
+  if (Snd.ac) { if (hid) Snd.ac.suspend(); else Snd.ac.resume(); }
+  if ("speechSynthesis" in window) { try { hid ? speechSynthesis.pause() : speechSynthesis.resume(); } catch (e) {} }
+  if (Voice.qari) { if (hid) Voice.qari.pause(); else Voice.qari.play().catch(() => {}); }
+});
 
 /* ============ ГОЛОС: записи из папки voice/, а если их нет - голос телефона ============ */
 /* Голоса озвучки: файлы лежат в voice/<id>/ */
@@ -149,8 +157,9 @@ const VOICES = [
   { id: "ruslan", name: "Руслан", g: "мужской" }
 ];
 const Voice = {
-  on: true, sp: "xenia", have: new Set(), cache: {}, cur: null, ru: null,
-  async load() {
+  on: true, sp: "xenia", have: new Set(), cache: new Map(), cur: null, ru: null, seq: 0, qari: null, ready: null,
+  load() { return this.ready || (this.ready = this.init()); },
+  async init() {
     let saved = null;
     try { saved = new URLSearchParams(location.search).get("golos") || localStorage.getItem("ayaty_voice"); } catch (e) {}
     if (VOICES.some(v => v.id === saved)) this.sp = saved;
@@ -158,16 +167,17 @@ const Voice = {
     this.pick(); if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => this.pick();
   },
   async manifest() {
-    this.have = new Set();
-    try { const r = await fetch("voice/" + this.sp + "/manifest.json", { cache: "no-cache" }); if (r.ok) this.have = new Set(await r.json()); } catch (e) {}
+    const sp = this.sp; let have = new Set();
+    try { const r = await fetch("voice/" + sp + "/manifest.json", { cache: "no-cache" }); if (r.ok) have = new Set(await r.json()); } catch (e) {}
+    if (sp === this.sp) this.have = have;      // пока грузилось, голос могли сменить
   },
   /* Послушать реплику другим голосом, не меняя выбранный */
   async preview(sp, id) {
-    this.stop();
+    this.stop(); const my = this.seq;
     try {
-      const r = await fetch("voice/" + sp + "/" + id + ".mp3"); if (!r.ok) return;
-      const b = await Snd.ac.decodeAudioData(await r.arrayBuffer());
-      this.stop(); const s = Snd.ac.createBufferSource(); s.buffer = b; s.connect(Snd.ac.destination); s.start(); this.cur = s;
+      const b = await this.buffer(sp, id);
+      if (my !== this.seq) return;
+      this.play(b);
     } catch (e) {}
   },
   async setSpeaker(sp) {
@@ -179,32 +189,50 @@ const Voice = {
     const vs = speechSynthesis.getVoices().filter(v => /^ru/i.test(v.lang));
     this.ru = vs.find(v => /milena|милена|yandex|google/i.test(v.name)) || vs[0] || null;
   },
+  /* Остановить всё: и то, что звучит, и то, что ещё загружается (жетон seq меняется) */
   stop() {
+    this.seq++; cap.classList.remove("talk");
+    if (this.qari) { this.qari.onended = null; this.qari.pause(); this.qari = null; }
     if ("speechSynthesis" in window && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel();
-    if (this.cur) { try { this.cur.stop(); } catch (e) {} this.cur = null; }
+    if (this.cur) { const c = this.cur; this.cur = null; try { c.stop(); } catch (e) {} }
   },
-  async file(id) {
-    const key = this.sp + "/" + id;
-    if (!this.cache[key]) { const r = await fetch("voice/" + key + ".mp3"); if (!r.ok) throw new Error("нет файла"); this.cache[key] = await Snd.ac.decodeAudioData(await r.arrayBuffer()); }
-    return this.cache[key];
+  play(b, onEnd) {
+    const s = Snd.ac.createBufferSource(); s.buffer = b; s.connect(Snd.ac.destination);
+    s.onended = () => { if (this.cur === s) this.cur = null; onEnd && onEnd(); };
+    s.start(); this.cur = s;
+  },
+  /* Декодированные реплики: держим в памяти только последние 16, иначе на телефоне кончается память */
+  async buffer(sp, id) {
+    const key = sp + "/" + id;
+    if (this.cache.has(key)) { const b = this.cache.get(key); this.cache.delete(key); this.cache.set(key, b); return b; }
+    const r = await fetch("voice/" + key + ".mp3"); if (!r.ok) throw new Error("нет файла");
+    const b = await Snd.ac.decodeAudioData(await r.arrayBuffer());
+    this.cache.set(key, b);
+    while (this.cache.size > 16) this.cache.delete(this.cache.keys().next().value);
+    return b;
+  },
+  /* Заранее скачать реплики главы, чтобы голос начинался сразу (браузер сохранит файлы в кэше) */
+  prefetch(prefix) {
+    Object.keys(window.LINES).filter(k => k.startsWith(prefix) && this.have.has(k)).forEach(k => { fetch("voice/" + this.sp + "/" + k + ".mp3").catch(() => {}); });
   },
   /* Промис завершается, когда реплика договорена */
   speak(id) {
     return new Promise(res => {
-      let done = false; const fin = () => { if (!done) { done = true; cap.classList.remove("talk"); res(); } };
-      this.stop();
-      if (this.on) cap.classList.add("talk");
+      this.stop(); const my = this.seq;
+      let done = false; const fin = () => { if (!done) { done = true; if (my === this.seq) cap.classList.remove("talk"); res(); } };
       if (!this.on) return setTimeout(fin, 500);
+      cap.classList.add("talk");
       if (this.have.has(id) && Snd.ac) {
-        this.file(id).then(b => {
-          const s = Snd.ac.createBufferSource(); s.buffer = b; s.connect(Snd.ac.destination); s.onended = fin; s.start(); this.cur = s;
-        }).catch(() => this.tts(id, fin));
+        this.buffer(this.sp, id).then(b => {
+          if (my !== this.seq) return fin();      // пока грузилось, реплику уже отменили
+          this.play(b, fin);
+        }).catch(() => { if (my === this.seq) this.tts(id, fin, my); else fin(); });
         setTimeout(fin, 60000); return;
       }
-      this.tts(id, fin);
+      this.tts(id, fin, my);
     });
   },
-  tts(id, fin) {
+  tts(id, fin, my) {
     const text = L(id).replace(/[؀-ۿﭐ-﷿ﹰ-﻿]+/g, "").replace(/["«»]/g, "").replace(/\s-\s/g, ", ").trim();
     if (!text || !("speechSynthesis" in window)) return setTimeout(fin, 900);
     if (!this.ru) this.pick();
@@ -212,7 +240,7 @@ const Voice = {
     u.lang = "ru-RU"; if (this.ru) u.voice = this.ru; u.rate = 0.92;
     u.onend = fin; u.onerror = fin;
     setTimeout(fin, 2500 + text.length * 90);
-    setTimeout(() => speechSynthesis.speak(u), 50);
+    setTimeout(() => { if (my === this.seq) speechSynthesis.speak(u); else fin(); }, 50);
   }
 };
 
@@ -243,13 +271,15 @@ function cue(id) { showCap(id); return Voice.speak(id); }
 function choice(qid, opts, okId) {
   return new Promise(async res => {
     showCap(qid);
-    let picked = false, misses = 0;
+    let picked = false, misses = 0, pending = null;
     const btns = opts.map(o => {
       const ic = o.ar ? "الله" : `<svg viewBox="0 0 48 48" aria-hidden="true">${o.icon || ""}</svg>`;
       const b = button(`<span class="oi${o.ar ? " ar" : ""}">${ic}</span><span>${L(o.id).replace(/\.$/, "")}</span>`, "opt");
       b.onclick = async () => {
-        picked = true; btns.forEach(x => x.classList.remove("reading"));
+        if (b.disabled || picked) return;
+        btns.forEach(x => x.classList.remove("reading"));
         if (o.ok) {
+          picked = true;
           Snd.tap(); celebrate(); b.classList.add("yes"); b.disabled = true;
           btns.forEach(x => { x.onclick = null; if (x !== b) x.remove(); });
           capNote.textContent = L(okId);
@@ -259,13 +289,16 @@ function choice(qid, opts, okId) {
         } else {
           misses++; Snd.thud(0.3); b.classList.add("no"); b.disabled = true;
           const nid = window.LINES[o.id + "_no"] ? o.id + "_no" : "wrong";
-          capNote.textContent = L(nid); Voice.speak(nid);
+          capNote.textContent = L(nid); pending = Voice.speak(nid);
         }
       };
       return b;
     });
     await Voice.speak(qid);
     for (let i = 0; i < btns.length && !picked; i++) {
+      while (pending) { const p = pending; await p; if (pending === p) pending = null; }
+      if (picked) break;
+      if (btns[i].disabled) continue;
       btns[i].classList.add("reading"); await Voice.speak(opts[i].id); btns[i].classList.remove("reading");
     }
   });
@@ -289,18 +322,19 @@ function ayahCard(key) {
     ov.querySelector(".tr").textContent = L(a.tr);
     requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add("on")));
     Snd.sparkle();
-    let qari = null;
-    const stopAll = () => { Voice.stop(); if (qari) { qari.pause(); qari = null; } };
+    let closed = false;
+    const stopAll = () => Voice.stop();
     const playQari = (i = 0) => {
-      if (i >= a.parts.length) { qari = null; return; }
-      qari = new Audio("https://cdn.islamic.network/quran/audio/128/ar.alafasy/" + a.parts[i].n + ".mp3");
-      qari.onended = () => playQari(i + 1); qari.play().catch(() => {});
+      if (i >= a.parts.length || closed) { Voice.qari = null; return; }
+      const q = new Audio("https://cdn.islamic.network/quran/audio/128/ar.alafasy/" + a.parts[i].n + ".mp3");
+      Voice.qari = q; q.onended = () => { if (Voice.qari === q) playQari(i + 1); }; q.play().catch(() => {});
     };
     ov.querySelectorAll("button").forEach(b => b.onclick = () => {
+      if (closed) return;
       Snd.tap(); const act = b.dataset.a;
       if (act === "qari") { stopAll(); playQari(0); }
       else if (act === "tr") { stopAll(); Voice.speak(a.tr); }
-      else { stopAll(); ov.classList.remove("on"); setTimeout(() => ov.remove(), 400); res(); }
+      else { closed = true; ov.style.pointerEvents = "none"; stopAll(); ov.classList.remove("on"); setTimeout(() => ov.remove(), 400); res(); }
     });
   });
 }

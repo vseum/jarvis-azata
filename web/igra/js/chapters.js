@@ -311,15 +311,16 @@ function connectDots(pts, timeout = 30000) {
     let k = 0, fin = false, down = false;
     dots[0].classList.add("hint");
     const field = el("div", "tapfield"); field.style.zIndex = 6;
+    const upd = () => { down = false; };
     const link = () => {
       const d = dots[k]; d.classList.remove("hint"); d.classList.add("lit"); Snd.sparkle();
       if (k > 0) { const a = pts[k - 1], b = pts[k]; g.insertAdjacentHTML("beforeend", `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"/>`); }
-      k++; if (k < dots.length) dots[k].classList.add("hint"); else { fin = true; field.remove(); res(); }
+      k++; if (k < dots.length) dots[k].classList.add("hint"); else { fin = true; field.remove(); window.removeEventListener("pointerup", upd); res(); }
     };
     const near = ev => { if (fin) return; const p = local(ev), d = dots[k]; if (Math.hypot(p.x - d._x, p.y - d._y) < 36) link(); };
     field.addEventListener("pointerdown", ev => { down = true; near(ev); });
     field.addEventListener("pointermove", ev => { if (down) near(ev); });
-    window.addEventListener("pointerup", () => { down = false; });
+    window.addEventListener("pointerup", upd);
     setTimeout(async () => { while (!fin) { link(); await sleep(350); } }, timeout);
   });
 }
@@ -333,10 +334,11 @@ function drawStroke(maxY, minLen = 220, timeout = 15000) {
     let len = 0, down = false, fin = false;
     const field = el("div", "tapfield"); field.style.zIndex = 6;
     const add = p => { const q = pts[pts.length - 1]; if (q) len += Math.hypot(p.x - q.x, p.y - q.y); pts.push(p); line.setAttribute("points", pts.map(o => o.x.toFixed(0) + "," + o.y.toFixed(0)).join(" ")); };
-    const end = () => { if (fin) return; fin = true; field.remove(); res(lay); };
+    const up = () => { if (down && len >= minLen) end(); down = false; };
+    const end = () => { if (fin) return; fin = true; field.remove(); window.removeEventListener("pointerup", up); res(lay); };
     field.addEventListener("pointerdown", ev => { const p = local(ev); if (p.y < maxY) { down = true; add(p); } });
     field.addEventListener("pointermove", ev => { if (!down) return; const p = local(ev); if (p.y < maxY) add(p); });
-    window.addEventListener("pointerup", () => { if (down && len >= minLen) end(); down = false; });
+    window.addEventListener("pointerup", up);
     setTimeout(async () => {
       if (fin) return;
       const cx = W * 0.5, cy = maxY * 0.62, R = 50;
@@ -549,7 +551,8 @@ function steerGame(ship, seaTop, sz, ms = 14000) {
     const aim = ev => { targetY = Math.max(minY, Math.min(maxY, local(ev).y - sz * 0.15)); };
     field.addEventListener("pointerdown", ev => { down = true; aim(ev); });
     field.addEventListener("pointermove", ev => { if (down) aim(ev); });
-    window.addEventListener("pointerup", () => { down = false; });
+    const up = () => { down = false; };
+    window.addEventListener("pointerup", up);
     const loop = t => {
       if (fin) return;
       const dt = Math.min(0.05, (t - last) / 1000); last = t;
@@ -567,7 +570,7 @@ function steerGame(ship, seaTop, sz, ms = 14000) {
         }
       });
       for (let i = rocks.length - 1; i >= 0; i--) if (rocks[i]._x < -80) { rocks[i].remove(); rocks.splice(i, 1); }
-      if (t - t0 > ms + 2500 && !rocks.length) { fin = true; field.remove(); return res(); }
+      if (t - t0 > ms + 2500 && !rocks.length) { fin = true; field.remove(); window.removeEventListener("pointerup", up); return res(); }
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
@@ -880,12 +883,12 @@ async function chFinal() {
 
 /* ============ ГЛАВЫ И МИРЫ ============ */
 const CHAPTERS = [
-  { id: "sky", name: "Небо без опор", icon: ICON.sky, fn: chSky },
-  { id: "fruit", name: "Разные плоды", icon: ICON.fruitc, fn: chFruit },
-  { id: "ship", name: "Корабль и ветер", icon: ICON.ship, fn: chShip },
-  { id: "mountain", name: "Горы", icon: ICON.mountain, fn: chMountain },
-  { id: "sunlamp", name: "Солнце-светильник", icon: ICON.sunc, fn: chSunLamp },
-  { id: "stars", name: "Звёзды", icon: ICON.star, fn: chStars }
+  { id: "sky", name: "Небо без опор", icon: ICON.sky, fn: chSky, lines: "k" },
+  { id: "fruit", name: "Разные плоды", icon: ICON.fruitc, fn: chFruit, lines: "f" },
+  { id: "ship", name: "Корабль и ветер", icon: ICON.ship, fn: chShip, lines: "s" },
+  { id: "mountain", name: "Горы", icon: ICON.mountain, fn: chMountain, lines: "m" },
+  { id: "sunlamp", name: "Солнце-светильник", icon: ICON.sunc, fn: chSunLamp, lines: "l" },
+  { id: "stars", name: "Звёзды", icon: ICON.star, fn: chStars, lines: "z" }
 ];
 /* Главы, которых ещё нет, записаны просто названием и показываются как "скоро" */
 const WORLDS = [
@@ -901,10 +904,12 @@ let running = false;
 function nextUndone() { const k = CHAPTERS.findIndex(c => !Save.d.done[c.id]); return k < 0 ? null : k; }
 async function play(from, withIntro) {
   running = true; unlockAudio();
+  await Voice.load();
   $("#start").classList.add("off");
   if (withIntro) await chIntro();
   for (let k = from; k < CHAPTERS.length; k++) {
     const c = CHAPTERS[k];
+    Voice.prefetch(c.lines);
     const misses = await c.fn();
     const st = misses === 0 ? 3 : misses === 1 ? 2 : 1;
     Save.d.done[c.id] = Math.max(Save.d.done[c.id] || 0, st); Save.save();

@@ -341,3 +341,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; background: 
   .hero { min-height: 90px; }
   .hint-sound { display: none; }
 }
+
+/* выравнивание по центру: текст подсказки, пояснение, кнопки и варианты ответа */
+#capText { text-align: center; padding: 0 22px; }
+#capNote { text-align: center; }
+#capBtns { justify-content: center; }
+.opt { position: relative; justify-content: center; text-align: center; padding: 8px 64px; }
+.opt .oi { position: absolute; left: 8px; top: 50%; translate: 0 -50%; }

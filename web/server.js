@@ -282,6 +282,9 @@ function readBody(req) {
   });
 }
 
+// подписка игры (ЮKassa): эндпоинты /igra/api/pay/*, /igra/api/me, /igra/api/autopay/* — см. igra-pay.js
+const igraPay = require('./igra-pay')({ send });
+
 const server = http.createServer((req, res) => {
   handle(req, res).catch(e => {
     console.error('request failed:', e && e.message);
@@ -330,6 +333,7 @@ async function handle(req, res) {
     if (igraNames[name] || Object.keys(igraNames).length < 2000) igraNames[name] = (igraNames[name] || 0) + 1;
     return send(res, 200, { ok: true });
   }
+  if (p.startsWith('/igra/api/') && await igraPay.handle(req, res, p, url)) return;
   const ig = p.match(/^\/igra\/((?:[\w-]+\/)*[\w.-]*)$/);
   if (ig && req.method === 'GET') {
     const rel = ig[1] || 'index.html', type = IGRA_TYPES[path.extname(rel)];
@@ -469,7 +473,7 @@ function shutdown() {
   server.close();
   clearTimeout(flushTimer);
   const done = () => process.exit(0);
-  Promise.all([sync(), igraFlush()]).then(done, done);
+  Promise.all([sync(), igraFlush(), igraPay.stop()]).then(done, done);
   setTimeout(done, 8000).unref();
 }
 process.on('SIGTERM', shutdown);

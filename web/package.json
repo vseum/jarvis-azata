@@ -1,8 +1,13 @@
 {
   "name": "tracker",
   "private": true,
-  "description": "Трекер (рахмат.рус). Сервер без фреймворков; единственная зависимость — Anthropic SDK для вкладки «ИИ».",
+  "description": "Трекер (рахмат.рус). Сервер без фреймворков; зависимости — Anthropic SDK для вкладки «ИИ» и pg для подписки игры (igra-pay.js).",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "dependencies": { "@anthropic-ai/sdk": "^0.131.0" }
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "pg": "^8.23.1"
+  }
 }

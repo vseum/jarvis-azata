@@ -35,6 +35,12 @@
 "kqb",
 "kqb_no",
 "kqc",
+"m0",
+"m1",
+"m2",
+"m3",
+"m4",
+"m5",
 "s0",
 "s1",
 "s10",
@@ -47,6 +53,13 @@
 "s7",
 "s8",
 "s9",
+"s_end",
+"s_quran",
 "sq",
-"sqa"
+"sq_ok",
+"sqa",
+"sqa_no",
+"sqb",
+"sqb_no",
+"sqc"
 ]

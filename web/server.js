@@ -235,8 +235,9 @@ const STATIC = {
 
 const IGRA_TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8', '.mp3': 'audio/mpeg',
+  '.json': 'application/json; charset=utf-8', '.mp3': 'audio/mpeg', '.woff2': 'font/woff2',
 };
+const igraFiles = new Map();
 
 // Игра: имена детей, которых ещё нет среди озвученных. Копим в памяти и раз в 10 минут дописываем
 // в ветку data (igra/names.json: { "имя": сколько раз ввели }). Хранится только само имя, без IP и других данных.
@@ -338,11 +339,23 @@ async function handle(req, res) {
   if (ig && req.method === 'GET') {
     const rel = ig[1] || 'index.html', type = IGRA_TYPES[path.extname(rel)];
     if (!type) return send(res, 404, 'Not found', 'text/plain; charset=utf-8');
-    try {
-      const buf = fs.readFileSync(path.join(__dirname, 'igra', rel));
-      res.writeHead(200, { 'Content-Type': type, 'Cache-Control': rel.endsWith('.mp3') ? 'public, max-age=604800' : 'no-cache' });
-      return res.end(buf);
-    } catch (e) { return send(res, 404, 'Not found', 'text/plain; charset=utf-8'); }
+    if (rel.endsWith('.mp3')) {   // озвучка: много файлов, в память не кладём, браузер кэширует на неделю
+      try { const buf = fs.readFileSync(path.join(__dirname, 'igra', rel)); res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'public, max-age=604800' }); return res.end(buf); }
+      catch (e) { return send(res, 404, 'Not found', 'text/plain; charset=utf-8'); }
+    }
+    let f = igraFiles.get(rel);
+    if (!f) {
+      // файлы игры в образе не меняются: читаем один раз, текст сжимаем, ETag — чтобы повторный заход получал 304
+      try { f = { buf: fs.readFileSync(path.join(__dirname, 'igra', rel)) }; } catch (e) { return send(res, 404, 'Not found', 'text/plain; charset=utf-8'); }
+      f.etag = '"' + require('crypto').createHash('sha1').update(f.buf).digest('base64url').slice(0, 20) + '"';
+      if (/^text\/|json|javascript/.test(type) && f.buf.length > 1024) f.gz = require('zlib').gzipSync(f.buf, { level: 9 });
+      if (igraFiles.size < 5000) igraFiles.set(rel, f);
+    }
+    const long = rel.endsWith('.woff2');
+    const head = { 'Content-Type': type, 'Cache-Control': long ? 'public, max-age=604800' : 'no-cache', ETag: f.etag, Vary: 'Accept-Encoding' };
+    if (req.headers['if-none-match'] === f.etag) { res.writeHead(304, head); return res.end(); }
+    if (f.gz && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) { res.writeHead(200, { ...head, 'Content-Encoding': 'gzip' }); return res.end(f.gz); }
+    res.writeHead(200, head); return res.end(f.buf);
   }
 
   if (STATIC[p] && req.method === 'GET') {

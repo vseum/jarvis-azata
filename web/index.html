@@ -667,6 +667,7 @@ function lsSave(){try{localStorage.setItem('fajr-witr-days',JSON.stringify(state
 function mutate(date,fn){
   const v=state[date]||(state[date]={});
   fn(v);
+  holdOrder=Date.now()+700; // отмеченное уедет вниз не сразу — строка не уходит из-под пальца
   if(typeof autoDiary==='function')autoDiary(date);
   unsynced[date]=true;
   lsSave();
@@ -940,7 +941,7 @@ function trackerPlan(root,k,nowOpen){
       const go=el('button',{class:'row tri'},'<div class="lab"><div class="n">Заполнить план на день</div><div class="note">фокус, сливки, вишенки, развлечения</div></div><span class="go">→</span>');
       go.onclick=()=>switchTab('plan');body.appendChild(go);
     }
-    for(const r of rows){
+    for(const r of ordered('plan',rows,r=>r.done,r=>r.kind+':'+(r.id||''))){
       const row=el('div',{class:'row tri'+(r.done?' done':'')+(r.kind==='focus'?' pfocus':'')});
       const lab=el('button',{class:'lab'},`<div class="n">${r.kind==='focus'?'<span class="pf">Фокус · </span>':''}${esc(r.t)}</div>${r.tag?`<div class="note">${r.tag}</div>`:''}`);
       const yes=el('button',{class:'mark yes','aria-pressed':String(r.done),'aria-label':'Сделал'},CHECK);
@@ -1697,7 +1698,22 @@ function finishSession(box){
 }
 const openState={};
 let shownOpen=new Set(); // blocks open on screen right now
+// главная: в каждом блоке и в «Плане дня» отмеченное («✓» или «−») — внизу, неотмеченное — сверху в обычном порядке.
+// Сразу после нажатия порядок 0,7 с держим прежним, потом пересортировываем.
+let holdOrder=0,dayOrd={date:null,ids:{}},orderTimer=null;
+function ordered(key,list,isMarked,idOf){
+  let out;
+  const prev=dayOrd.date===viewDate&&dayOrd.ids[key];
+  if(prev&&Date.now()<holdOrder){
+    const pos=new Map(prev.map((id,i)=>[id,i]));
+    out=list.slice().sort((a,b)=>(pos.has(idOf(a))?pos.get(idOf(a)):1e9)-(pos.has(idOf(b))?pos.get(idOf(b)):1e9));
+    clearTimeout(orderTimer);orderTimer=setTimeout(()=>{if(tab==='day'&&!/^(INPUT|TEXTAREA)$/.test((document.activeElement||{}).tagName||''))render();},holdOrder-Date.now()+20);
+  }else out=list.filter(x=>!isMarked(x)).concat(list.filter(isMarked));
+  dayOrd.ids[key]=out.map(idOf);
+  return out;
+}
 function renderDay(){
+  if(dayOrd.date!==viewDate)dayOrd={date:viewDate,ids:{}};
   const v=state[viewDate]||{};
   const root=$('view-day');root.innerHTML='';
   const [ht,hs,har,hctx,hwhy]=hadithFor(viewDate);
@@ -1732,7 +1748,7 @@ function renderDay(){
       sec.appendChild(all);
     }
     const body=el('div',{class:'body'});sec.appendChild(body);
-    for(const h of b.items){
+    for(const h of ordered(b.id,b.items,h=>sc(h,v)>=1-1e-9||missed(h,v),h=>h.id)){
       const nt=liveNote(h,v),note=nt?`<div class="note">${esc(nt)}</div>`:'';
       if(!h.type){
         const row=triRow(v,h.id,h.n,note,'');

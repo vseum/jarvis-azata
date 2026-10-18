@@ -74,8 +74,8 @@ function hr(w) { const l = w.addStack(); l.size = new Size(0, 1); l.backgroundCo
 // полоска прогресса, как в шапке сайта: подпись, тонкая линия, «12 из 29 · 41%»
 function prog(w, label, frac, text, fill, barW) {
   const r = w.addStack(); r.centerAlignContent();
-  const l = r.addStack(); l.size = new Size(66, 0);
-  const lt = l.addText(label); lt.font = F.b(9.5); lt.textColor = col(C.ink3);
+  const l = r.addStack(); l.size = new Size(78, 0);
+  const lt = l.addText(label); lt.font = F.b(9.5); lt.textColor = col(C.ink3); lt.lineLimit = 1; lt.minimumScaleFactor = 0.7;
   l.addSpacer();
   r.addSpacer(6);
   const track = r.addStack(); track.size = new Size(barW, 3); track.backgroundColor = col(C.fill); track.cornerRadius = 1.5;
@@ -127,7 +127,7 @@ function buildWidget(doc, offline) {
     const h1 = dt.addText(`Сегодня, ${NOW.getDate()} ${MONTHS[NOW.getMonth()]}`); h1.font = F.d(17); h1.textColor = col(C.ink);
     dt.addSpacer();
     w.addSpacer(9);
-    const barW = widgetWidth(fam) - 2 * P - 66 - 6 - 12 - 96;
+    const barW = widgetWidth(fam) - 2 * P - 78 - 6 - 12 - 96;
     const total = +doc.total || 0, score = +doc.score || 0, pct = Math.round(+doc.pct || 0);
     const hab = total ? (score >= total - 1e-9 ? 'Всё выполнено' : `${String(Math.round(score * 10) / 10).replace('.', ',')} из ${total} · ${pct}%`) : `${pct}%`;
     prog(w, 'ПРИВЫЧКИ', pct / 100, hab, C.ink, barW);

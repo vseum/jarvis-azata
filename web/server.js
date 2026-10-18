@@ -328,7 +328,18 @@ async function handle(req, res) {
 
     // day YYYY-MM-DD, week plan YYYY-Www, month plan + notes YYYY-MM, word-learning progress `learn`
     const m = p.match(/^\/api\/days\/(\d{4}-\d{2}-\d{2}|\d{4}-W\d{2}|\d{4}-\d{2}|learn|ai)$/); // + learn: progress in words
-    if (m && req.method === 'GET') return send(res, 200, days[m[1]] || { v: {} });   // один документ — для виджета на телефоне
+    // один документ — для виджета на телефоне. Пока за день нет отметок, сайт ещё не прислал total (пунктов в дне) —
+    // берём его из последнего такого же дня недели, иначе из последнего дня: виджет пишет «0 из 29», а не «0%»
+    if (m && req.method === 'GET') {
+      const doc = Object.assign({ v: {} }, days[m[1]]);
+      if (!doc.total && /^\d{4}-\d{2}-\d{2}$/.test(m[1])) {
+        const wd = new Date(m[1] + 'T12:00:00Z').getUTCDay();
+        const prev = Object.keys(days).filter(k => k < m[1] && /^\d{4}-\d{2}-\d{2}$/.test(k) && days[k].total).sort().reverse();
+        const same = prev.find(k => new Date(k + 'T12:00:00Z').getUTCDay() === wd) || prev[0];
+        if (same) doc.total = days[same].total;
+      }
+      return send(res, 200, doc);
+    }
     if (m && req.method === 'PUT') {
       let body;
       try { body = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'bad json' }); }

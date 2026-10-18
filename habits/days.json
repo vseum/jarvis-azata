@@ -1,5 +1,5 @@
 {
- "updatedAt": "2026-10-18T06:38:12.952Z",
+ "updatedAt": "2026-10-18T06:53:56.186Z",
  "days": {
   "2026-09-27": {
    "v": {
@@ -1706,7 +1706,6 @@
   },
   "2026-10-18": {
    "v": {
-    "sleep_isha": true,
     "_tasks": [
      {
       "id": "mvdgdx40ha2j",
@@ -1716,12 +1715,15 @@
       "at": "2026-10-18T06:37:26.112Z"
      }
     ],
-    "wake_fajr": true
+    "sleep_isha": true,
+    "tahajjud": false,
+    "witr": false,
+    "sleep_back": false
    },
-   "score": 2,
-   "pct": 7,
+   "score": 1,
+   "pct": 3,
    "total": 29,
-   "updatedAt": "2026-10-18T06:37:57.950Z"
+   "updatedAt": "2026-10-18T06:53:41.176Z"
   }
  }
 }

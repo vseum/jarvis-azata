@@ -145,19 +145,11 @@ document.addEventListener("visibilitychange", () => {
 
 /* ============ ГОЛОС: записи из папки voice/, а если их нет - голос телефона ============ */
 /* Голоса озвучки: файлы лежат в voice/<id>/ */
-const VOICES = [
-  { id: "xenia", name: "Ксения", g: "женский" },
-  { id: "baya", name: "Бая", g: "женский" },
-  { id: "kseniya", name: "Ксюша", g: "женский" },
-  { id: "aidar", name: "Айдар", g: "мужской" },
-  { id: "eugene", name: "Евгений", g: "мужской" },
-  { id: "alexandr", name: "Александр", g: "мужской" },
-  { id: "roman", name: "Роман", g: "мужской" },
-  { id: "denis", name: "Денис", g: "мужской" },
-  { id: "ruslan", name: "Руслан", g: "мужской" }
+const VOICES = [   /* новый голос — строка сюда и папка voice/<id>/; при двух и больше голосах на старте появится выбор */
+  { id: "eugene", name: "Евгений", g: "мужской" }
 ];
 const Voice = {
-  on: true, sp: "xenia", have: new Set(), cache: new Map(), cur: null, ru: null, seq: 0, qari: null, ready: null,
+  on: true, sp: VOICES[0].id, have: new Set(), cache: new Map(), cur: null, ru: null, seq: 0, qari: null, ready: null,
   load() { return this.ready || (this.ready = this.init()); },
   async init() {
     let saved = null;
@@ -316,10 +308,16 @@ function ayahCard(key) {
     const firstNum = +key.split(":")[1].split("-")[0];
     const ar = a.parts.map((p, i) => `${p.ar} <span class="num">﴿${AR_DIGITS(firstNum + i)}﴾</span>`).join(" ");
     const ov = el("div", "ayah", app,
-      `<div class="acard">${["tl", "tr", "bl", "br"].map(c => `<svg class="star8 ${c}" viewBox="0 0 40 40" aria-hidden="true">${STAR8}</svg>`).join("")}<p class="lbl">Аят из Корана</p><p class="ref">${a.ref}</p><p class="ar" dir="rtl" lang="ar">${ar}</p>` +
-      `<p class="tr"></p><p class="src">Перевод смыслов: Эльмир Кулиев</p>` +
+      `<div class="acard">${["tl", "tr", "bl", "br"].map(c => `<svg class="star8 ${c}" viewBox="0 0 40 40" aria-hidden="true">${STAR8}</svg>`).join("")}<p class="lbl">Аят из Корана</p><p class="ref">${a.ref}</p><div class="abody"><p class="ar" dir="rtl" lang="ar">${ar}</p>` +
+      `<p class="tr"></p><p class="src">Перевод смыслов: Эльмир Кулиев</p></div>` +
       `<div class="abtns"><button class="btn teal" data-a="qari">▶ Чтец</button><button class="btn teal" data-a="tr">▶ Перевод</button><button class="btn" data-a="next">Дальше</button></div></div>`);
-    ov.querySelector(".tr").textContent = L(a.tr);
+    ov.querySelector("p.tr").textContent = L(a.tr);
+    /* длинный аят: арабский мельче, текст прокручивается внутри карточки, кнопки всегда на экране */
+    const arLen = a.parts.reduce((n, p) => n + p.ar.length, 0);
+    if (arLen > 260) ov.classList.add(arLen > 520 ? "xlong" : "long");
+    const body = ov.querySelector(".abody");
+    const fade = () => body.classList.toggle("more", body.scrollTop + body.clientHeight < body.scrollHeight - 4);
+    body.addEventListener("scroll", fade, { passive: true }); requestAnimationFrame(fade);
     requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add("on")));
     Snd.sparkle();
     let closed = false;
@@ -340,14 +338,24 @@ function ayahCard(key) {
 }
 
 /* ============ ЗАСТАВКА ГЛАВЫ ============ */
-async function chapterTitle(num, name, lineId) {
+/* Текущая глава (id): по ней заставка сама считает «Мир N · Глава M» */
+let CUR = null;
+function chapterPlace() {
+  const wi = WORLDS.findIndex(w => w.ch.includes(CUR));
+  return wi < 0 ? "" : `Мир ${wi + 1} · Глава ${WORLDS[wi].ch.indexOf(CUR) + 1}`;
+}
+/* Заставка главы. Первый параметр оставлен для совместимости и не используется */
+async function chapterTitle(_, name, lineId) {
   hideCap();
-  const t = el("div", "chtitle", app, `<div><small>Глава ${num}</small><b>${name}</b><svg class="orn" viewBox="0 0 120 16" aria-hidden="true"><path d="M0 8h44M76 8h44" stroke="#F5C451" stroke-width="1.5"/><path d="M60 1l4 7-4 7-4-7z" fill="#F5C451"/><circle cx="50" cy="8" r="2" fill="#F5C451"/><circle cx="70" cy="8" r="2" fill="#F5C451"/></svg></div>`);
+  const t = el("div", "chtitle", app, `<div><small>${chapterPlace()}</small><b>${name}</b><svg class="orn" viewBox="0 0 120 16" aria-hidden="true"><path d="M0 8h44M76 8h44" stroke="#F5C451" stroke-width="1.5"/><path d="M60 1l4 7-4 7-4-7z" fill="#F5C451"/><circle cx="50" cy="8" r="2" fill="#F5C451"/><circle cx="70" cy="8" r="2" fill="#F5C451"/></svg></div>`);
   requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add("on")));
   Snd.sparkle();
   await Promise.all([Voice.speak(lineId), sleep(2200)]);
   t.classList.remove("on"); await sleep(600); t.remove();
 }
+
+/* Стили главы прямо из её файла (чтобы миры не правили общий style.css) */
+function addCSS(text) { const st = document.createElement("style"); st.textContent = text; document.head.appendChild(st); }
 
 /* ============ ВЗАИМОДЕЙСТВИЯ ============ */
 /* Ждём n нажатий на элемент. Если ребёнок не нажимает, через timeout игра идёт дальше сама */
@@ -417,7 +425,7 @@ function chaptersSheet() {
           const ch = CHAPTERS.find(x => x.id === c);
           if (!ch) return `<div class="ch soon"><span class="ci">${LOCK}</span><span>${c}<span class="stars">скоро</span></span></div>`;
           const st = Save.d.done[c] || 0;
-          return `<button class="ch" data-id="${c}"><span class="ci"><svg viewBox="0 0 48 48" aria-hidden="true">${ch.icon}</svg></span><span>${ch.name}<span class="stars">${st ? "★".repeat(st) + "☆".repeat(3 - st) : "играть"}</span></span></button>`;
+          return `<button class="ch" data-id="${c}"><span class="ci"><svg viewBox="0 0 48 48" aria-hidden="true">${ch.icon}</svg></span><span>${ch.name.replace(/^(Аль|Ан|Ас|Ад)-(\S+)/, '<span class="nw">$1-$2</span>')}<span class="stars">${st ? "★".repeat(st) + "☆".repeat(3 - st) : "играть"}</span></span></button>`;
         }).join("") + `</div></div>`;
     }).join("");
     const ov = sheet(`<h2>Главы</h2>${html}<div class="row"><button class="btn line" id="shClose">Закрыть</button></div>`);

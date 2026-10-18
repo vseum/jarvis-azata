@@ -1119,7 +1119,9 @@ async function chFinal() {
   await toDark(); clearStage();
   sky("linear-gradient(180deg,#24557A 0%,#C98A6B 55%,#F6D79A 100%)");
   const { W, H } = size(); sunAt(W * 0.5, H * 0.44, 170); hills(0.3, ["#7E9E78", "#5E8A64", "#3F6E52"]); vignette();
-  el("div", "items-row", stage, ITEMS.filter(i => Save.d.items.includes(i.id)).map(i => `<svg viewBox="0 0 100 100" aria-hidden="true">${i.svg}</svg>`).join(""));
+  const got = ITEMS.filter(i => Save.d.items.includes(i.id));
+  const row = el("div", "items-row", stage, got.map(i => `<svg viewBox="0 0 100 100" aria-hidden="true">${i.svg}</svg>`).join(""));
+  row.classList.toggle("many", got.length > 8);
   Snd.amb("wind", 0.6); fromDark(); await sleep(500);
   celebrate();
   await say("fin1");
@@ -1129,76 +1131,24 @@ async function chFinal() {
 }
 
 /* ============ ГЛАВЫ И МИРЫ ============ */
-const CHAPTERS = [
-  { id: "sky", name: "Небо без опор", icon: ICON.sky, fn: chSky, lines: "k" },
-  { id: "fruit", name: "Разные плоды", icon: ICON.fruitc, fn: chFruit, lines: "f" },
-  { id: "ship", name: "Корабль и ветер", icon: ICON.ship, fn: chShip, lines: "s" },
-  { id: "mountain", name: "Горы", icon: ICON.mountain, fn: chMountain, lines: "m" },
-  { id: "sunlamp", name: "Солнце-светильник", icon: ICON.sunc, fn: chSunLamp, lines: "l" },
-  { id: "stars", name: "Звёзды", icon: ICON.star, fn: chStars, lines: "z" },
-  { id: "hear", name: "Кто услышит?", icon: ICON.echo, fn: chHear, lines: "h" },
-  { id: "yunus", name: "Дуа Юнуса", icon: ICON.pearl, fn: chYunus, lines: "y" },
-  { id: "bless", name: "Милости Аллаха", icon: ICON.dropc, fn: chBless, lines: "n" }
-];
-/* Главы, которых ещё нет, записаны просто названием и показываются как "скоро" */
+/* Миры по порядку. Главы регистрируются через regChapter(номер мира, глава) — в этом файле и в файлах js/w*.js.
+   Порядок глав в игре = порядок миров, внутри мира — порядок регистрации. */
 const WORLDS = [
-  { t: "Кто всё создал?", s: "Знамения Аллаха вокруг нас", ch: ["sky", "fruit", "ship", "mountain", "sunlamp", "stars", "Сладкая и солёная вода", "День и ночь"] },
-  { t: "Только Аллаху", s: "Кому поклоняться и у кого просить помощи", ch: ["hear", "yunus", "bless", "Никто, кроме Аллаха", "Защита у Аллаха"] },
-  { t: "Во что верит мусульманин", s: "Шесть столпов веры", ch: ["Вера в Аллаха", "Ангелы", "Книги", "Пророки", "Судный день", "Предопределение"] },
-  { t: "Как живёт мусульманин", s: "Пять столпов ислама", ch: ["Шахада", "Омовение", "Намаз", "Пост", "Закят", "Хадж"] },
-  { t: "Сокровища Корана", s: "Смысл коротких сур", ch: ["Аль-Фатиха", "Аль-Ихлас", "Аль-Фаляк", "Ан-Нас"] }
+  { t: "Кто всё создал?", s: "Знамения Аллаха вокруг нас", ch: [] },
+  { t: "Только Аллаху", s: "Кому поклоняться и у кого просить помощи", ch: [] },
+  { t: "Во что верит мусульманин", s: "Шесть столпов веры", ch: [] },
+  { t: "Как живёт мусульманин", s: "Столпы ислама и омовение", ch: [] },
+  { t: "Сокровища Корана", s: "Смысл коротких сур", ch: [] }
 ];
-
-/* ============ ЗАПУСК ============ */
-let running = false;
-function nextUndone() { const k = CHAPTERS.findIndex(c => !Save.d.done[c.id]); return k < 0 ? null : k; }
-async function play(from, withIntro) {
-  running = true; unlockAudio();
-  await Voice.load();
-  $("#start").classList.add("off");
-  if (withIntro) await chIntro();
-  for (let k = from; k < CHAPTERS.length; k++) {
-    const c = CHAPTERS[k];
-    Voice.prefetch(c.lines);
-    const misses = await c.fn();
-    const st = misses === 0 ? 3 : misses === 1 ? 2 : 1;
-    Save.d.done[c.id] = Math.max(Save.d.done[c.id] || 0, st); Save.save();
-    await starsToast(st);
-  }
-  await chFinal();
-  showStart();
-}
-function showStart() {
-  running = false; hideCap(); clearStage(); fromDark();
-  const any = Object.keys(Save.d.done).length > 0, next = nextUndone();
-  $("#goCont").hidden = !any || next == null;
-  $("#go").textContent = any ? "Начать сначала" : "Начать";
-  $("#go").classList.toggle("glass", any && next != null);
-  $("#start").classList.remove("off");
-}
-async function pickChapter() {
-  const k = await chaptersSheet();
-  if (k == null) return;
-  if (running) { try { sessionStorage.setItem("ayaty_jump", k); } catch (e) {} location.reload(); return; }
-  play(k, false);
-}
-
-Save.load(); Save.d.items = Save.d.items.filter(i => ITEMS.some(x => x.id === i)); updateBag(false);
-Voice.load().then(() => { $("#goVoice b").textContent = voiceName(); });
-showStart();
-$("#go").onclick = () => { Snd.tap(); play(0, true); };
-$("#goCont").onclick = () => { Snd.tap(); const k = nextUndone(); if (k != null) play(k, false); };
-$("#goCh").onclick = () => { Snd.tap(); pickChapter(); };
-$("#goVoice").onclick = async () => { Snd.tap(); await voiceSheet(); $("#goVoice b").textContent = voiceName(); };
-$("#tHome").onclick = () => { Snd.tap(); pickChapter(); };
-$("#tBag").onclick = () => { Snd.tap(); bagSheet(); };
-$("#tVoice").onclick = e => { Voice.on = !Voice.on; e.currentTarget.setAttribute("aria-pressed", Voice.on); if (!Voice.on) Voice.stop(); };
-$("#tSfx").onclick = e => { Snd.setOn(!Snd.on); e.currentTarget.setAttribute("aria-pressed", Snd.on); };
-/* После выбора главы во время игры страница перезагружается: предлагаем сразу сыграть выбранную главу */
-(() => {
-  let j = null; try { j = sessionStorage.getItem("ayaty_jump"); sessionStorage.removeItem("ayaty_jump"); } catch (e) {}
-  if (j == null || !CHAPTERS[+j]) return;
-  const b = el("button", "btn big", null, "Играть: " + CHAPTERS[+j].name);
-  $(".sbtns").prepend(b);
-  b.onclick = () => { Snd.tap(); play(+j, false); };
-})();
+const REG = {}, CHAPTERS = [];
+/* глава: { id, name, icon (svg 48×48 без тега svg), fn (async, возвращает число ошибок), lines (префикс реплик главы) } */
+function regChapter(world, c) { REG[c.id] = c; WORLDS[world].ch.push(c.id); }
+regChapter(0, { id: "sky", name: "Небо без опор", icon: ICON.sky, fn: chSky, lines: "k" });
+regChapter(0, { id: "fruit", name: "Разные плоды", icon: ICON.fruitc, fn: chFruit, lines: "f" });
+regChapter(0, { id: "ship", name: "Корабль и ветер", icon: ICON.ship, fn: chShip, lines: "s" });
+regChapter(0, { id: "mountain", name: "Горы", icon: ICON.mountain, fn: chMountain, lines: "m" });
+regChapter(0, { id: "sunlamp", name: "Солнце-светильник", icon: ICON.sunc, fn: chSunLamp, lines: "l" });
+regChapter(0, { id: "stars", name: "Звёзды", icon: ICON.star, fn: chStars, lines: "z" });
+regChapter(1, { id: "hear", name: "Кто услышит?", icon: ICON.echo, fn: chHear, lines: "h" });
+regChapter(1, { id: "yunus", name: "Дуа Юнуса", icon: ICON.pearl, fn: chYunus, lines: "y" });
+regChapter(1, { id: "bless", name: "Милости Аллаха", icon: ICON.dropc, fn: chBless, lines: "n" });

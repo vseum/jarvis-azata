@@ -19,7 +19,7 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body {
   margin: 0; height: 100%; overflow: hidden; background: var(--night);
-  font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink);
+  font-family: "Nunito", "Amiri", system-ui, -apple-system, "Segoe UI", sans-serif;   /* Amiri подхватывает ﷺ и арабские слова */ color: var(--ink);
   overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -205,7 +205,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; background: 
 .whead small { display: block; font-size: 13.5px; color: var(--muted); font-weight: 700; }
 .wbar { height: 6px; border-radius: 3px; background: rgba(18,49,63,.1); margin-top: 6px; overflow: hidden; }
 .wbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-2)); border-radius: 3px; }
-.chlist { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.chlist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ch > span:last-child { min-width: 0; overflow-wrap: break-word; hyphens: auto; }
+.ch .nw { white-space: nowrap; }
 .ch {
   display: flex; align-items: center; gap: 10px; min-height: 62px; padding: 8px 10px; border-radius: 16px; background: #fff;
   text-align: left; font-weight: 900; font-size: 15px; line-height: 1.15; color: var(--ink);
@@ -392,9 +394,15 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; background: 
 #cap.hidden #capBtns { pointer-events: none; }
 /* полоска ритма не глотает касания */
 .tbar { pointer-events: none; }
-/* длинная карточка аята прокручивается целиком, заголовок не уезжает вверх */
-.ayah { align-items: flex-start; }
-.acard { margin: auto 0; }
+/* карточка аята всегда влезает в экран: прокручивается только текст, кнопки на месте */
+.ayah { overflow: hidden; }
+.acard { display: flex; flex-direction: column; max-height: 100%; }
+.acard .abody { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; margin: 0 -6px; padding: 0 6px; }
+.acard .abody.more { -webkit-mask-image: linear-gradient(#000 calc(100% - 46px), transparent); mask-image: linear-gradient(#000 calc(100% - 46px), transparent); }
+.acard .abtns { flex: none; padding-top: 4px; }
+.ayah.long .acard .ar { font-size: clamp(22px, 5.6vw, 27px); line-height: 1.85; }
+.ayah.xlong .acard .ar { font-size: clamp(20px, 5vw, 25px); line-height: 1.8; }
+.ayah.xlong .acard .tr { font-size: 15.5px; }
 
 /* мир 2 */
 .swave { position: absolute; border-radius: 50%; border: 4px solid transparent; border-right-color: rgba(255,255,255,.9); pointer-events: none; }
@@ -423,3 +431,24 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; background: 
 .counter2.big { left: 50%; right: auto; translate: -50% 0; font-size: 20px; }
 .plus { position: absolute; padding: 4px 10px; border-radius: 12px; background: rgba(12, 38, 52, .8); color: #FFE7A0; font-weight: 900; font-size: 15px; white-space: nowrap; pointer-events: none; }
 .obj.thing.got { filter: drop-shadow(0 0 10px rgba(245,196,81,.9)); }
+
+/* финал: когда сокровищ много, они мельче */
+.items-row.many { gap: 8px 10px; bottom: 8%; }
+.items-row.many svg { width: 42px; height: 42px; animation-duration: 4s; }
+/* узкий экран: «Чтец» и «Перевод» в одну строку, «Дальше» под ними */
+@media (max-width: 380px) {
+  .abtns { gap: 8px; }
+  .abtns .btn.teal { min-height: 44px; font-size: 15px; padding: 0 14px; }
+  .acard { padding: 24px 16px 16px; }
+  .acard .star8 { width: 26px; height: 26px; }
+}
+@media (max-height: 600px) {
+  .acard .ref { margin-bottom: 8px; }
+  .abtns .btn { min-height: 44px; }
+}
+@media (max-width: 380px) {
+  .sheet-in { padding: 22px 12px 16px; }
+  .world { padding: 12px 10px; }
+  .ch { flex-direction: column; justify-content: flex-start; gap: 6px; padding: 10px 6px 9px; font-size: 14.5px; text-align: center; }
+  .ch > span:last-child { overflow-wrap: normal; hyphens: manual; }
+}

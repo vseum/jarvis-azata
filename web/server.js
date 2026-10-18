@@ -336,7 +336,7 @@ async function handle(req, res) {
         if (h.type === 'group') note = `${h.subs.filter(x => v[x.id] === true).length}/${h.subs.length}`;
         if (h.type === 'hours') note = `${String(+v[h.id] || 0).replace('.', ',')} из ${h.target} ч`;
         if (h.type === 'multi') note = `${Array.isArray(v[h.id]) ? v[h.id].length : 0}/${h.opts.length}`;
-        return { id: h.id, n: h.n, note, block: h.bname, s: Math.round(habitScore(h, v) * 100) / 100, miss: habitMissed(h, v), tap: h.type ? 'open' : 'toggle' };
+        return { id: h.id, n: h.n, note, block: h.bname, s: Math.round(habitScore(h, v) * 100) / 100, miss: habitMissed(h, v), tap: !h.type || h.type === 'group' ? 'toggle' : 'open' };
       });
       return send(res, 200, { d, v, score: st.score, total: st.total, pct: st.pct, habits });
     }
@@ -351,9 +351,13 @@ async function handle(req, res) {
       if (!doc) return send(res, 404, { error: 'no day' });
       const v = Object.assign({}, doc.v), done = !!b.done, up = new Date().toISOString();
       if (b.kind === 'habit') {
-        const h = HABITS.find(x => x.id === b.id && !x.type);           // из виджета — только простые пункты (не группы, часы, джамаат)
+        // из виджета — простые пункты и группы (витамины: «−»/«✓» ставят все подпункты, как на сайте); часы и джамаат — только на сайте
+        const h = HABITS.find(x => x.id === b.id && (!x.type || x.type === 'group'));
         if (!h) return send(res, 400, { error: 'bad habit' });
-        if (done) v[h.id] = true; else delete v[h.id];
+        const val = 'val' in b ? b.val : (done || null);                  // true — сделал, false — не сделал, null — снять отметку
+        if (val !== true && val !== false && val !== null) return send(res, 400, { error: 'bad val' });
+        for (const id of h.type === 'group' ? h.subs.map(x => x.id) : [h.id]) { if (val === null) delete v[id]; else v[id] = val; }
+        if (h.type === 'group') delete v[h.id];
       } else if (b.kind === 'focus') {
         if (!v._focus) return send(res, 404, { error: 'no focus' });
         v._focus = Object.assign({}, v._focus, { done });

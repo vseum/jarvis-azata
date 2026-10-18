@@ -62,17 +62,18 @@ async function toggle(it) {
 const marked = h => h.s >= 1 || h.miss;
 const habitsSorted = hs => hs.filter(h => !marked(h)).concat(hs.filter(marked));
 
-// кружок-отметка, как на сайте: серый контур с бледной галочкой; сделано — чёрный круг с белой галочкой;
-// «не сделал» — красный круг с белой чертой
+// кружки, как на сайте: «✓» — серый контур с бледной галочкой, нажат — чёрный круг с белой галочкой;
+// «−» — серый контур с бледной чертой, нажат — красный круг с белой чертой.
+// state: open / done (галочка), noOff / miss (черта)
 function mark(state, d) {
-  const s = d / 28, c = new DrawContext();
+  const s = d / 28, c = new DrawContext(), on = state === 'done' || state === 'miss', minus = state === 'miss' || state === 'noOff';
   c.size = new Size(d, d); c.opaque = false; c.respectScreenScale = true;
-  if (state === 'done' || state === 'miss') { c.setFillColor(col(state === 'done' ? C.ink : C.miss)); c.fillEllipse(new Rect(0, 0, d, d)); }
+  if (on) { c.setFillColor(col(state === 'done' ? C.ink : C.miss)); c.fillEllipse(new Rect(0, 0, d, d)); }
   else { const lw = 1.5 * s; c.setStrokeColor(col(C.ring)); c.setLineWidth(lw); c.strokeEllipse(new Rect(lw / 2, lw / 2, d - lw, d - lw)); }
   const p = new Path();
-  if (state === 'miss') { p.move(new Point(10 * s, 14 * s)); p.addLine(new Point(18 * s, 14 * s)); }
+  if (minus) { p.move(new Point(11.25 * s, 14 * s)); p.addLine(new Point(16.75 * s, 14 * s)); }
   else { p.move(new Point(10.5 * s, 14.4 * s)); p.addLine(new Point(12.8 * s, 16.8 * s)); p.addLine(new Point(17.5 * s, 11.3 * s)); }
-  c.addPath(p); c.setStrokeColor(col(state === 'open' ? C.tick : '#FFFFFF')); c.setLineWidth(1.9 * s); c.strokePath();
+  c.addPath(p); c.setStrokeColor(col(on ? '#FFFFFF' : C.tick)); c.setLineWidth(1.9 * s); c.strokePath();
   return c.getImage();
 }
 
@@ -99,15 +100,22 @@ function widgetWidth(fam) {
   return wide ? 364 : mid ? 338 : 329;
 }
 
-// строка списка: текст (+ серая приписка), справа кружок; url — что делать при нажатии
+// строка списка: текст (+ серая приписка), справа кружок; url — что делать при нажатии.
+// У привычки два кружка, как на сайте: «−» и «✓», у каждого своё нажатие (o.btns: [[состояние, url], …])
 function row(w, o) {
   const r = w.addStack(); r.centerAlignContent(); r.setPadding(o.pv, 0, o.pv, 0);
-  if (o.url) r.url = o.url;
+  if (o.url && !o.btns) r.url = o.url;
   const n = r.addText(o.text); n.lineLimit = 1; n.font = o.bold ? F.d(o.fs) : F.m(o.fs); n.textColor = col(o.dim ? C.ink3 : C.ink);
   if (o.note) { r.addSpacer(6); const t = r.addText(o.note); t.font = F.d(o.fs - 3); t.textColor = col(C.ink3); t.lineLimit = 1; }
   r.addSpacer(8); r.addSpacer();
   if (o.go) { const g = r.addText('→'); g.font = F.m(o.fs + 3); g.textColor = col(C.ink2); }
-  else { const img = r.addImage(mark(o.state, o.md)); img.imageSize = new Size(o.md, o.md); }
+  else if (o.btns) {
+    o.btns.forEach(([state, url], i) => {
+      if (i) r.addSpacer(10);
+      const b = r.addStack(); if (url) b.url = url;
+      const img = b.addImage(mark(state, o.md)); img.imageSize = new Size(o.md, o.md);
+    });
+  } else { const img = r.addImage(mark(o.state, o.md)); img.imageSize = new Size(o.md, o.md); }
   hr(w);
 }
 
@@ -134,8 +142,8 @@ function buildWidget(doc, offline) {
   // что показать строкой: дело плана или привычка
   const planRow = it => ({ text: it.kind === 'focus' ? 'Фокус · ' + it.t : it.t, bold: it.kind === 'focus', dim: it.done, state: it.done ? 'done' : 'open',
     url: `${RUN}?toggle=${encodeURIComponent(it.kind + ':' + it.id)}` });
-  const habRow = h => ({ text: h.n, note: h.note, dim: marked(h), state: h.s >= 1 ? 'done' : h.miss ? 'miss' : 'open',
-    url: h.tap === 'toggle' ? `${RUN}?habit=${encodeURIComponent(h.id)}` : RUN });
+  const habRow = h => ({ text: h.n, note: h.note, dim: marked(h), state: h.s >= 1 ? 'done' : h.miss ? 'miss' : 'open', url: RUN,
+    btns: h.tap === 'toggle' ? [[h.miss ? 'miss' : 'noOff', `${RUN}?habit=${encodeURIComponent(h.id)}&v=no`], [h.s >= 1 ? 'done' : 'open', `${RUN}?habit=${encodeURIComponent(h.id)}&v=yes`]] : null });
 
   // экран блокировки: сколько осталось и что первое
   const firstOpen = planOpen.map(x => x.t).concat(habOpen.map(h => h.n));
@@ -188,7 +196,7 @@ function buildWidget(doc, offline) {
     const all = planOpen.map(planRow).concat(habOpen.map(habRow), sorted(plan).filter(x => x.done).map(planRow), habits.filter(marked).map(habRow));
     head(w, 'СЕГОДНЯ', 'дела и привычки', left ? `осталось ${left}` : 'Готово', !left, small);
     if (!all.length) row(w, { text: 'Заполнить план на день', go: true, fs, pv, url: RUN });
-    for (const r of all.slice(0, 3)) row(w, Object.assign(r, { fs, md, pv, url: small ? null : r.url }));
+    for (const r of all.slice(0, 3)) row(w, Object.assign(r, { fs, md, pv, url: small ? null : r.url }, small ? { btns: null } : {}));   // маленький — без нажатий на строки, один кружок
   }
   w.addSpacer();
   if (offline) { const o = w.addText('нет связи — последние данные'); o.font = F.r(9.5); o.textColor = col(C.ink3); }
@@ -219,9 +227,12 @@ if (config.runsInWidget) {
     const i = q.indexOf(':'), it = items(doc.v || {}).find(x => x.kind === q.slice(0, i) && x.id === q.slice(i + 1));
     if (it) { try { await toggle(it); } catch (e) {} }
   }
-  if (qp.habit && !offline) {   // простая привычка: отметить «сделал» или снять отметку
+  if (qp.habit && !offline) {   // привычка: «✓» — сделал, «−» — не сделал; повторное нажатие снимает отметку
     const h = (doc.habits || []).find(x => x.id === qp.habit && x.tap === 'toggle');
-    if (h) { try { await api('/api/toggle', { d: TODAY, kind: 'habit', id: h.id, done: !(h.s >= 1) }); } catch (e) {} }
+    if (h) {
+      const val = qp.v === 'no' ? (h.miss ? null : false) : (h.s >= 1 ? null : true);
+      try { await api('/api/toggle', { d: TODAY, kind: 'habit', id: h.id, val }); } catch (e) {}
+    }
   }
   if (!offline) await selfUpdate();
   if (offline) {

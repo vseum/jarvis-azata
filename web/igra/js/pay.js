@@ -57,7 +57,7 @@ const Pay = {
         <div class="pgate"><p>Сколько будет <b class="gq"></b>?</p><div class="gans"></div></div>
         <div class="pbuy" hidden>${buy}<button class="btn line pcodebtn">У меня есть код</button>
         <p class="small poffer">Автопродление, отключить можно в любой момент. <a href="oferta.html" target="_blank">Оферта</a></p></div>
-        <div class="row"><button class="btn line" data-a="close">Назад</button></div>`);
+`);
       ov.classList.add("paysheet");
       /* «Для взрослых»: малыш не дойдёт до оплаты случайно */
       const a = 3 + Math.floor(Math.random() * 6), b = 4 + Math.floor(Math.random() * 5), sum = a + b;
@@ -70,7 +70,7 @@ const Pay = {
         else { g.disabled = true; g.classList.add("no"); }
       });
       const done = v => { ov.close(); res(v); };
-      ov.querySelector("[data-a=close]").onclick = () => { Snd.tap(); done(false); };
+      ov.withX(() => done(false));
       ov.querySelectorAll(".plan").forEach(p => p.onclick = async () => {
         Snd.tap(); p.disabled = true;
         try {
@@ -86,9 +86,9 @@ const Pay = {
   codeSheet() {
     return new Promise(res => {
       const ov = sheet(`<h2>Код семьи</h2><input class="nmin pcin" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="АБВ-1234">
-        <p class="small pmsg"></p><div class="row"><button class="btn" data-a="ok">Открыть игру</button></div><div class="row"><button class="btn line" data-a="no">Назад</button></div>`);
+        <p class="small pmsg"></p><div class="row"><button class="btn" data-a="ok">Открыть игру</button></div>`);
       const inp = ov.querySelector(".pcin"), msg = ov.querySelector(".pmsg");
-      ov.querySelector("[data-a=no]").onclick = () => { Snd.tap(); ov.close(); res(false); };
+      ov.withX(() => { ov.close(); res(false); });
       ov.querySelector("[data-a=ok]").onclick = async () => {
         Snd.tap(); const code = inp.value.trim().toUpperCase(); if (!code) return;
         let r; try { r = await this.api("me?code=" + encodeURIComponent(code)); } catch (e) { msg.textContent = "Нет связи, попробуйте ещё раз"; return; }
@@ -109,6 +109,7 @@ const Pay = {
     const ov = sheet(`<h2>Подписка</h2>${body}<div class="row"><button class="btn" data-a="close">Готово</button></div>`);
     ov.classList.add("paysheet");
     ov.querySelector("[data-a=close]").onclick = () => { Snd.tap(); ov.close(); };
+    ov.withX(() => ov.close());
     const au = ov.querySelector("[data-a=auto]");
     if (au) au.onclick = async () => {
       Snd.tap(); au.disabled = true;

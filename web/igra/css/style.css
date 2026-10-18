@@ -221,7 +221,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; background: 
 .ch.soon .ci { background: rgba(18,49,63,.06); }
 .ch.soon .stars { color: #A9BCC2; letter-spacing: 0; }
 .sheet .row { display: flex; justify-content: center; margin-top: 8px; }
-.bag { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 8px; }
+.bag { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 8px; }
+.bag div { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 380px) { .bag { gap: 7px; } .bag svg { width: 52px; height: 52px; } .bag div { font-size: 12.5px; } }
 .bag div { background: #fff; border-radius: 20px; padding: 12px 6px 10px; text-align: center; font-weight: 900; font-size: 14px; box-shadow: 0 3px 0 #E6D7B5; }
 .bag div.lk { opacity: .35; filter: grayscale(1); }
 .bag svg { width: 64px; height: 64px; display: block; margin: 0 auto 6px; }
@@ -556,3 +558,13 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; background: 
 .pcode { display: block; margin: 8px 0; font-size: 26px; letter-spacing: 2px; color: var(--night-2); }
 .pmsgbig { font-size: 16px !important; line-height: 1.45; }
 .pcin { text-transform: uppercase; letter-spacing: 2px; }
+/* крестик окна: сверху справа и не уезжает при прокрутке */
+.sheet-in { position: relative; }
+.sxwrap { position: sticky; top: 0; height: 0; z-index: 5; display: flex; justify-content: flex-end; }
+.sx { width: 44px; height: 44px; margin: 2px 2px 0 0; border-radius: 50%; display: grid; place-items: center; background: #fff; color: var(--night-2); box-shadow: 0 3px 0 #E6D7B5, 0 6px 14px -6px rgba(0,0,0,.35); transition: transform .12s; }
+.sx svg { width: 22px; height: 22px; }
+.sx:active { transform: scale(.9); }
+.sheet h2 { padding: 0 40px; }
+/* автонажатие «Дальше»: снизу на кнопке заполняется полоска (3 с) */
+.btn.auto::before { content: ""; position: absolute; left: 18px; right: 18px; bottom: 7px; height: 4px; border-radius: 2px; background: rgba(59,42,12,.35); transform-origin: left; animation: autofill 3s linear forwards; pointer-events: none; }
+@keyframes autofill { from { transform: scaleX(0); } to { transform: scaleX(1); } }

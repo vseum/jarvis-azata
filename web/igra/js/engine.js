@@ -146,10 +146,12 @@ document.addEventListener("visibilitychange", () => {
 /* ============ ГОЛОС: записи из папки voice/, а если их нет - голос телефона ============ */
 /* Голоса озвучки: файлы лежат в voice/<id>/ */
 const VOICES = [   /* новый голос — строка сюда и папка voice/<id>/; при двух и больше голосах на старте появится выбор */
-  { id: "eugene", name: "Евгений", g: "мужской" }
+  { id: "eugene", name: "Евгений", g: "мужской" },
+  { id: "azat", name: "Азат", g: "мужской" }
 ];
+const BASE_VOICE = "eugene";   // озвучен полностью: им договариваются реплики, которых у выбранного голоса ещё нет
 const Voice = {
-  on: true, sp: VOICES[0].id, have: new Set(), cache: new Map(), cur: null, ru: null, seq: 0, qari: null, ready: null,
+  on: true, sp: VOICES[0].id, have: new Set(), base: new Set(), cache: new Map(), cur: null, ru: null, seq: 0, qari: null, ready: null,
   load() { return this.ready || (this.ready = this.init()); },
   async init() {
     let saved = null;
@@ -159,10 +161,13 @@ const Voice = {
     this.pick(); if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => this.pick();
   },
   async manifest() {
-    const sp = this.sp; let have = new Set();
-    try { const r = await fetch("voice/" + sp + "/manifest.json", { cache: "no-cache" }); if (r.ok) have = new Set(await r.json()); } catch (e) {}
-    if (sp === this.sp) this.have = have;      // пока грузилось, голос могли сменить
+    const sp = this.sp;
+    const get = async s => { try { const r = await fetch("voice/" + s + "/manifest.json", { cache: "no-cache" }); if (r.ok) return new Set(await r.json()); } catch (e) {} return new Set(); };
+    const [have, base] = await Promise.all([get(sp), sp === BASE_VOICE ? null : get(BASE_VOICE)]);
+    if (sp === this.sp) { this.have = have; this.base = base || have; }      // пока грузилось, голос могли сменить
   },
+  /* Каким голосом есть файл реплики: выбранным, иначе основным */
+  src(id) { return this.have.has(id) ? this.sp : this.base.has(id) ? BASE_VOICE : null; },
   /* Послушать реплику другим голосом, не меняя выбранный */
   async preview(sp, id) {
     this.stop(); const my = this.seq;
@@ -207,7 +212,7 @@ const Voice = {
   },
   /* Заранее скачать реплики главы, чтобы голос начинался сразу (браузер сохранит файлы в кэше) */
   prefetch(prefix) {
-    Object.keys(window.LINES).filter(k => k.startsWith(prefix) && this.have.has(k)).forEach(k => { fetch("voice/" + this.sp + "/" + k + ".mp3").catch(() => {}); });
+    Object.keys(window.LINES).filter(k => k.startsWith(prefix) && this.src(k)).forEach(k => { fetch("voice/" + this.src(k) + "/" + k + ".mp3").catch(() => {}); });
   },
   /* Промис завершается, когда реплика договорена. named: сначала позвать ребёнка по имени */
   speak(id, named) {
@@ -216,9 +221,9 @@ const Voice = {
       let done = false; const fin = () => { if (!done) { done = true; if (my === this.seq) cap.classList.remove("talk"); res(); } };
       if (!this.on) return setTimeout(fin, 500);
       cap.classList.add("talk");
-      const nm = named ? Me.clip() : null;
-      if (this.have.has(id) && Snd.ac) {
-        Promise.all([nm ? this.buffer(this.sp, "names/" + nm).catch(() => null) : null, this.buffer(this.sp, id)]).then(([nb, b]) => {
+      const nm = named ? Me.clip() : null, from = this.src(id);
+      if (from && Snd.ac) {
+        Promise.all([nm ? this.buffer(Me.sp, "names/" + nm).catch(() => null) : null, this.buffer(from, id)]).then(([nb, b]) => {
           if (my !== this.seq) return fin();      // пока грузилось, реплику уже отменили
           if (!nb) return this.play(b, fin);
           this.play(nb, () => my === this.seq ? setTimeout(() => my === this.seq ? this.play(b, fin) : fin(), 120) : fin());
@@ -247,8 +252,10 @@ const normName = s => s.trim().toLowerCase().replace(/ё/g, "е").replace(/\s+/g
 const Me = {
   list: null, idx: new Map(),
   get name() { return Save.d.name || ""; },
+  sp: BASE_VOICE,   // каким голосом озвучены имена (у нового голоса их может ещё не быть)
   load() {
-    return this.list || (this.list = fetch("voice/" + Voice.sp + "/names.json").then(r => r.ok ? r.json() : []).catch(() => [])
+    const get = s => fetch("voice/" + s + "/names.json").then(r => r.ok ? r.json() : null).catch(() => null);
+    return this.list || (this.list = get(Voice.sp).then(a => a ? (this.sp = Voice.sp, a) : get(BASE_VOICE).then(b => (this.sp = BASE_VOICE, b || [])))
       .then(a => { this.idx = new Map(a.map(([n, id]) => [normName(n), id])); return a; }));
   },
   clip(n = this.name) { return n ? this.idx.get(normName(n)) || null : null; },
@@ -268,7 +275,7 @@ const Me = {
   async hello(n) {
     const id = this.clip(n); if (!id || !Voice.on || !Snd.ac) return;
     Voice.stop(); const my = Voice.seq;
-    try { const b = await Voice.buffer(Voice.sp, "names/" + id); if (my === Voice.seq) Voice.play(b); } catch (e) {}
+    try { const b = await Voice.buffer(this.sp, "names/" + id); if (my === Voice.seq) Voice.play(b); } catch (e) {}
   }
 };
 /* Обращение в начале реплики: «Амина! » */
@@ -277,7 +284,28 @@ const callName = named => named && Me.name ? Me.name + "! " : "";
 /* ============ ПОДПИСИ И КНОПКИ ============ */
 /* Реплика в подписи: её можно переслушать кнопкой — для детей, которые ещё не читают */
 let capLine = null;
-function replayCap() { if (capLine && !cap.classList.contains("hidden")) { unlockAudio(); Voice.speak(capLine.id, capLine.named); } }
+function replayCap() {
+  if (!capLine || cap.classList.contains("hidden")) return;
+  unlockAudio(); const p = Voice.speak(capLine.id, capLine.named);
+  if (autoNext.rearm) autoNext.rearm(p);
+}
+/* Ребёнок не нажал «Дальше»: через 3 с после конца реплики игра идёт дальше сама — на кнопке заполняется полоска.
+   Повтор реплики начинает отсчёт заново; пока открыто окно (пауза и т.п.) — ждём. Без звука даём время прочитать */
+const AUTO_MS = 3000;
+function autoNext(b, p, text) {
+  let t = null, gen = 0, live = true;
+  const arm = async g => {
+    if (!live || g !== gen) return;
+    if (!Voice.on || !Snd.ac) { await sleep(Math.min(9000, 1200 + text.length * 60)); if (!live || g !== gen) return; }
+    b.classList.remove("auto"); void b.offsetWidth; b.classList.add("auto");
+    const fire = () => { if (!live || g !== gen) return; if (document.querySelector(".sheet")) { b.classList.remove("auto"); t = setTimeout(() => arm(g), 800); return; } b.click(); };
+    t = setTimeout(fire, AUTO_MS);
+  };
+  const stop = () => { clearTimeout(t); b.classList.remove("auto"); };
+  p.then(() => arm(gen));
+  autoNext.rearm = pp => { gen++; stop(); const g = gen; pp.then(() => arm(g)); };
+  b.addEventListener("click", () => { live = false; stop(); autoNext.rearm = null; }, { once: true });
+}
 function showCap(id, note, named) {
   capLine = { id, named };
   cap.classList.remove("hidden");
@@ -294,6 +322,7 @@ async function say(id, opt = {}) {
   await sleep(500);
   const b = button(opt.btn || "Дальше");
   p.then(() => b.classList.add("glow"));
+  autoNext(b, p, L(id));
   await clicked(b);
   Voice.stop(); capBtns.innerHTML = "";
 }
@@ -318,7 +347,7 @@ function choice(qid, opts, okId) {
           btns.forEach(x => { x.onclick = null; if (x !== b) x.remove(); });
           capNote.textContent = callName(true) + L(okId); capLine = { id: okId, named: true };
           const p = Voice.speak(okId, true); await sleep(500);
-          const nb = button("Дальше"); p.then(() => nb.classList.add("glow")); await clicked(nb);
+          const nb = button("Дальше"); p.then(() => nb.classList.add("glow")); autoNext(nb, p, L(okId)); await clicked(nb);
           Voice.stop(); capBtns.innerHTML = ""; capNote.textContent = ""; res(misses);
         } else {
           misses++; Snd.thud(0.3); b.classList.add("no"); b.disabled = true;
@@ -484,6 +513,16 @@ function sheet(html) {
   const ov = el("div", "sheet", app, `<div class="sheet-in">${html}</div>`);
   requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add("on")));
   ov.close = () => { ov.classList.remove("on"); setTimeout(() => ov.remove(), 300); };
+  /* Крестик сверху, закреплён при прокрутке, и нажатие на тёмный фон — закрыть.
+     Ребёнок не станет искать «Закрыть» в самом низу длинного списка */
+  ov.withX = fn => {
+    const w = el("div", "sxwrap"); ov.firstChild.prepend(w);
+    const x = el("button", "sx", w, '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>');
+    x.setAttribute("aria-label", "Закрыть");
+    const go = () => { Snd.tap(); fn(); };
+    x.onclick = go; ov.addEventListener("click", e => { if (e.target === ov) go(); });
+    return ov;
+  };
   return ov;
 }
 function chaptersSheet() {
@@ -500,10 +539,9 @@ function chaptersSheet() {
           return `<button class="ch${nx ? " next" : ""}${lk ? " lock" : ""}" data-id="${c}"><span class="ci"><svg viewBox="0 0 48 48" aria-hidden="true">${ch.icon}</svg></span><span>${ch.name.replace(/^(Аль|Ан|Ас|Ад)-(\S+)/, '<span class="nw">$1-$2</span>')}<span class="stars">${st ? "★".repeat(st) + "☆".repeat(3 - st) : lk ? "полная версия" : nx ? "дальше ▶" : "играть"}</span>${lk ? `<i class="chlock">${LOCK}</i>` : ""}</span></button>`;
         }).join("") + `</div></div>`;
     }).join("");
-    const ov = sheet(`<h2>Главы</h2>${html}<div class="row"><button class="btn line" id="shClose">Закрыть</button></div>`);
+    const ov = sheet(`<h2>Главы</h2>${html}`).withX(() => { ov.close(); res(null); });
     const nb = ov.querySelector(".ch.next"); if (nb) setTimeout(() => nb.scrollIntoView({ block: "center", behavior: "smooth" }), 350);
     ov.querySelectorAll("button.ch").forEach(b => b.onclick = () => { Snd.tap(); ov.close(); res(CHAPTERS.findIndex(c => c.id === b.dataset.id)); });
-    ov.querySelector("#shClose").onclick = () => { Snd.tap(); ov.close(); res(null); };
   });
 }
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5" fill="#B7C6CC"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="#B7C6CC" stroke-width="2.2"/></svg>';
@@ -521,7 +559,7 @@ function pauseSheet() {
     const ov = sheet(`<h2>Пауза</h2><p class="small psub">${chapterPlace()}</p><div class="pmenu">${row("go", "Играть дальше", "main")}${row("again", "Начать главу заново")}${row("list", "Все главы")}${row("home", "На главную")}</div>`);
     ov.classList.add("psheet");
     ov.querySelectorAll(".pbtn").forEach(b => b.onclick = () => { Snd.tap(); ov.close(); res(b.dataset.a); });
-    ov.onclick = e => { if (e.target === ov) { ov.close(); res("go"); } };   // нажали мимо — играем дальше
+    ov.withX(() => { ov.close(); res("go"); });   // закрыли паузу — играем дальше
   });
 }
 /* Выбор голоса: каждый можно послушать */
@@ -529,7 +567,7 @@ function voiceSheet() {
   return new Promise(res => {
     const rows = VOICES.map(v => `<div class="vrow${v.id === Voice.sp ? " on" : ""}" data-id="${v.id}"><button class="vplay" aria-label="Послушать">▶</button>` +
       `<span><b>${v.name}</b><small>${v.g} голос</small></span><button class="btn vpick">${v.id === Voice.sp ? "Выбран" : "Выбрать"}</button></div>`).join("");
-    const ov = sheet(`<h2>Голос</h2><div class="vlist">${rows}</div><p class="small">Нажми ▶, чтобы послушать</p><div class="row"><button class="btn line" id="vClose">Готово</button></div>`);
+    const ov = sheet(`<h2>Голос</h2><div class="vlist">${rows}</div><p class="small">Нажми ▶, чтобы послушать</p>`).withX(() => { Voice.stop(); ov.close(); res(); });
     ov.querySelectorAll(".vrow").forEach(r => {
       const id = r.dataset.id;
       r.querySelector(".vplay").onclick = () => { Snd.tap(); unlockAudio(); Voice.preview(id, "intro1"); };
@@ -538,7 +576,6 @@ function voiceSheet() {
         ov.querySelectorAll(".vrow").forEach(x => { const on = x.dataset.id === id; x.classList.toggle("on", on); x.querySelector(".vpick").textContent = on ? "Выбран" : "Выбрать"; });
       };
     });
-    ov.querySelector("#vClose").onclick = () => { Snd.tap(); Voice.stop(); ov.close(); res(); };
   });
 }
 /* Как тебя зовут? Пока ребёнок печатает, подсказываем озвученные имена — нажал, и игра произносит имя */
@@ -577,8 +614,7 @@ function nameSheet() {
 function voiceName() { return (VOICES.find(v => v.id === Voice.sp) || VOICES[0]).name; }
 function bagSheet() {
   const html = ITEMS.map(i => `<div class="${Save.d.items.includes(i.id) ? "" : "lk"}"><svg viewBox="0 0 100 100" aria-hidden="true">${i.svg}</svg>${i.name}</div>`).join("");
-  const ov = sheet(`<h2>Мои сокровища</h2><div class="bag">${html}</div><p class="small">Сокровища даются за пройденные главы</p><div class="row"><button class="btn line">Закрыть</button></div>`);
-  ov.querySelector("button").onclick = () => { Snd.tap(); ov.close(); };
+  const ov = sheet(`<h2>Мои сокровища</h2><div class="bag">${html}</div><p class="small">Сокровища даются за пройденные главы</p>`).withX(() => ov.close());
 }
 
 /* ============ TELEGRAM ============ */

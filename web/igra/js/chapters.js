@@ -203,7 +203,7 @@ async function chIntro() {
   sky("linear-gradient(180deg,#5FB4E6 0%,#A9DDF4 55%,#F6E7C4 100%)");
   const { W, H } = size(); sunAt(W * 0.74, H * 0.42, 150); clouds(3, 0.28, 0.46); hills(0.32); vignette();
   Snd.amb("wind", 0.7); fromDark(); await sleep(500);
-  await say("intro1");
+  await say("intro1", { named: true });
   await say("intro2");
   await say("intro3", { btn: "Бисмиллях" });
 }
@@ -1124,10 +1124,76 @@ async function chFinal() {
   row.classList.toggle("many", got.length > 8);
   Snd.amb("wind", 0.6); fromDark(); await sleep(500);
   celebrate();
-  await say("fin1");
+  await say("fin1", { named: true });
   await say("fin2");
+  hideCap(); await certificate();
   await say("fin3", { btn: "В меню" });
   hideCap();
+}
+/* Грамота в конце игры: рисуется на canvas, её можно сохранить картинкой или поделиться */
+async function certCanvas() {
+  try { await Promise.all([document.fonts.load('900 100px "Nunito"'), document.fonts.load('700 60px "Nunito"'), document.fonts.load('700 60px "Amiri"')]); } catch (e) {}
+  const W = 1080, H = 1440, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d");
+  const bg = x.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#FDF6E6"); bg.addColorStop(1, "#F6E7C4");
+  x.fillStyle = bg; x.fillRect(0, 0, W, H);
+  const rr = (p, r) => { x.beginPath(); x.roundRect(p, p, W - 2 * p, H - 2 * p, r); };
+  x.strokeStyle = "#C9A24E"; x.lineWidth = 6; rr(40, 44); x.stroke();
+  x.strokeStyle = "rgba(201,162,78,.55)"; x.lineWidth = 2; rr(62, 30); x.stroke();
+  const star = new Path2D("M20 2l5 8 9-2-2 9 8 5-8 5 2 9-9-2-5 8-5-8-9 2 2-9-8-5 8-5-2-9 9 2z");
+  [[110, 110], [W - 110, 110], [110, H - 110], [W - 110, H - 110]].forEach(([cx, cy]) => {
+    x.save(); x.translate(cx - 40, cy - 40); x.scale(2, 2); x.strokeStyle = "#E6A93A"; x.lineWidth = 1.6; x.stroke(star);
+    x.beginPath(); x.arc(20, 20, 4, 0, 7); x.fillStyle = "#E6A93A"; x.fill(); x.restore();
+  });
+  x.textAlign = "center"; x.textBaseline = "alphabetic";
+  const fit = (text, font, size, maxW) => { let s = size; do { x.font = font.replace("{s}", s); s -= 4; } while (x.measureText(text).width > maxW && s > 30); };
+  const wrap = (text, y, lh, maxW) => {
+    const words = text.split(" "); let line = "";
+    for (const w of words) { const t = line ? line + " " + w : w; if (x.measureText(t).width > maxW && line) { x.fillText(line, W / 2, y); y += lh; line = w; } else line = t; }
+    x.fillText(line, W / 2, y); return y;
+  };
+  x.fillStyle = "#B9802A"; x.font = '700 64px "Amiri", serif'; x.direction = "rtl"; x.fillText("مَا شَاءَ اللَّهُ", W / 2, 250); x.direction = "ltr";
+  x.fillStyle = "#163B4F"; x.font = '900 128px "Nunito", sans-serif'; x.fillText("ГРАМОТА", W / 2, 420);
+  let y = 520;
+  if (Me.name) {
+    x.fillStyle = "#6B8590"; x.font = '700 46px "Nunito", sans-serif'; x.fillText("награждается", W / 2, y);
+    x.fillStyle = "#B9802A"; fit(Me.name, '900 {s}px "Nunito", sans-serif', 132, W - 260); x.fillText(Me.name, W / 2, y + 150); y += 250;
+  }
+  x.fillStyle = "#34505C"; x.font = '700 48px "Nunito", sans-serif';
+  y = wrap("за прохождение всех пяти уровней игры «Аяты вокруг нас»", y + 20, 66, W - 280);
+  const done = CHAPTERS.filter(ch => Save.d.done[ch.id]), stars = done.reduce((n, ch) => n + Save.d.done[ch.id], 0);
+  x.fillStyle = "#163B4F"; x.font = '900 52px "Nunito", sans-serif';
+  x.fillText(`Глав: ${done.length} из ${CHAPTERS.length}   ★ ${stars} из ${CHAPTERS.length * 3}`, W / 2, y + 120);
+  x.fillStyle = "#6B8590"; x.font = '700 42px "Nunito", sans-serif';
+  wrap("Всё вокруг создал Аллах, и только Ему мы поклоняемся.", y + 230, 58, W - 300);
+  x.fillStyle = "#9AAEB5"; x.font = '700 36px "Nunito", sans-serif';
+  x.fillText(new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }), W / 2, H - 210);
+  x.fillText("рахмат.рус/igra", W / 2, H - 160);
+  return c;
+}
+function certificate() {
+  return new Promise(async res => {
+    const c = await certCanvas(), url = c.toDataURL("image/png");
+    const ov = el("div", "cert", app, `<div class="cin"><img alt="Грамота" src="${url}"><p>Нажми на грамоту и подержи, чтобы сохранить</p>` +
+      `<div class="row"><button class="btn teal" data-a="save">Сохранить</button><button class="btn" data-a="next">Дальше</button></div></div>`);
+    requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add("on")));
+    celebrate(); Voice.speak("cert", true);
+    ov.querySelector("[data-a=save]").onclick = async () => {
+      Snd.tap();
+      const blob = await new Promise(r => c.toBlob(r, "image/png")), file = new File([blob], "gramota.png", { type: "image/png" });
+      try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: "Грамота" }); return; } } catch (e) { if (e.name === "AbortError") return; }
+      const a = document.createElement("a"); a.href = url; a.download = "gramota.png"; document.body.appendChild(a); a.click(); a.remove();
+    };
+    ov.querySelector("[data-a=next]").onclick = () => { Snd.tap(); Voice.stop(); ov.classList.remove("on"); setTimeout(() => ov.remove(), 400); res(); };
+  });
+}
+/* Уровень пройден: большая надпись и похвала по имени */
+async function levelDone(wi) {
+  const t = el("div", "chtitle lvl", app, `<div><small>Ма ша Аллах!</small><b>Уровень ${wi + 1} пройден</b><svg class="orn" viewBox="0 0 120 16" aria-hidden="true"><path d="M0 8h44M76 8h44" stroke="#F5C451" stroke-width="1.5"/><path d="M60 1l4 7-4 7-4-7z" fill="#F5C451"/><circle cx="50" cy="8" r="2" fill="#F5C451"/><circle cx="70" cy="8" r="2" fill="#F5C451"/></svg></div>`);
+  requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add("on")));
+  celebrate();
+  await say("lvl_done", { named: true, btn: "Дальше" });
+  hideCap(); t.classList.remove("on"); await sleep(500); t.remove();
 }
 
 /* ============ ГЛАВЫ И МИРЫ ============ */

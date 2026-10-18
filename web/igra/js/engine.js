@@ -174,6 +174,7 @@ const Voice = {
   },
   async setSpeaker(sp) {
     this.sp = sp; try { localStorage.setItem("ayaty_voice", sp); } catch (e) {}
+    Me.list = null; Me.load();
     await this.manifest();
   },
   pick() {
@@ -189,6 +190,7 @@ const Voice = {
     if (this.cur) { const c = this.cur; this.cur = null; try { c.stop(); } catch (e) {} }
   },
   play(b, onEnd) {
+    if (this.cur) { const c = this.cur; this.cur = null; try { c.stop(); } catch (e) {} }
     const s = Snd.ac.createBufferSource(); s.buffer = b; s.connect(Snd.ac.destination);
     s.onended = () => { if (this.cur === s) this.cur = null; onEnd && onEnd(); };
     s.start(); this.cur = s;
@@ -207,17 +209,19 @@ const Voice = {
   prefetch(prefix) {
     Object.keys(window.LINES).filter(k => k.startsWith(prefix) && this.have.has(k)).forEach(k => { fetch("voice/" + this.sp + "/" + k + ".mp3").catch(() => {}); });
   },
-  /* Промис завершается, когда реплика договорена */
-  speak(id) {
+  /* Промис завершается, когда реплика договорена. named: сначала позвать ребёнка по имени */
+  speak(id, named) {
     return new Promise(res => {
       this.stop(); const my = this.seq;
       let done = false; const fin = () => { if (!done) { done = true; if (my === this.seq) cap.classList.remove("talk"); res(); } };
       if (!this.on) return setTimeout(fin, 500);
       cap.classList.add("talk");
+      const nm = named ? Me.clip() : null;
       if (this.have.has(id) && Snd.ac) {
-        this.buffer(this.sp, id).then(b => {
+        Promise.all([nm ? this.buffer(this.sp, "names/" + nm).catch(() => null) : null, this.buffer(this.sp, id)]).then(([nb, b]) => {
           if (my !== this.seq) return fin();      // пока грузилось, реплику уже отменили
-          this.play(b, fin);
+          if (!nb) return this.play(b, fin);
+          this.play(nb, () => my === this.seq ? setTimeout(() => my === this.seq ? this.play(b, fin) : fin(), 120) : fin());
         }).catch(() => { if (my === this.seq) this.tts(id, fin, my); else fin(); });
         setTimeout(fin, 60000); return;
       }
@@ -236,10 +240,48 @@ const Voice = {
   }
 };
 
+/* ============ ИМЯ РЕБЁНКА ============ */
+/* Главный герой — сам ребёнок: игра зовёт его по имени. Имена озвучены заранее:
+   voice/<голос>/names.json — [["Амина", "n0001"], …], файлы voice/<голос>/names/<id>.mp3 */
+const normName = s => s.trim().toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ");
+const Me = {
+  list: null, idx: new Map(),
+  get name() { return Save.d.name || ""; },
+  load() {
+    return this.list || (this.list = fetch("voice/" + Voice.sp + "/names.json").then(r => r.ok ? r.json() : []).catch(() => [])
+      .then(a => { this.idx = new Map(a.map(([n, id]) => [normName(n), id])); return a; }));
+  },
+  clip(n = this.name) { return n ? this.idx.get(normName(n)) || null : null; },
+  /* Подсказки при вводе: имена, которые начинаются с набранного */
+  async suggest(q, max = 6) {
+    q = normName(q); if (!q) return [];
+    const a = await this.load(), out = [];
+    for (const [n] of a) { if (normName(n).startsWith(q)) { out.push(n); if (out.length >= max) break; } }
+    return out;
+  },
+  async set(n) {
+    Save.d.name = n; Save.save(); await this.load();
+    /* имени нет среди озвученных — сообщаем серверу, его озвучат в следующий раз (передаётся только имя) */
+    if (n && !this.clip()) fetch("api/name", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: n }) }).catch(() => {});
+  },
+  /* Произнести одно имя (ребёнок слышит, что игра его узнала) */
+  async hello(n) {
+    const id = this.clip(n); if (!id || !Voice.on || !Snd.ac) return;
+    Voice.stop(); const my = Voice.seq;
+    try { const b = await Voice.buffer(Voice.sp, "names/" + id); if (my === Voice.seq) Voice.play(b); } catch (e) {}
+  }
+};
+/* Обращение в начале реплики: «Амина! » */
+const callName = named => named && Me.name ? Me.name + "! " : "";
+
 /* ============ ПОДПИСИ И КНОПКИ ============ */
-function showCap(id, note) {
+/* Реплика в подписи: её можно переслушать кнопкой — для детей, которые ещё не читают */
+let capLine = null;
+function replayCap() { if (capLine && !cap.classList.contains("hidden")) { unlockAudio(); Voice.speak(capLine.id, capLine.named); } }
+function showCap(id, note, named) {
+  capLine = { id, named };
   cap.classList.remove("hidden");
-  capText.textContent = L(id); capText.classList.remove("pop"); void capText.offsetWidth; capText.classList.add("pop");
+  capText.textContent = callName(named) + L(id); capText.classList.remove("pop"); void capText.offsetWidth; capText.classList.add("pop");
   capNote.textContent = note || ""; capBtns.innerHTML = "";
 }
 function hideCap() { cap.classList.add("hidden"); Voice.stop(); }
@@ -247,8 +289,8 @@ function button(label, cls = "btn", parent = capBtns) { return el("button", cls,
 function clicked(b) { return new Promise(r => { b.onclick = () => { Snd.tap(); r(); }; }); }
 /* Сказать реплику и дождаться кнопки. Кнопка начинает светиться, когда голос замолк */
 async function say(id, opt = {}) {
-  showCap(id, opt.note);
-  const p = Voice.speak(id);
+  showCap(id, opt.note, opt.named);
+  const p = Voice.speak(id, opt.named);
   await sleep(500);
   const b = button(opt.btn || "Дальше");
   p.then(() => b.classList.add("glow"));
@@ -274,14 +316,14 @@ function choice(qid, opts, okId) {
           picked = true;
           Snd.tap(); celebrate(); b.classList.add("yes"); b.disabled = true;
           btns.forEach(x => { x.onclick = null; if (x !== b) x.remove(); });
-          capNote.textContent = L(okId);
-          const p = Voice.speak(okId); await sleep(500);
+          capNote.textContent = callName(true) + L(okId); capLine = { id: okId, named: true };
+          const p = Voice.speak(okId, true); await sleep(500);
           const nb = button("Дальше"); p.then(() => nb.classList.add("glow")); await clicked(nb);
           Voice.stop(); capBtns.innerHTML = ""; capNote.textContent = ""; res(misses);
         } else {
           misses++; Snd.thud(0.3); b.classList.add("no"); b.disabled = true;
           const nid = window.LINES[o.id + "_no"] ? o.id + "_no" : "wrong";
-          capNote.textContent = L(nid); pending = Voice.speak(nid);
+          capNote.textContent = L(nid); capLine = { id: nid }; pending = Voice.speak(nid);
         }
       };
       return b;
@@ -301,17 +343,25 @@ const STAR8 = '<path d="M20 2l5 8 9-2-2 9 8 5-8 5 2 9-9-2-5 8-5-8-9 2 2-9-8-5 8-
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.8 6 6.5.7-4.9 4.4 1.4 6.4L12 16.7 6.2 20l1.4-6.4L2.7 9.2l6.5-.7z" fill="#F5C451" stroke="#B9802A" stroke-width="1.2" stroke-linejoin="round"/></svg>';
 const STAR_OFF = STAR.replace('fill="#F5C451" stroke="#B9802A"', 'fill="#E9DFC8" stroke="#CDBF9F"');
 const AR_DIGITS = n => String(n).replace(/\d/g, d => "٠١٢٣٤٥٦٧٨٩"[d]);
+/* Карточка аята для ребёнка, который ещё не читает: сначала чтец читает по-арабски (звучащий аят подсвечен золотом),
+   потом голос читает перевод (подсвечен бирюзой). Кнопки — значки тех же цветов: книга = чтец, облачко «Аа» = перевод */
+const ICO_QARI = '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M14 8.2C11 6.3 7.4 5.8 3.5 6.6v14.2c3.9-.8 7.5-.3 10.5 1.6 3-1.9 6.6-2.4 10.5-1.6V6.6c-3.9-.8-7.5-.3-10.5 1.6z" fill="#fff"/><path d="M14 8.2v14.2" stroke="#B9802A" stroke-width="1.6"/><path d="M6.5 11h4.5M6.5 14h4.5M17 11h4.5M17 14h4.5" stroke="#E2B65A" stroke-width="1.4" stroke-linecap="round"/></svg>';
+const ICO_TR = '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M5 4.5h18a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-9.5l-6 4.5v-4.5H5a3 3 0 0 1-3-3v-10a3 3 0 0 1 3-3z" fill="#fff"/><text x="14" y="17.2" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="900" font-size="10.5" fill="#1F6F80">Аа</text></svg>';
+const ICO_NEXT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function ayahCard(key) {
   return new Promise(res => {
     hideCap();
     const a = window.AYAT[key];
     const firstNum = +key.split(":")[1].split("-")[0];
-    const ar = a.parts.map((p, i) => `${p.ar} <span class="num">﴿${AR_DIGITS(firstNum + i)}﴾</span>`).join(" ");
+    const ar = a.parts.map((p, i) => `<span class="ap">${p.ar} <span class="num">﴿${AR_DIGITS(firstNum + i)}﴾</span></span>`).join(" ");
     const ov = el("div", "ayah", app,
-      `<div class="acard">${["tl", "tr", "bl", "br"].map(c => `<svg class="star8 ${c}" viewBox="0 0 40 40" aria-hidden="true">${STAR8}</svg>`).join("")}<p class="lbl">Аят из Корана</p><p class="ref">${a.ref}</p><div class="abody"><p class="ar" dir="rtl" lang="ar">${ar}</p>` +
-      `<p class="tr"></p><p class="src">Перевод смыслов: Эльмир Кулиев</p></div>` +
-      `<div class="abtns"><button class="btn teal" data-a="qari">▶ Чтец</button><button class="btn teal" data-a="tr">▶ Перевод</button><button class="btn" data-a="next">Дальше</button></div></div>`);
-    ov.querySelector("p.tr").textContent = L(a.tr);
+      `<div class="acard">${["tl", "tr", "bl", "br"].map(c => `<svg class="star8 ${c}" viewBox="0 0 40 40" aria-hidden="true">${STAR8}</svg>`).join("")}<p class="ref">${a.ref}</p><div class="abody"><p class="ar" dir="rtl" lang="ar">${ar}</p>` +
+      `<p class="tr"></p><p class="src">Перевод смыслов: Эльмир Кулиев · чтец Мишари аль-Афаси</p></div>` +
+      `<div class="abtns"><button class="ibtn qari" data-a="qari" aria-label="Послушать чтеца">${ICO_QARI}<small>Чтец</small></button>` +
+      `<button class="ibtn trn" data-a="tr" aria-label="Послушать перевод">${ICO_TR}<small>Перевод</small></button>` +
+      `<button class="btn next" data-a="next">Дальше ${ICO_NEXT}</button></div></div>`);
+    const trP = ov.querySelector("p.tr"), aps = [...ov.querySelectorAll(".ap")], bQ = ov.querySelector(".qari"), bT = ov.querySelector(".trn"), bN = ov.querySelector(".next");
+    trP.textContent = L(a.tr);
     /* длинный аят: арабский мельче, текст прокручивается внутри карточки, кнопки всегда на экране */
     const arLen = a.parts.reduce((n, p) => n + p.ar.length, 0);
     if (arLen > 260) ov.classList.add(arLen > 520 ? "xlong" : "long");
@@ -321,28 +371,49 @@ function ayahCard(key) {
     requestAnimationFrame(() => requestAnimationFrame(() => ov.classList.add("on")));
     Snd.sparkle();
     let closed = false;
-    const stopAll = () => Voice.stop();
-    const playQari = (i = 0) => {
-      if (i >= a.parts.length || closed) { Voice.qari = null; return; }
-      const q = new Audio("https://cdn.islamic.network/quran/audio/128/ar.alafasy/" + a.parts[i].n + ".mp3");
-      Voice.qari = q; q.onended = () => { if (Voice.qari === q) playQari(i + 1); }; q.play().catch(() => {});
+    /* что сейчас звучит: подсветка текста и кнопки */
+    const mark = (what, i) => {
+      aps.forEach((e, k) => e.classList.toggle("on", what === "ar" && k === i)); trP.classList.toggle("on", what === "tr");
+      bQ.classList.toggle("play", what === "ar"); bT.classList.toggle("play", what === "tr");
+      const e = what === "ar" ? aps[i] : what === "tr" ? trP : null;
+      if (e) { const r = e.getBoundingClientRect(), br = body.getBoundingClientRect(); if (r.top < br.top || r.bottom > br.bottom) body.scrollTo({ top: body.scrollTop + r.top - br.top - 8, behavior: "smooth" }); }
+    };
+    const qariBuf = i => Voice.buffer("qari", a.parts[i].n);
+    a.parts.forEach((_, i) => qariBuf(i).catch(() => {}));   // скачиваем заранее, чтобы аяты шли без пауз
+    const run = async what => {
+      Voice.stop(); const my = Voice.seq, live = () => my === Voice.seq && !closed;
+      if (what !== "tr") {
+        for (let i = 0; i < a.parts.length; i++) {
+          let b; try { b = await qariBuf(i); } catch (e) { break; }
+          if (!live()) return;
+          mark("ar", i); await new Promise(r => Voice.play(b, r));
+          if (!live()) return;
+        }
+        mark(null);
+        if (what === "qari") return;
+        await sleep(450); if (!live()) return;
+      }
+      mark("tr"); const s0 = Voice.seq; await Voice.speak(a.tr);
+      if (Voice.seq !== s0 + 1 || closed) return;
+      mark(null); bN.classList.add("glow");
     };
     ov.querySelectorAll("button").forEach(b => b.onclick = () => {
       if (closed) return;
       Snd.tap(); const act = b.dataset.a;
-      if (act === "qari") { stopAll(); playQari(0); }
-      else if (act === "tr") { stopAll(); Voice.speak(a.tr); }
-      else { closed = true; ov.style.pointerEvents = "none"; stopAll(); ov.classList.remove("on"); setTimeout(() => ov.remove(), 400); res(); }
+      if (act === "qari") run("qari");
+      else if (act === "tr") run("tr");
+      else { closed = true; ov.style.pointerEvents = "none"; Voice.stop(); mark(null); ov.classList.remove("on"); setTimeout(() => ov.remove(), 400); res(); }
     });
+    if (Voice.on && Snd.ac) setTimeout(() => { if (!closed) run("all"); }, 700); else bN.classList.add("glow");
   });
 }
 
 /* ============ ЗАСТАВКА ГЛАВЫ ============ */
-/* Текущая глава (id): по ней заставка сама считает «Мир N · Глава M» */
+/* Текущая глава (id): по ней заставка сама считает «Уровень N · Глава M» */
 let CUR = null;
-function chapterPlace() {
-  const wi = WORLDS.findIndex(w => w.ch.includes(CUR));
-  return wi < 0 ? "" : `Мир ${wi + 1} · Глава ${WORLDS[wi].ch.indexOf(CUR) + 1}`;
+function chapterPlace(id = CUR) {
+  const wi = WORLDS.findIndex(w => w.ch.includes(id));
+  return wi < 0 ? "" : `Уровень ${wi + 1} · Глава ${WORLDS[wi].ch.indexOf(id) + 1}`;
 }
 /* Заставка главы. Первый параметр оставлен для совместимости и не используется */
 async function chapterTitle(_, name, lineId) {
@@ -391,7 +462,7 @@ const Save = {
   d: { done: {}, items: [] },
   load() { try { const x = JSON.parse(localStorage.getItem(this.key) || "null"); if (x) this.d = Object.assign(this.d, x); } catch (e) {} },
   save() { try { localStorage.setItem(this.key, JSON.stringify(this.d)); } catch (e) {} },
-  reset() { this.d = { done: {}, items: [] }; this.save(); }
+  reset() { this.d = { done: {}, items: [], name: this.d.name }; this.save(); }
 };
 function updateBag(bump) {
   $("#bagN").textContent = Save.d.items.length;
@@ -417,6 +488,7 @@ function sheet(html) {
 }
 function chaptersSheet() {
   return new Promise(res => {
+    const next = CHAPTERS.find(c => !Save.d.done[c.id]);   // следующая непройденная — подсвечена
     const html = WORLDS.map((w, wi) => {
       const ready = w.ch.filter(c => CHAPTERS.some(x => x.id === c)), done = ready.filter(c => Save.d.done[c]).length;
       return `<div class="world"><div class="whead"><span class="wnum">${wi + 1}</span><div><b>${w.t}</b><small>${w.s}</small>` +
@@ -424,16 +496,34 @@ function chaptersSheet() {
         w.ch.map(c => {
           const ch = CHAPTERS.find(x => x.id === c);
           if (!ch) return `<div class="ch soon"><span class="ci">${LOCK}</span><span>${c}<span class="stars">скоро</span></span></div>`;
-          const st = Save.d.done[c] || 0;
-          return `<button class="ch" data-id="${c}"><span class="ci"><svg viewBox="0 0 48 48" aria-hidden="true">${ch.icon}</svg></span><span>${ch.name.replace(/^(Аль|Ан|Ас|Ад)-(\S+)/, '<span class="nw">$1-$2</span>')}<span class="stars">${st ? "★".repeat(st) + "☆".repeat(3 - st) : "играть"}</span></span></button>`;
+          const st = Save.d.done[c] || 0, nx = next && next.id === c, lk = !Pay.canPlay(c);
+          return `<button class="ch${nx ? " next" : ""}${lk ? " lock" : ""}" data-id="${c}"><span class="ci"><svg viewBox="0 0 48 48" aria-hidden="true">${ch.icon}</svg></span><span>${ch.name.replace(/^(Аль|Ан|Ас|Ад)-(\S+)/, '<span class="nw">$1-$2</span>')}<span class="stars">${st ? "★".repeat(st) + "☆".repeat(3 - st) : lk ? "полная версия" : nx ? "дальше ▶" : "играть"}</span>${lk ? `<i class="chlock">${LOCK}</i>` : ""}</span></button>`;
         }).join("") + `</div></div>`;
     }).join("");
     const ov = sheet(`<h2>Главы</h2>${html}<div class="row"><button class="btn line" id="shClose">Закрыть</button></div>`);
+    const nb = ov.querySelector(".ch.next"); if (nb) setTimeout(() => nb.scrollIntoView({ block: "center", behavior: "smooth" }), 350);
     ov.querySelectorAll("button.ch").forEach(b => b.onclick = () => { Snd.tap(); ov.close(); res(CHAPTERS.findIndex(c => c.id === b.dataset.id)); });
     ov.querySelector("#shClose").onclick = () => { Snd.tap(); ov.close(); res(null); };
   });
 }
 const LOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2.5" fill="#B7C6CC"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="#B7C6CC" stroke-width="2.2"/></svg>';
+/* Пауза во время главы: главное действие — «Играть дальше» (выделено), остальное спокойнее */
+const PICO = {
+  go: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>',
+  again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/><path d="M6.5 3.5V7.4h3.9" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  list: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="7" height="7" rx="2" fill="currentColor"/><rect x="13.5" y="4" width="7" height="7" rx="2" fill="currentColor"/><rect x="3.5" y="13" width="7" height="7" rx="2" fill="currentColor"/><rect x="13.5" y="13" width="7" height="7" rx="2" fill="currentColor"/></svg>',
+  home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11.2L12 4l8.5 7.2" stroke="currentColor" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9.2h4.2v-5.4h3.6v5.4H18V10" fill="currentColor"/></svg>'
+};
+function pauseSheet() {
+  return new Promise(res => {
+    Voice.stop();
+    const row = (a, t, cls = "") => `<button class="pbtn ${cls}" data-a="${a}"><span class="pi">${PICO[a]}</span><span>${t}</span></button>`;
+    const ov = sheet(`<h2>Пауза</h2><p class="small psub">${chapterPlace()}</p><div class="pmenu">${row("go", "Играть дальше", "main")}${row("again", "Начать главу заново")}${row("list", "Все главы")}${row("home", "На главную")}</div>`);
+    ov.classList.add("psheet");
+    ov.querySelectorAll(".pbtn").forEach(b => b.onclick = () => { Snd.tap(); ov.close(); res(b.dataset.a); });
+    ov.onclick = e => { if (e.target === ov) { ov.close(); res("go"); } };   // нажали мимо — играем дальше
+  });
+}
 /* Выбор голоса: каждый можно послушать */
 function voiceSheet() {
   return new Promise(res => {
@@ -449,6 +539,39 @@ function voiceSheet() {
       };
     });
     ov.querySelector("#vClose").onclick = () => { Snd.tap(); Voice.stop(); ov.close(); res(); };
+  });
+}
+/* Как тебя зовут? Пока ребёнок печатает, подсказываем озвученные имена — нажал, и игра произносит имя */
+function nameSheet() {
+  return new Promise(res => {
+    const ov = sheet(`<h2>Как тебя зовут?</h2><p class="small nmhint">Игра будет звать тебя по имени</p>
+      <input id="nmIn" class="nmin" maxlength="24" autocomplete="off" autocorrect="off" spellcheck="false" autocapitalize="words" enterkeyhint="done" placeholder="Имя">
+      <div class="nmsug"></div>
+      <div class="row"><button class="btn" id="nmOk">Готово</button></div>
+      <div class="row"><button class="btn line" id="nmSkip">Без имени</button></div>`);
+    ov.classList.add("nmsheet");
+    const inp = ov.querySelector("#nmIn"), sug = ov.querySelector(".nmsug");
+    const tidy = v => v.replace(/[^A-Za-zА-Яа-яЁё\s'-]/g, "").replace(/\s+/g, " ").trim().slice(0, 24)
+      .split(/([\s-])/).map(w => w && /\S/.test(w) && w !== "-" ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w).join("");
+    let ask = 0;
+    const update = async () => {
+      const my = ++ask, list = await Me.suggest(inp.value);
+      if (my !== ask) return;
+      const cur = normName(inp.value);
+      sug.innerHTML = list.map(n => `<button class="nmchip${normName(n) === cur ? " on" : ""}">${n}</button>`).join("");
+      sug.querySelectorAll(".nmchip").forEach(b => b.onclick = () => { Snd.tap(); unlockAudio(); inp.value = b.textContent; Me.hello(b.textContent); update(); });
+    };
+    inp.value = Me.name; inp.oninput = update; update();
+    inp.onblur = () => { const t = tidy(inp.value); if (t !== inp.value) { inp.value = t; update(); } };
+    const done = async name => { inp.blur(); ov.close(); await Me.set(name); res(name); };
+    ov.querySelector("#nmOk").onclick = () => {
+      const n = tidy(inp.value);
+      if (!n) { Snd.thud(0.25); inp.classList.remove("shake"); void inp.offsetWidth; inp.classList.add("shake"); inp.focus(); return; }
+      Snd.tap(); unlockAudio(); Me.hello(n); done(n);
+    };
+    inp.onkeydown = e => { if (e.key === "Enter") ov.querySelector("#nmOk").click(); };
+    ov.querySelector("#nmSkip").onclick = () => { Snd.tap(); done(""); };
+    setTimeout(() => inp.focus(), 350);
   });
 }
 function voiceName() { return (VOICES.find(v => v.id === Voice.sp) || VOICES[0]).name; }

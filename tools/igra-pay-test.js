@@ -1,4 +1,5 @@
-// Сценарий подписки игры против мока ЮKassa: node tools/igra-pay-test.js [postgres://…]
+// Сценарий подписки игры против мока ЮKassa (запасной провайдер): node tools/igra-pay-test.js [postgres://…]
+// Робокасса — tools/igra-pay-test-robokassa.js.
 // Без аргумента — хранилище в памяти (IGRA_DB_URL=memory), с аргументом — настоящий PostgreSQL (таблицы igra_* очищаются!).
 // start → hook succeeded → status с кодом → me → продление по коду → автопродление → отказ ×3 → autopay off/on → возврат.
 
@@ -11,9 +12,9 @@ const igraPay = require(path.join(__dirname, '..', 'web', 'igra-pay'));
 const DB = process.argv[2] || 'memory';
 const H = 3600000, DAY = 24 * H;
 
-function send(res, status, body) {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify(body));
+function send(res, status, body, type) {   // как send() в server.js
+  res.writeHead(status, { 'Content-Type': type || 'application/json; charset=utf-8' });
+  res.end(typeof body === 'string' ? body : JSON.stringify(body));
 }
 const listen = srv => new Promise(r => srv.listen(0, '127.0.0.1', () => r(srv.address().port)));
 

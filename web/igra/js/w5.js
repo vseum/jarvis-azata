@@ -130,9 +130,8 @@ function w5Ribbon(key) {
   W5.bot = rb.getBoundingClientRect().top - app.getBoundingClientRect().top - 10;
   let cur = 0;
   rb.querySelector(".w5play").onclick = () => {
-    Snd.tap(); Voice.stop();
-    const q = new Audio("https://cdn.islamic.network/quran/audio/128/ar.alafasy/" + a.parts[cur].n + ".mp3");
-    Voice.qari = q; q.onended = () => { if (Voice.qari === q) Voice.qari = null; }; q.play().catch(() => {});
+    Snd.tap(); Voice.stop(); const my = Voice.seq;
+    Voice.buffer("qari", a.parts[cur].n).then(b => { if (my === Voice.seq) Voice.play(b); }).catch(() => {});
   };
   const api = {
     show() { rb.classList.remove("off"); },
@@ -141,7 +140,7 @@ function w5Ribbon(key) {
     done(i) { beads[i - 1].classList.remove("cur"); beads[i - 1].classList.add("done"); Snd.sparkle(); },
     async intro(i, id) { api.at(i); api.full(true); await say(id); api.full(false); },
     async outro(i, id) { api.full(true); await say(id); api.done(i); },
-    remove() { if (Voice.qari) Voice.stop(); rb.style.pointerEvents = "none"; fadeOut(rb, 400); W5.bot = 0; }
+    remove() { rb.style.pointerEvents = "none"; fadeOut(rb, 400); W5.bot = 0; }
   };
   return api;
 }

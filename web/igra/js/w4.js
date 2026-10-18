@@ -171,7 +171,12 @@ addCSS(`
 
 /* ============ ОБЩЕЕ ============ */
 /* Таймер бездействия: poke() откладывает срабатывание */
-function w4Idle(ms, fn) { let t = setTimeout(fn, ms); return { poke() { clearTimeout(t); t = setTimeout(fn, ms); }, stop() { clearTimeout(t); } }; }
+/* Таймер бездействия: касание откладывает подсказку-автоход, но не дольше чем на ms·4 —
+   иначе ребёнок, который трогает экран, но не может сделать жест, застрянет навсегда */
+function w4Idle(ms, fn) {
+  const end = Date.now() + ms * 4; let t = setTimeout(fn, ms);
+  return { poke() { clearTimeout(t); t = setTimeout(fn, Math.max(0, Math.min(ms, end - Date.now()))); }, stop() { clearTimeout(t); } };
+}
 const w4Hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 function w4Mix(a, b, k) { const A = w4Hex(a), B = w4Hex(b); return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * k).toString(16).padStart(2, "0")).join(""); }
 /* Цвет неба по ключевым точкам: stops = [[t, верх, низ], ...] */
@@ -591,7 +596,7 @@ async function chSawm() {
 function w4Fling(box, home, need, onIn, onTap) {
   const { W, H } = size();
   return new Promise(res => {
-    let given = 0, fin = false, coin = null, track = [], flying = false;
+    let given = 0, fin = false, coin = null, track = [], flying = false, taps = 0;
     const g = H * 1.7, cs = 46;
     const boxTop = box._y - box.offsetHeight * 0.36, boxHalf = box.offsetWidth * 0.42;
     const newCoin = () => { coin = obj("w4-coin", ART.w4_coin, home.x, home.y, cs, cs); coin.style.zIndex = 9; coin.classList.add("hint", "tapme"); fadeIn(coin, 300); coin.onpointerdown = dn; };
@@ -601,7 +606,11 @@ function w4Fling(box, home, need, onIn, onTap) {
       if (!track.length || flying) return;
       const a = track[0], b = track[track.length - 1], dtt = Math.max(16, b.t - a.t) / 1000;
       let vx = (b.x - a.x) / dtt, vy = (b.y - a.y) / dtt; track = [];
-      if (vy > -250) { put(coin, home.x, home.y); coin.classList.add("hint"); onTap && onTap(); return; }
+      if (vy > -250) {   /* просто нажали: подсказываем смахнуть, а с третьего раза монетка летит и от нажатия — иначе малыш застрянет */
+        put(coin, home.x, home.y);
+        if (++taps >= 3) return autoThrow();
+        coin.classList.add("hint"); onTap && onTap(); return;
+      }
       launch(vx * 0.6, vy);
     };
     const launch = (vx, vy) => {

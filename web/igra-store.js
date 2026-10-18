@@ -3,7 +3,7 @@
 //   init()                         — создать таблицы
 //   tx(async t => …)               — атомарная операция; t: payment, addPayment, setPayment, account, accountByCode,
 //                                    createAccount, setAccount, refundedSum (account/payment с lock=true блокируют строку)
-//   accountByCode(code), paymentByToken(token), due(now), stale(now), close()
+//   accountByCode(code), paymentByToken(token), paymentByInv(invId), nextInvId(), due(now), stale(now, minAgeMs), close()
 // Персональных данных нет: аккаунт — это код доступа, срок и технический id способа оплаты в ЮKassa.
 
 const ACC_FIELDS = ['plan', 'paid_until', 'autopay', 'payment_method_id', 'fails', 'retry_at'];
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS igra_accounts (
   retry_at timestamptz
 );
 CREATE TABLE IF NOT EXISTS igra_payments (
-  id text PRIMARY KEY,                      -- id платежа (или возврата) в ЮKassa
+  id text PRIMARY KEY,                      -- ЮKassa: id платежа/возврата; Робокасса: rk-<InvId> или rk-r-… для продлений
   token text UNIQUE,                        -- случайный ключ страницы возврата (?paid=…), только у первых платежей
   account_id integer REFERENCES igra_accounts(id),
   amount numeric(10,2) NOT NULL,
@@ -33,6 +33,10 @@ CREATE TABLE IF NOT EXISTS igra_payments (
   ref text,                                 -- для возврата: id исходного платежа
   created_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE igra_payments ADD COLUMN IF NOT EXISTS provider text NOT NULL DEFAULT 'yookassa';
+ALTER TABLE igra_payments ADD COLUMN IF NOT EXISTS inv_id bigint UNIQUE;          -- Робокасса: наш номер счёта InvId
+ALTER TABLE igra_payments ADD COLUMN IF NOT EXISTS parent_inv_id bigint;          -- Робокасса: материнский счёт продления
+CREATE SEQUENCE IF NOT EXISTS igra_inv_seq START WITH 100001;
 CREATE INDEX IF NOT EXISTS igra_payments_pending ON igra_payments (created_at) WHERE status = 'pending';
 CREATE INDEX IF NOT EXISTS igra_payments_ref ON igra_payments (ref) WHERE ref IS NOT NULL;
 `;
@@ -44,6 +48,7 @@ const accRow = r => r && {
 const payRow = r => r && {
   id: r.id, token: r.token, account_id: r.account_id, amount: Number(r.amount), status: r.status,
   kind: r.kind, plan: r.plan, ref: r.ref, created_at: r.created_at,
+  provider: r.provider || 'yookassa', inv_id: r.inv_id == null ? null : Number(r.inv_id), parent_inv_id: r.parent_inv_id == null ? null : Number(r.parent_inv_id),
 };
 
 function pgStore(url) {
@@ -62,8 +67,10 @@ function pgStore(url) {
   const ops = q => ({
     payment: async (id, lock) => payRow((await q(`SELECT * FROM igra_payments WHERE id=$1${lock ? ' FOR UPDATE' : ''}`, [id])).rows[0]),
     addPayment: async p => (await q(
-      `INSERT INTO igra_payments (id, token, account_id, amount, status, kind, plan, ref) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (id) DO NOTHING`,
-      [p.id, p.token || null, p.account_id || null, p.amount, p.status, p.kind, p.plan || null, p.ref || null])).rowCount === 1,
+      `INSERT INTO igra_payments (id, token, account_id, amount, status, kind, plan, ref, provider, inv_id, parent_inv_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO NOTHING`,
+      [p.id, p.token || null, p.account_id || null, p.amount, p.status, p.kind, p.plan || null, p.ref || null,
+        p.provider || 'yookassa', p.inv_id || null, p.parent_inv_id || null])).rowCount === 1,
     setPayment: async (id, f) => { const s = set('igra_payments', PAY_FIELDS, id, f); if (s) await q(...s); },
     account: async (id, lock) => accRow((await q(`SELECT * FROM igra_accounts WHERE id=$1${lock ? ' FOR UPDATE' : ''}`, [id])).rows[0]),
     accountByCode: async code => accRow((await q('SELECT * FROM igra_accounts WHERE code=$1', [code])).rows[0]),
@@ -90,6 +97,8 @@ function pgStore(url) {
     },
     accountByCode: base.accountByCode,
     paymentByToken: async token => payRow((await pool.query('SELECT * FROM igra_payments WHERE token=$1', [token])).rows[0]),
+    paymentByInv: async inv => payRow((await pool.query('SELECT * FROM igra_payments WHERE inv_id=$1', [inv])).rows[0]),
+    nextInvId: async () => Number((await pool.query("SELECT nextval('igra_inv_seq') AS n")).rows[0].n),
     // кого продлевать: автоплатёж включён, способ оплаты сохранён, срок кончается в ближайшие сутки (или кончился не больше
     // трёх суток назад — окно повторов), очередная попытка уже пора и нет незавершённого платежа-продления за последние сутки
     due: async now => (await pool.query(`
@@ -101,25 +110,27 @@ function pgStore(url) {
                         AND p.created_at > $1::timestamptz - interval '24 hours')
       ORDER BY a.paid_until LIMIT 100`, [now])).rows.map(accRow),
     // платежи, которые давно висят в pending (уведомление потерялось) — перепроверить в ЮKassa
-    stale: async now => (await pool.query(`
+    stale: async (now, minAge = 600000) => (await pool.query(`
       SELECT * FROM igra_payments WHERE status = 'pending' AND kind IN ('first','renew')
-        AND created_at < $1::timestamptz - interval '10 minutes' AND created_at > $1::timestamptz - interval '48 hours'
-      ORDER BY created_at LIMIT 50`, [now])).rows.map(payRow),
+        AND created_at <= $1::timestamptz - $2::float8 * interval '1 millisecond' AND created_at > $1::timestamptz - interval '48 hours'
+      ORDER BY created_at LIMIT 50`, [now, minAge])).rows.map(payRow),
     close: () => pool.end(),
   };
 }
 
 function memoryStore() {
   const accounts = new Map(), payments = new Map();
-  let seq = 0, chain = Promise.resolve();
+  let seq = 0, inv = 100000, chain = Promise.resolve();
   const copy = x => x && Object.assign({}, x);
   const t = {
     payment: async id => copy(payments.get(id)),
     addPayment: async p => {
       if (payments.has(p.id)) return false;
       if (p.token && [...payments.values()].some(x => x.token === p.token)) throw new Error('duplicate token');
+      if (p.inv_id && [...payments.values()].some(x => x.inv_id === p.inv_id)) throw new Error('duplicate inv_id');
       payments.set(p.id, { id: p.id, token: p.token || null, account_id: p.account_id || null, amount: Number(p.amount), status: p.status,
-        kind: p.kind, plan: p.plan || null, ref: p.ref || null, created_at: p.created_at || new Date() });
+        kind: p.kind, plan: p.plan || null, ref: p.ref || null, created_at: p.created_at || new Date(),
+        provider: p.provider || 'yookassa', inv_id: p.inv_id || null, parent_inv_id: p.parent_inv_id || null });
       return true;
     },
     setPayment: async (id, f) => { const r = payments.get(id); if (r) for (const k of PAY_FIELDS) if (k in f) r[k] = f[k]; },
@@ -141,6 +152,8 @@ function memoryStore() {
     tx(fn) { const run = chain.then(() => fn(t)); chain = run.catch(() => {}); return run; },
     accountByCode: t.accountByCode,
     paymentByToken: async token => copy([...payments.values()].find(p => p.token === token)),
+    paymentByInv: async n => copy([...payments.values()].find(p => p.inv_id === n)),
+    nextInvId: async () => ++inv,
     due: async now => {
       const n = +now;
       return [...accounts.values()].filter(a => a.autopay && a.payment_method_id && a.plan && a.paid_until
@@ -148,8 +161,8 @@ function memoryStore() {
         && ![...payments.values()].some(p => p.account_id === a.id && p.kind === 'renew' && p.status === 'pending' && +p.created_at > n - 24 * H))
         .sort((x, y) => x.paid_until - y.paid_until).slice(0, 100).map(copy);
     },
-    stale: async now => [...payments.values()].filter(p => p.status === 'pending' && (p.kind === 'first' || p.kind === 'renew')
-      && +p.created_at < +now - 600000 && +p.created_at > +now - 48 * H).slice(0, 50).map(copy),
+    stale: async (now, minAge = 600000) => [...payments.values()].filter(p => p.status === 'pending' && (p.kind === 'first' || p.kind === 'renew')
+      && +p.created_at <= +now - minAge && +p.created_at > +now - 48 * H).slice(0, 50).map(copy),
     close: async () => {},
     _raw: { accounts, payments },   // для тестов
   };

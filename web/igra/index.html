@@ -19,19 +19,15 @@
   <div id="stage"></div>
 
   <header id="top">
-    <button id="tHome" class="pill" aria-label="Главы">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>
-      <span>Главы</span>
+    <button id="tMenu" class="pill round" aria-label="Меню">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11.2L12 4l8.5 7.2" stroke="currentColor" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9.2h4.2v-5.4h3.6v5.4H18V10" fill="currentColor"/></svg>
     </button>
     <div class="tright">
       <button id="tBag" class="pill" aria-label="Мои сокровища">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6-4.5-4.2 6.1-.7z" fill="#F5C451"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.5h17v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" fill="#C98A3A"/><path d="M3.5 10.5a8.5 5.5 0 0 1 17 0z" fill="#E2A64B"/><rect x="3.5" y="10" width="17" height="2.4" fill="#F5C451"/><rect x="10.3" y="11" width="3.4" height="4.4" rx="1" fill="#FFE7A0"/></svg>
         <b id="bagN">0</b>
       </button>
-      <button id="tVoice" class="pill round" aria-label="Голос" aria-pressed="true">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-      </button>
-      <button id="tSfx" class="pill round" aria-label="Звуки" aria-pressed="true">
+      <button id="tSfx" class="pill round" aria-label="Звук" aria-pressed="true">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
       </button>
     </div>
@@ -39,6 +35,7 @@
 
   <section id="cap" class="hidden" aria-live="polite">
     <span id="capTalk" aria-hidden="true"><i></i><i></i><i></i></span>
+    <button id="capRe" aria-label="Послушать ещё раз"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M19.8 3.6v4.6h-4.6" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.6 10.6v2.8h2l2.6 2.3V8.3l-2.6 2.3z" fill="currentColor"/></svg></button>
     <p id="capText"></p>
     <p id="capNote"></p>
     <div id="capBtns"></div>
@@ -77,10 +74,11 @@
       <p class="bism" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
       <h1>Аяты<br>вокруг нас</h1>
       <p class="sub">Игра о единобожии и основах ислама для детей</p>
+      <p id="hello" class="hello" hidden>Ас-саляму алейкум, <b></b>!<button id="goName">это не я</button></p>
       <div class="sbtns">
-        <button id="goCont" class="btn big" hidden>Продолжить</button>
-        <button id="go" class="btn big">Начать</button>
-        <button id="goCh" class="btn glass">Главы</button>
+          <button id="go" class="btn big"><span id="goT">Играть</span><small id="goSub" hidden></small></button>
+        <button id="goCh" class="btn glass">Все главы</button>
+        <button id="goPay" class="chip" hidden>Подписка для родителей</button>
         <button id="goVoice" class="chip">Голос: <b>Евгений</b></button>
       </div>
       <p class="hint-sound">Играть лучше со звуком</p>
@@ -102,6 +100,7 @@
 <script src="js/w3.js"></script>
 <script src="js/w4.js"></script>
 <script src="js/w5.js"></script>
+<script src="js/pay.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

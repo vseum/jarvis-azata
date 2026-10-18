@@ -12,9 +12,16 @@
 | `GITHUB_REPO` | по умолчанию `vseum/jarvis-azata` |
 | `DATA_BRANCH` | по умолчанию `data` |
 | `IGRA_DB_URL` | подписка игры (`igra-pay.js`): строка PostgreSQL `postgres://user:pass@host:5432/db` (для облачной базы с TLS добавить `?sslmode=require`). Таблицы `igra_accounts`, `igra_payments` создаются сами. Без неё эндпоинты оплаты отвечают 503, игра работает |
-| `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY` | ЮKassa → Интеграция → Ключи API. Уведомления (HTTP-уведомления в ЛК ЮKassa): `https://xn--80aa9aonp.xn--p1acf/igra/api/pay/hook`, события `payment.succeeded`, `payment.canceled`, `refund.succeeded` |
+| `ROBOKASSA_LOGIN`, `ROBOKASSA_PASS1`, `ROBOKASSA_PASS2` | основной провайдер оплаты игры — Робокасса (кабинет → Магазин → Технические настройки: идентификатор магазина, Пароль #1, Пароль #2). В тестовом режиме — тестовые пароли |
+| `ROBOKASSA_HASH` | алгоритм подписи, как выбран в технических настройках: `md5` (по умолчанию) или `sha256` |
+| `ROBOKASSA_TEST` | `1` — тестовые платежи (`IsTest=1`). Автопродление и OpStateExt в тесте у Робокассы не работают |
+| `ROBOKASSA_RECEIPT` | `0` — не передавать номенклатуру чека (`Receipt`). По умолчанию передаётся одна позиция «Доступ к полной версии игры…» |
+| `IGRA_PAY` | `robokassa` или `yookassa` — кем принимать новые оплаты. По умолчанию Робокасса, если заданы её ключи |
+| `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY` | запасной провайдер ЮKassa (Интеграция → Ключи API). Уведомления: `https://xn--80aa9aonp.xn--p1acf/igra/api/pay/hook`, события `payment.succeeded`, `payment.canceled`, `refund.succeeded` |
 
-Проверка подписки локально: `node tools/igra-pay-test.js` (память + мок ЮKassa) или `node tools/igra-pay-test.js postgres://…` (очищает таблицы `igra_*`!).
+Робокасса, технические настройки магазина: Result URL `https://xn--80aa9aonp.xn--p1acf/igra/api/pay/hook/robokassa` (метод POST); Success URL и Fail URL — `https://xn--80aa9aonp.xn--p1acf/igra/api/pay/return` (метод GET); алгоритм хеша = `ROBOKASSA_HASH`.
+
+Проверка подписки локально: `node tools/igra-pay-test-robokassa.js [postgres://…] [md5|sha256]` и `node tools/igra-pay-test.js [postgres://…]` (ЮKassa). С адресом базы тесты очищают таблицы `igra_*`!
 
 ## Где данные
 

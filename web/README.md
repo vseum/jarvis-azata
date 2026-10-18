@@ -11,6 +11,10 @@
 | `GITHUB_TOKEN` | fine-grained токен GitHub: только репо `vseum/jarvis-azata`, Contents: Read and write. Без него данные живут только в контейнере и **стираются при каждом деплое** |
 | `GITHUB_REPO` | по умолчанию `vseum/jarvis-azata` |
 | `DATA_BRANCH` | по умолчанию `data` |
+| `IGRA_DB_URL` | подписка игры (`igra-pay.js`): строка PostgreSQL `postgres://user:pass@host:5432/db` (для облачной базы с TLS добавить `?sslmode=require`). Таблицы `igra_accounts`, `igra_payments` создаются сами. Без неё эндпоинты оплаты отвечают 503, игра работает |
+| `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY` | ЮKassa → Интеграция → Ключи API. Уведомления (HTTP-уведомления в ЛК ЮKassa): `https://xn--80aa9aonp.xn--p1acf/igra/api/pay/hook`, события `payment.succeeded`, `payment.canceled`, `refund.succeeded` |
+
+Проверка подписки локально: `node tools/igra-pay-test.js` (память + мок ЮKassa) или `node tools/igra-pay-test.js postgres://…` (очищает таблицы `igra_*`!).
 
 ## Где данные
 

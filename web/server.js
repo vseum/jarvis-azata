@@ -238,6 +238,32 @@ const IGRA_TYPES = {
   '.json': 'application/json; charset=utf-8', '.mp3': 'audio/mpeg',
 };
 
+// Игра: имена детей, которых ещё нет среди озвученных. Копим в памяти и раз в 10 минут дописываем
+// в ветку data (igra/names.json: { "имя": сколько раз ввели }). Хранится только само имя, без IP и других данных.
+const IGRA_NAMES = 'igra/names.json';
+let igraNames = {};
+const igraHits = new Map(); // IP -> [запросов за час, начало часа]; только для лимита, никуда не пишется
+async function igraFlush() {
+  const batch = igraNames;
+  if (!GH_TOKEN || !Object.keys(batch).length) return;
+  igraNames = {};
+  try {
+    const cur = await gh('GET', `/repos/${GH_REPO}/contents/${IGRA_NAMES}?ref=${GH_BRANCH}`);
+    let all = {}, sha = null;
+    if (cur.status === 200) { sha = cur.json.sha; try { all = JSON.parse(Buffer.from(cur.json.content, 'base64').toString('utf8')); } catch (e) {} }
+    for (const [n, c] of Object.entries(batch)) all[n] = (all[n] || 0) + c;
+    const r = await gh('PUT', `/repos/${GH_REPO}/contents/${IGRA_NAMES}`, {
+      message: 'igra: новые имена', branch: GH_BRANCH,
+      content: Buffer.from(JSON.stringify(all, null, 1) + '\n').toString('base64'), ...(sha ? { sha } : {}),
+    });
+    if (r.status !== 200 && r.status !== 201) throw new Error('HTTP ' + r.status);
+  } catch (e) {
+    for (const [n, c] of Object.entries(batch)) igraNames[n] = (igraNames[n] || 0) + c; // не вышло — попробуем в следующий раз
+    console.error('igra names:', e.message);
+  }
+}
+setInterval(igraFlush, 600000).unref();
+
 function send(res, status, body, type) {
   res.writeHead(status, {
     'Content-Type': type || 'application/json; charset=utf-8',
@@ -292,6 +318,18 @@ async function handle(req, res) {
 
   // детская игра «Аяты вокруг нас» (исходники: github.com/vseum/kids_game): статика из web/igra/
   if (p === '/igra') { res.writeHead(301, { Location: '/igra/' }); return res.end(); }
+  if (p === '/igra/api/name' && req.method === 'POST') {
+    const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim(), now = Date.now();
+    const h = igraHits.get(ip), fresh = h && now - h[1] < 3600000;
+    if (fresh && h[0] >= 10) return send(res, 429, { ok: false });
+    if (igraHits.size > 10000) igraHits.clear();
+    igraHits.set(ip, fresh ? [h[0] + 1, h[1]] : [1, now]);
+    let name = '';
+    try { name = String(JSON.parse(await readBody(req)).name || '').trim(); } catch (e) {}
+    if (!/^[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё' -]{1,23}$/.test(name)) return send(res, 400, { ok: false });
+    if (igraNames[name] || Object.keys(igraNames).length < 2000) igraNames[name] = (igraNames[name] || 0) + 1;
+    return send(res, 200, { ok: true });
+  }
   const ig = p.match(/^\/igra\/((?:[\w-]+\/)*[\w.-]*)$/);
   if (ig && req.method === 'GET') {
     const rel = ig[1] || 'index.html', type = IGRA_TYPES[path.extname(rel)];
@@ -431,7 +469,7 @@ function shutdown() {
   server.close();
   clearTimeout(flushTimer);
   const done = () => process.exit(0);
-  sync().then(done, done);
+  Promise.all([sync(), igraFlush()]).then(done, done);
   setTimeout(done, 8000).unref();
 }
 process.on('SIGTERM', shutdown);

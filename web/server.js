@@ -5,6 +5,33 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
+
+// ---------- привычки для виджета: тот же список, что на сайте (BLOCKS из index.html — один источник), счёт — как sc() на сайте
+const HABITS = (() => {
+  const src = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+  const a = src.indexOf('const BLOCKS=['), b = src.indexOf('const ALL=', a);
+  const blocks = vm.runInNewContext('(' + src.slice(a + 'const BLOCKS='.length, b).trim().replace(/;$/, '') + ')');
+  return blocks.flatMap(bl => bl.items.map(h => Object.assign({ block: bl.id, bname: bl.name }, h)));
+})();
+const isDayKey = k => /^\d{4}-\d{2}-\d{2}$/.test(k);
+const habitOn = (h, d) => (!h.from || d >= h.from) && (!h.days || h.days.includes(new Date(d + 'T12:00:00Z').getUTCDay()));
+function habitScore(h, v) {
+  if (h.type === 'group') {
+    if (v[h.id] === true && !h.subs.some(x => v[x.id] !== undefined)) return 1;
+    return h.subs.filter(x => v[x.id] === true).length / h.subs.length;
+  }
+  const raw = v[h.id];
+  if (h.type === 'hours') return raw ? Math.min(raw / h.target, 1) : 0;
+  if (h.type === 'multi') return Array.isArray(raw) ? raw.length / h.opts.length : 0;
+  return raw === true ? 1 : 0;
+}
+const habitMissed = (h, v) => h.type === 'group' ? h.subs.every(x => v[x.id] === false) : v[h.id] === false;
+function dayStats(d, v) {
+  const list = HABITS.filter(h => habitOn(h, d));
+  const s = list.reduce((acc, h) => acc + habitScore(h, v || {}), 0);
+  return { list, score: Math.round(s * 100) / 100, total: list.length, pct: list.length ? Math.round(s / list.length * 100) : 0 };
+}
 
 const PORT = +process.env.PORT || 8080;
 const KEY = process.env.TRACKER_KEY || '';
@@ -300,14 +327,34 @@ async function handle(req, res) {
       catch (e) { console.error('ai failed:', e && e.message); return send(res, 502, { error: 'ai_failed', detail: String(e && e.message || e).slice(0, 300) }); }
     }
 
-    // виджет на телефоне (Scriptable): отметить фокус / дело / радость, не трогая остальной документ и процент дня
+    // виджет на телефоне: день целиком — документ, привычки дня (как на сайте) и счёт «12,5 из 29»
+    const wm = p.match(/^\/api\/widget\/(\d{4}-\d{2}-\d{2})$/);
+    if (wm && req.method === 'GET') {
+      const d = wm[1], doc = days[d] || {}, v = doc.v || {}, st = dayStats(d, v);
+      const habits = st.list.map(h => {
+        let note = '';
+        if (h.type === 'group') note = `${h.subs.filter(x => v[x.id] === true).length}/${h.subs.length}`;
+        if (h.type === 'hours') note = `${String(+v[h.id] || 0).replace('.', ',')} из ${h.target} ч`;
+        if (h.type === 'multi') note = `${Array.isArray(v[h.id]) ? v[h.id].length : 0}/${h.opts.length}`;
+        return { id: h.id, n: h.n, note, block: h.bname, s: Math.round(habitScore(h, v) * 100) / 100, miss: habitMissed(h, v), tap: h.type ? 'open' : 'toggle' };
+      });
+      return send(res, 200, { d, v, score: st.score, total: st.total, pct: st.pct, habits });
+    }
+
+    // виджет на телефоне (Scriptable): отметить фокус / дело / радость / привычку, не трогая остальной документ
     if (p === '/api/toggle' && req.method === 'POST') {
       let b;
       try { b = JSON.parse(await readBody(req)); } catch (e) { return send(res, 400, { error: 'bad json' }); }
-      const d = String(b && b.d || ''), doc = /^\d{4}-\d{2}-\d{2}$/.test(d) && days[d];
+      const d = String(b && b.d || '');
+      if (!isDayKey(d)) return send(res, 400, { error: 'bad day' });
+      const doc = days[d] || (b.kind === 'habit' ? { v: {} } : null);   // привычку можно отметить и в день без документа
       if (!doc) return send(res, 404, { error: 'no day' });
       const v = Object.assign({}, doc.v), done = !!b.done, up = new Date().toISOString();
-      if (b.kind === 'focus') {
+      if (b.kind === 'habit') {
+        const h = HABITS.find(x => x.id === b.id && !x.type);           // из виджета — только простые пункты (не группы, часы, джамаат)
+        if (!h) return send(res, 400, { error: 'bad habit' });
+        if (done) v[h.id] = true; else delete v[h.id];
+      } else if (b.kind === 'focus') {
         if (!v._focus) return send(res, 404, { error: 'no focus' });
         v._focus = Object.assign({}, v._focus, { done });
       } else if (b.kind === '_tasks' || b.kind === '_fun') {
@@ -315,7 +362,8 @@ async function handle(req, res) {
         v[b.kind] = (v[b.kind] || []).map(x => x && x.id === b.id ? (hit = true, Object.assign({}, x, { done, up })) : x);
         if (!hit) return send(res, 404, { error: 'no item' });
       } else return send(res, 400, { error: 'bad kind' });
-      days[d] = Object.assign({}, doc, { v, updatedAt: up });
+      const st = dayStats(d, v);                                          // процент дня — как на сайте, сразу после отметки
+      days[d] = Object.assign({}, doc, { v, score: st.score, pct: st.pct, total: st.total, updatedAt: up });
       changed.add(d);
       saveLocal();
       scheduleSync();

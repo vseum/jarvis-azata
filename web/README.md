@@ -21,7 +21,8 @@
 - `GET /api/days` — все дни
 - `PUT /api/days/YYYY-MM-DD` — `{v, score, pct}`
 - `GET /api/days/YYYY-MM-DD` — один день (для виджета)
-- `POST /api/toggle` — `{d, kind: focus|_tasks|_fun, id, done}`: отметить дело из виджета, не трогая остальной документ
+- `GET /api/widget/YYYY-MM-DD` — для виджета: документ дня, привычки дня (`{id, n, note, block, s, miss, tap}`) и счёт, как на сайте
+- `POST /api/toggle` — `{d, kind: focus|_tasks|_fun|habit, id, done}`: отметить дело или простую привычку из виджета, не трогая остальной документ
 - `/widget` — виджет «План дня» для iPhone (Scriptable): инструкция и код (`widget.js`)
 - `GET /api/status` — число дней, последняя синхронизация с GitHub, ошибка
 - `GET /healthz`

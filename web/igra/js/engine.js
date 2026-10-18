@@ -179,7 +179,7 @@ const Voice = {
   },
   async setSpeaker(sp) {
     this.sp = sp; try { localStorage.setItem("ayaty_voice", sp); } catch (e) {}
-    Me.list = null; Me.load();
+    Me.load();
     await this.manifest();
   },
   pick() {
@@ -223,7 +223,7 @@ const Voice = {
       cap.classList.add("talk");
       const nm = named ? Me.clip() : null, from = this.src(id);
       if (from && Snd.ac) {
-        Promise.all([nm ? this.buffer(Me.sp, "names/" + nm).catch(() => null) : null, this.buffer(from, id)]).then(([nb, b]) => {
+        Promise.all([nm ? this.buffer(this.sp, "names/" + nm).catch(() => null) : null, this.buffer(from, id)]).then(([nb, b]) => {
           if (my !== this.seq) return fin();      // пока грузилось, реплику уже отменили
           if (!nb) return this.play(b, fin);
           this.play(nb, () => my === this.seq ? setTimeout(() => my === this.seq ? this.play(b, fin) : fin(), 120) : fin());
@@ -252,13 +252,19 @@ const normName = s => s.trim().toLowerCase().replace(/ё/g, "е").replace(/\s+/g
 const Me = {
   list: null, idx: new Map(),
   get name() { return Save.d.name || ""; },
-  sp: BASE_VOICE,   // каким голосом озвучены имена (у нового голоса их может ещё не быть)
+  /* Подсказки — из полного списка основного голоса; звучат имена только голосом, который выбран
+     (у нового голоса имён может быть меньше — тогда имя только в подписи, голоса не смешиваются) */
+  voiced: new Map(), vsp: null,
   load() {
     const get = s => fetch("voice/" + s + "/names.json").then(r => r.ok ? r.json() : null).catch(() => null);
-    return this.list || (this.list = get(Voice.sp).then(a => a ? (this.sp = Voice.sp, a) : get(BASE_VOICE).then(b => (this.sp = BASE_VOICE, b || [])))
-      .then(a => { this.idx = new Map(a.map(([n, id]) => [normName(n), id])); return a; }));
+    if (this.vsp !== Voice.sp) {
+      this.vsp = Voice.sp; const sp = Voice.sp;
+      this.voicedReady = get(sp).then(a => { if (this.vsp === sp) this.voiced = new Map((a || []).map(([n, id]) => [normName(n), id])); });
+    }
+    return this.list || (this.list = get(BASE_VOICE).then(a => a || []).then(a => { this.idx = new Map(a.map(([n, id]) => [normName(n), id])); return a; }));
   },
-  clip(n = this.name) { return n ? this.idx.get(normName(n)) || null : null; },
+  clip(n = this.name) { return n ? this.voiced.get(normName(n)) || null : null; },   // имя озвучено выбранным голосом?
+  known(n) { return !!n && this.idx.has(normName(n)); },
   /* Подсказки при вводе: имена, которые начинаются с набранного */
   async suggest(q, max = 6) {
     q = normName(q); if (!q) return [];
@@ -269,13 +275,13 @@ const Me = {
   async set(n) {
     Save.d.name = n; Save.save(); await this.load();
     /* имени нет среди озвученных — сообщаем серверу, его озвучат в следующий раз (передаётся только имя) */
-    if (n && !this.clip()) fetch("api/name", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: n }) }).catch(() => {});
+    if (n && !this.known(n)) fetch("api/name", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: n }) }).catch(() => {});
   },
   /* Произнести одно имя (ребёнок слышит, что игра его узнала) */
   async hello(n) {
     const id = this.clip(n); if (!id || !Voice.on || !Snd.ac) return;
     Voice.stop(); const my = Voice.seq;
-    try { const b = await Voice.buffer(this.sp, "names/" + id); if (my === Voice.seq) Voice.play(b); } catch (e) {}
+    try { const b = await Voice.buffer(Voice.sp, "names/" + id); if (my === Voice.seq) Voice.play(b); } catch (e) {}
   }
 };
 /* Обращение в начале реплики: «Амина! » */

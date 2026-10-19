@@ -172,7 +172,8 @@ function alTrace(host, text, idleMs = 18000) {
     for (let y = 2; y < h; y += 4) for (let x = 2; x < w; x += 4) { const i = (Math.round(y * dpr) * gold.width + Math.round(x * dpr)) * 4 + 3; if (data[i] > 120) left.push({ x, y }); }
     const total = left.length || 1; let done = 0, fin = false, down = false, last = null;
     const R = Math.max(16, fs * 0.09);
-    const st = left.reduce((a, p) => (p.x > a.x ? p : a), left[0] || { x: w * 0.8, y: h / 2 });   // справа — так пишут по-арабски
+    const sc = p => p.x - p.y * 0.6;   // начало — сверху справа: так начинают писать арабские буквы (у Алифа — верх)
+    const st = left.reduce((a, p) => (sc(p) > sc(a) ? p : a), left[0] || { x: w * 0.8, y: h / 2 });
     const dot = el("div", "al-start", host); dot.style.left = st.x + "px"; dot.style.top = st.y + "px";
     const paintAt = (x, y) => {
       ctx.save(); ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(gold, 0, 0, w, h); ctx.restore();
@@ -192,7 +193,7 @@ function alTrace(host, text, idleMs = 18000) {
     const mv = ev => { if (!down || fin) return; idle.poke(); stroke(pos(ev)); };
     const up = () => { down = false; last = null; };
     cv.addEventListener("pointerdown", dn); window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up); window.addEventListener("pointercancel", up);
-    const auto = async () => { if (fin) return; dot.style.display = "none"; left.sort((a, b) => b.x - a.x); while (!fin && left.length) { const p = left[0]; paintAt(p.x, p.y); await sleep(20); } };
+    const auto = async () => { if (fin) return; dot.style.display = "none"; left.sort((a, b) => sc(b) - sc(a)); while (!fin && left.length) { const p = left[0]; paintAt(p.x, p.y); await sleep(20); } };
     const idle = alIdle(idleMs, auto);
     function finish() {
       if (fin) return; fin = true; idle.stop();

@@ -238,6 +238,8 @@ const IGRA_TYPES = {
   '.json': 'application/json; charset=utf-8', '.mp3': 'audio/mpeg', '.woff2': 'font/woff2',
 };
 const igraFiles = new Map();
+const REC_HASH = '69d1d46636eb3f090259b52afb4c5b0e39a2c682185353a2034f1e29e227b72a';   // токен ссылки суфлёра (sha256)
+let recQueue = Promise.resolve();
 
 // Игра: имена детей, которых ещё нет среди озвученных. Копим в памяти и раз в 10 минут дописываем
 // в ветку data (igra/names.json: { "имя": сколько раз ввели }). Хранится только само имя, без IP и других данных.
@@ -333,6 +335,36 @@ async function handle(req, res) {
     if (!/^[A-Za-zА-Яа-яЁё][A-Za-zА-Яа-яЁё' -]{1,23}$/.test(name)) return send(res, 400, { ok: false });
     if (igraNames[name] || Object.keys(igraNames).length < 2000) igraNames[name] = (igraNames[name] || 0) + 1;
     return send(res, 200, { ok: true });
+  }
+  // Суфлёр (igra/zapis.html): Азат записывает реплики игры своим голосом. Каждая запись сразу уходит в ветку data
+  // (igra/rec/<id>.<ext>), чтобы не потерялась. Доступ — по токену из ссылки, в коде только его sha256
+  if (p.startsWith('/igra/api/rec')) {
+    const tok = String(req.headers['x-rec'] || url.searchParams.get('t') || '');
+    if (require('crypto').createHash('sha256').update(tok).digest('hex') !== REC_HASH) return send(res, 401, { error: 'нужна ссылка суфлёра' });
+    if (!GH_TOKEN) return send(res, 503, { error: 'нет GITHUB_TOKEN' });
+    if (p === '/igra/api/rec/list' && req.method === 'GET') {
+      const r = await gh('GET', `/repos/${GH_REPO}/contents/igra/rec?ref=${GH_BRANCH}`);
+      return send(res, 200, { done: r.status === 200 ? r.json.map(f => f.name.replace(/\.\w+$/, '')) : [] });
+    }
+    const m = p.match(/^\/igra\/api\/rec\/([\w-]{1,48})$/);
+    if (m && req.method === 'POST') {
+      const type = String(req.headers['content-type'] || ''), ext = /mp4|aac|m4a/.test(type) ? 'm4a' : /ogg/.test(type) ? 'ogg' : 'webm';
+      const body = await new Promise((ok, no) => { const parts = []; let n = 0;
+        req.on('data', c => { n += c.length; if (n > 4194304) { no(new Error('too large')); req.destroy(); } else parts.push(c); });
+        req.on('end', () => ok(Buffer.concat(parts))); req.on('error', no); });
+      if (body.length < 1000) return send(res, 400, { error: 'пустая запись' });
+      // по одной записи за раз: параллельные записи в одну ветку GitHub конфликтуют
+      recQueue = recQueue.then(async () => {
+        const fp = `igra/rec/${m[1]}.${ext}`;
+        const cur = await gh('GET', `/repos/${GH_REPO}/contents/${fp}?ref=${GH_BRANCH}`);
+        const put = await gh('PUT', `/repos/${GH_REPO}/contents/${fp}`, { message: 'суфлёр: ' + m[1], branch: GH_BRANCH,
+          content: body.toString('base64'), ...(cur.status === 200 ? { sha: cur.json.sha } : {}) });
+        if (put.status !== 200 && put.status !== 201) throw new Error('HTTP ' + put.status);
+      });
+      try { await recQueue; return send(res, 200, { ok: true }); }
+      catch (e) { recQueue = Promise.resolve(); console.error('rec upload:', e.message); return send(res, 502, { error: 'не сохранилось, повторите' }); }
+    }
+    return send(res, 404, { error: 'not found' });
   }
   if (p.startsWith('/igra/api/') && await igraPay.handle(req, res, p, url)) return;
   const ig = p.match(/^\/igra\/((?:[\w-]+\/)*[\w.-]*)$/);

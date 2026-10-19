@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Суфлёр — запись голоса</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0E2A3A">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+  :root { --bg: #0E2A3A; --card: #163B4F; --ink: #F4F8FA; --muted: #9DB6C2; --gold: #F5C451; --red: #E5484D; --ok: #46B97A; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: "Nunito", "Amiri", system-ui, sans-serif; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  #app { display: flex; flex-direction: column; height: 100%; max-width: 560px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px); }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-weight: 800; }
+  .count { font-size: 15px; color: var(--muted); } .count b { color: var(--ink); }
+  .bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); margin: 8px 0 14px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold), #E6A93A); transition: width .3s; }
+  .group { font-size: 13.5px; font-weight: 800; color: var(--gold); letter-spacing: .3px; }
+  .card { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 8px 0 14px; padding: 20px 18px; border-radius: 22px; background: var(--card); display: flex; text-align: center; }
+  .text { margin: auto; font-size: clamp(22px, 6.2vw, 30px); line-height: 1.38; font-weight: 800; }   /* margin:auto — по центру, но длинный текст прокручивается с начала */
+  @media (max-height: 700px) {
+    .text { font-size: 21px; } .card { padding: 14px; margin: 6px 0 10px; } .tips { display: none; }
+    .rec { width: 78px; height: 78px; } .nav { width: 48px; height: 48px; } .meter { margin-top: 10px; } .row2 { margin-top: 10px; } .state { margin-bottom: 6px; }
+  }
+  .card.done { box-shadow: inset 0 0 0 2px rgba(70,185,122,.55); }
+  .state { min-height: 22px; text-align: center; font-weight: 800; font-size: 15px; color: var(--muted); margin-bottom: 10px; }
+  .state.recording { color: var(--red); } .state.ok { color: var(--ok); }
+  .mainrow { display: flex; align-items: center; justify-content: center; gap: 22px; }
+  .nav { width: 54px; height: 54px; border-radius: 50%; background: rgba(255,255,255,.08); font-size: 26px; font-weight: 900; }
+  .rec { position: relative; width: 96px; height: 96px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 6px rgba(229,72,77,.25); display: grid; place-items: center; }
+  .rec::after { content: ""; width: 34px; height: 34px; border-radius: 50%; background: #fff; transition: border-radius .2s, width .2s, height .2s; }
+  .rec.on::after { width: 30px; height: 30px; border-radius: 6px; }
+  .rec.on { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 14px rgba(229,72,77,.12); } }
+  .meter { height: 8px; border-radius: 4px; background: rgba(255,255,255,.08); margin: 14px 30px 0; overflow: hidden; }
+  .meter i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .08s; }
+  .row2 { display: flex; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .small { padding: 10px 16px; border-radius: 16px; background: rgba(255,255,255,.08); font-weight: 800; font-size: 15px; }
+  .small:disabled { opacity: .35; }
+  .tips { font-size: 13.5px; color: var(--muted); line-height: 1.45; margin-top: 12px; text-align: center; }
+  .msg { margin: auto; text-align: center; font-size: 18px; line-height: 1.5; padding: 20px; }
+  .q { font-size: 12.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="app"><p class="msg">Загружаю…</p></div>
+<script>
+"use strict";
+/* Суфлёр: Азат читает реплики игры своим голосом. Каждая запись сразу уходит на сервер (ветка data репозитория),
+   копия лежит в браузере, пока не загрузится. Порядок — как в игре; можно прерываться и продолжать с любого телефона. */
+const $ = s => document.querySelector(s);
+const app = $("#app");
+let T = "";
+try { const u = new URL(location.href), t = u.searchParams.get("t"); if (t) { localStorage.setItem("zapis_t", t); u.searchParams.delete("t"); history.replaceState(null, "", u.pathname); } T = localStorage.getItem("zapis_t") || ""; } catch (e) {}
+
+/* хранилище записей в браузере: и для «послушать», и как очередь, если сеть пропала */
+const DB = (() => {
+  let db = null;
+  const open = () => db || (db = new Promise((ok, no) => { const r = indexedDB.open("zapis", 1); r.onupgradeneeded = () => r.result.createObjectStore("takes"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }));
+  const tx = async (mode, fn) => { const d = await open(); return new Promise((ok, no) => { const t = d.transaction("takes", mode), s = t.objectStore("takes"); const r = fn(s); t.oncomplete = () => ok(r && r.result); t.onerror = () => no(t.error); }); };
+  return { put: (k, v) => tx("readwrite", s => s.put(v, k)), get: k => tx("readonly", s => s.get(k)), keys: () => tx("readonly", s => s.getAllKeys()) };
+})();
+
+let items = [], done = new Set(), i = 0, rec = null, stream = null, chunks = [], t0 = 0, timer = null, lastBlob = null, uploading = 0;
+const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
+
+async function upload(id, blob) {
+  uploading++; render();
+  for (let k = 0; k < 5; k++) {
+    try {
+      const r = await fetch("api/rec/" + id, { method: "POST", headers: { "X-Rec": T, "Content-Type": blob.type || mime }, body: blob });
+      if (r.ok) { done.add(id); const v = await DB.get(id); if (v) await DB.put(id, { ...v, sent: true }); uploading--; render(); return true; }
+      if (r.status === 401) { alert("Ссылка суфлёра устарела — откройте её заново"); break; }
+    } catch (e) {}
+    await new Promise(r => setTimeout(r, 2000 * (k + 1)));
+  }
+  uploading--; render(); return false;
+}
+
+async function start() {
+  if (!T) { app.innerHTML = `<p class="msg">Откройте суфлёр по ссылке, которую прислал Джарвис.</p>`; return; }
+  items = await (await fetch("zapis.json", { cache: "no-cache" })).json();
+  try { const r = await fetch("api/rec/list", { headers: { "X-Rec": T } }); if (r.status === 401) { app.innerHTML = `<p class="msg">Ссылка не подошла. Откройте её заново из чата.</p>`; return; } if (r.ok) (await r.json()).done.forEach(id => done.add(id)); } catch (e) {}
+  // что записано, но не долетело до сервера в прошлый раз — отправляем
+  for (const k of await DB.keys().catch(() => [])) { const v = await DB.get(k); if (v && !v.sent && !done.has(k)) upload(k, v.blob); }
+  const saved = +(localStorage.getItem("zapis_i") || -1);
+  i = items.findIndex(x => !done.has(x.id)); if (i < 0) i = 0; if (saved >= 0 && saved < items.length && !done.has(items[saved].id)) i = saved;
+  render();
+}
+
+function render() {
+  const it = items[i]; if (!it) return;
+  const n = items.filter(x => done.has(x.id)).length;
+  app.innerHTML = `
+    <div class="top"><span class="count">Записано <b>${n}</b> из ${items.length}</span><span class="q">${uploading ? "отправляю…" : "все отправлены"}</span></div>
+    <div class="bar"><i style="width:${(n / items.length * 100).toFixed(1)}%"></i></div>
+    <div class="group">${it.g} · №${i + 1}</div>
+    <div class="card${done.has(it.id) ? " done" : ""}"><div class="text"></div></div>
+    <div class="state${rec ? " recording" : done.has(it.id) ? " ok" : ""}">${rec ? "Идёт запись… нажми, когда закончишь" : done.has(it.id) ? "✓ Записано — можно перезаписать" : "Нажми красную кнопку и читай"}</div>
+    <div class="mainrow"><button class="nav" data-a="prev" aria-label="Назад">‹</button><button class="rec${rec ? " on" : ""}" data-a="rec" aria-label="Запись"></button><button class="nav" data-a="next" aria-label="Дальше">›</button></div>
+    <div class="meter"><i></i></div>
+    <div class="row2"><button class="small" data-a="play" ${lastBlob || done.has(it.id) ? "" : "disabled"}>▶ Послушать</button><button class="small" data-a="skip">К незаписанной</button></div>
+    <p class="tips">Читай тепло и неспешно, как своим детям. Пауза полсекунды до и после фразы — лишнее я обрежу. Ошибся — просто перезапиши.</p>`;
+  app.querySelector(".text").textContent = it.t;
+  app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => act(b.dataset.a));
+  try { localStorage.setItem("zapis_i", i); } catch (e) {}
+}
+
+async function act(a) {
+  if (a === "rec") return rec ? stop() : record();
+  if (rec) return;
+  if (a === "prev") { i = Math.max(0, i - 1); lastBlob = null; render(); }
+  if (a === "next") { i = Math.min(items.length - 1, i + 1); lastBlob = null; render(); }
+  if (a === "skip") { const k = items.findIndex((x, j) => j > i && !done.has(x.id)); i = k >= 0 ? k : items.findIndex(x => !done.has(x.id)); if (i < 0) i = 0; lastBlob = null; render(); }
+  if (a === "play") { const v = lastBlob || (await DB.get(items[i].id) || {}).blob; if (v) new Audio(URL.createObjectURL(v)).play(); else alert("Эта реплика записана на другом устройстве"); }
+}
+
+let wake = null, meterRaf = 0;
+async function record() {
+  try {
+    if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
+  } catch (e) { alert("Нет доступа к микрофону. Разреши его в настройках браузера."); return; }
+  try { wake = await navigator.wakeLock.request("screen"); } catch (e) {}
+  chunks = []; rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 128000 } : {});
+  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+  rec.start(); t0 = Date.now(); render(); meter();
+}
+function meter() {
+  const ac = meter.ac || (meter.ac = new (window.AudioContext || window.webkitAudioContext)());
+  const an = meter.an || (meter.an = ac.createAnalyser()); if (!meter.src) { meter.src = ac.createMediaStreamSource(stream); meter.src.connect(an); }
+  const buf = new Float32Array(an.fftSize);
+  const tick = () => { if (!rec) return; an.getFloatTimeDomainData(buf); let p = 0; for (const v of buf) p = Math.max(p, Math.abs(v)); const m = $(".meter i"); if (m) { m.style.width = Math.min(100, p * 140) + "%"; m.style.background = p > 0.95 ? "#E5484D" : "#46B97A"; } meterRaf = requestAnimationFrame(tick); };
+  tick();
+}
+function stop() {
+  const r = rec, it = items[i]; rec = null; cancelAnimationFrame(meterRaf);
+  r.onstop = async () => {
+    const blob = new Blob(chunks, { type: r.mimeType || mime }); lastBlob = blob;
+    if (Date.now() - t0 < 600) { render(); return; }               // случайное касание — не сохраняем
+    await DB.put(it.id, { blob, sent: false, at: Date.now() }).catch(() => {});
+    upload(it.id, blob);
+    // сразу к следующей незаписанной: так быстрее, а к этой можно вернуться стрелкой
+    const k = items.findIndex((x, j) => j > i && !done.has(x.id) && x.id !== it.id);
+    if (k >= 0) { i = k; lastBlob = null; }
+    render();
+  };
+  r.stop(); if (wake) { wake.release().catch(() => {}); wake = null; }
+}
+start();
+</script>
+</body>
+</html>

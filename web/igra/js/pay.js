@@ -6,12 +6,14 @@
 const PRICES = { month: 349, year: 2490 };
 const Pay = {
   on: false, active: false, until: null, plan: null, autopay: false,
-  get code() { return Save.d.code || ""; },
+  /* код семьи общий для всех наших игр */
+  get code() { let c = Save.d.code || ""; try { c = c || localStorage.getItem("ayaty_family_code") || ""; } catch (e) {} return c; },
+  remember(code) { Save.d.code = code; Save.save(); try { localStorage.setItem("ayaty_family_code", code); } catch (e) {} },
   inTG: !!(window.Telegram && Telegram.WebApp && Telegram.WebApp.initData),
   free(id) { const w = WORLDS.find(w => w.ch.includes(id)); return !w || WORLDS.indexOf(w) === 0 || w.ch[0] === id; },
   canPlay(id) { return !this.on || this.active || this.free(id); },
   async api(path, body) {
-    const r = await fetch("api/" + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+    const r = await fetch(ROOT + "api/" + path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
     let j = null; try { j = await r.json(); } catch (e) {}
     return { status: r.status, ok: r.ok, j: j || {} };
   },
@@ -42,7 +44,7 @@ const Pay = {
     }
     ov.close();
     if (!st) return sheetMsg("Оплата не прошла", "Деньги не списаны. Можно попробовать ещё раз из списка глав.");
-    Save.d.code = st.code; Save.save(); await this.check(); celebrate();
+    this.remember(st.code); await this.check(); celebrate();
     await sheetMsg("Спасибо! Вся игра открыта", `Код вашей семьи: <b class="pcode">${st.code}</b>Запишите его: с ним игра откроется и на другом телефоне.`);
   },
   /* Глава закрыта: экран для родителей. Возвращает true, если после него можно играть */
@@ -56,7 +58,7 @@ const Pay = {
         <ul class="pfeat"><li>Все 5 уровней — 29 глав</li><li>Новые главы каждый месяц</li><li>Одна подписка на всех детей в семье</li></ul>
         <div class="pgate"><p>Сколько будет <b class="gq"></b>?</p><div class="gans"></div></div>
         <div class="pbuy" hidden>${buy}<button class="btn line pcodebtn">У меня есть код</button>
-        <p class="small poffer">Автопродление, отключить можно в любой момент. <a href="oferta.html" target="_blank">Оферта</a></p></div>
+        <p class="small poffer">Автопродление, отключить можно в любой момент. <a href="${ROOT}oferta.html" target="_blank">Оферта</a></p></div>
 `);
       ov.classList.add("paysheet");
       /* «Для взрослых»: малыш не дойдёт до оплаты случайно */
@@ -92,7 +94,7 @@ const Pay = {
       ov.querySelector("[data-a=ok]").onclick = async () => {
         Snd.tap(); const code = inp.value.trim().toUpperCase(); if (!code) return;
         let r; try { r = await this.api("me?code=" + encodeURIComponent(code)); } catch (e) { msg.textContent = "Нет связи, попробуйте ещё раз"; return; }
-        if (r.ok && r.j.active) { Save.d.code = code; Save.save(); this.set(r.j); celebrate(); ov.close(); res(true); }
+        if (r.ok && r.j.active) { this.remember(code); this.set(r.j); celebrate(); ov.close(); res(true); }
         else msg.textContent = r.status === 429 ? "Слишком много попыток, подождите немного" : r.ok ? "Подписка по этому коду закончилась" : "Такого кода нет — проверьте буквы и цифры";
       };
       setTimeout(() => inp.focus(), 300);

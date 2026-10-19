@@ -1160,15 +1160,15 @@ async function certCanvas() {
     x.fillStyle = "#B9802A"; fit(Me.name, '900 {s}px "Nunito", sans-serif', 132, W - 260); x.fillText(Me.name, W / 2, y + 150); y += 250;
   }
   x.fillStyle = "#34505C"; x.font = '700 48px "Nunito", sans-serif';
-  y = wrap("за прохождение всех пяти уровней игры «Аяты вокруг нас»", y + 20, 66, W - 280);
+  y = wrap(`за прохождение всех уровней игры «${GAME.title}»`, y + 20, 66, W - 280);
   const done = CHAPTERS.filter(ch => Save.d.done[ch.id]), stars = done.reduce((n, ch) => n + Save.d.done[ch.id], 0);
   x.fillStyle = "#163B4F"; x.font = '900 52px "Nunito", sans-serif';
   x.fillText(`Глав: ${done.length} из ${CHAPTERS.length}   ★ ${stars} из ${CHAPTERS.length * 3}`, W / 2, y + 120);
   x.fillStyle = "#6B8590"; x.font = '700 42px "Nunito", sans-serif';
-  wrap("Всё вокруг создал Аллах, и только Ему мы поклоняемся.", y + 230, 58, W - 300);
+  wrap(GAME.certLine || "Всё вокруг создал Аллах, и только Ему мы поклоняемся.", y + 230, 58, W - 300);
   x.fillStyle = "#9AAEB5"; x.font = '700 36px "Nunito", sans-serif';
   x.fillText(new Date().toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }), W / 2, H - 210);
-  x.fillText("рахмат.рус/igra", W / 2, H - 160);
+  x.fillText(GAME.url, W / 2, H - 160);
   return c;
 }
 function certificate() {

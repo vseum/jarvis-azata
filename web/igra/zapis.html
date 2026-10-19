@@ -19,6 +19,11 @@
   .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold), #E6A93A); transition: width .3s; }
   .group { font-size: 13.5px; font-weight: 800; color: var(--gold); letter-spacing: .3px; }
   .card { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 8px 0 14px; padding: 20px 18px; border-radius: 22px; background: var(--card); display: flex; text-align: center; }
+  .lists { display: flex; gap: 6px; margin-bottom: 10px; }
+  .lists button { flex: 1; padding: 8px 6px; border-radius: 12px; background: rgba(255,255,255,.06); color: var(--muted); font-weight: 800; font-size: 13.5px; }
+  .lists button.on { background: rgba(245,196,81,.18); color: var(--gold); }
+  .text.ar { font-family: "Amiri", serif; font-size: clamp(56px, 18vw, 96px); line-height: 1.5; direction: rtl; }
+  .hint { display: block; margin-top: 6px; font-family: "Nunito", sans-serif; font-size: 16px; font-weight: 700; color: var(--muted); direction: ltr; }
   .text { margin: auto; font-size: clamp(22px, 6.2vw, 30px); line-height: 1.38; font-weight: 800; }   /* margin:auto — по центру, но длинный текст прокручивается с начала */
   @media (max-height: 700px) {
     .text { font-size: 21px; } .card { padding: 14px; margin: 6px 0 10px; } .tips { display: none; }
@@ -63,6 +68,9 @@ const DB = (() => {
   return { put: (k, v) => tx("readwrite", s => s.put(v, k)), get: k => tx("readonly", s => s.get(k)), keys: () => tx("readonly", s => s.getAllKeys()) };
 })();
 
+/* два раздела: реплики игр (по-русски) и арабские звуки «Алиф-Ба» (буквы, слоги, слова) */
+const LISTS = { game: { file: "zapis.json", title: "Реплики игр" }, ar: { file: "alifba/ar_items.json", title: "Арабские звуки" } };
+let list = "game"; try { list = localStorage.getItem("zapis_list") || "game"; } catch (e) {} if (!LISTS[list]) list = "game";
 let items = [], done = new Set(), i = 0, rec = null, stream = null, chunks = [], t0 = 0, timer = null, lastBlob = null, uploading = 0;
 const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
 
@@ -81,19 +89,21 @@ async function upload(id, blob) {
 
 async function start() {
   if (!T) { app.innerHTML = `<p class="msg">Откройте суфлёр по ссылке, которую прислал Джарвис.</p>`; return; }
-  items = await (await fetch("zapis.json", { cache: "no-cache" })).json();
+  items = await (await fetch(LISTS[list].file, { cache: "no-cache" })).json();
   try { const r = await fetch("api/rec/list", { headers: { "X-Rec": T } }); if (r.status === 401) { app.innerHTML = `<p class="msg">Ссылка не подошла. Откройте её заново из чата.</p>`; return; } if (r.ok) (await r.json()).done.forEach(id => done.add(id)); } catch (e) {}
   // что записано, но не долетело до сервера в прошлый раз — отправляем
   for (const k of await DB.keys().catch(() => [])) { const v = await DB.get(k); if (v && !v.sent && !done.has(k)) upload(k, v.blob); }
-  const saved = +(localStorage.getItem("zapis_i") || -1);
+  const saved = +(localStorage.getItem("zapis_i_" + list) || -1);
   i = items.findIndex(x => !done.has(x.id)); if (i < 0) i = 0; if (saved >= 0 && saved < items.length && !done.has(items[saved].id)) i = saved;
   render();
 }
 
+function el2(parent, text) { const s = document.createElement("span"); s.className = "hint"; s.textContent = text; parent.appendChild(s); }
 function render() {
   const it = items[i]; if (!it) return;
   const n = items.filter(x => done.has(x.id)).length;
   app.innerHTML = `
+    <div class="lists">${Object.entries(LISTS).map(([k, v]) => `<button data-l="${k}" class="${k === list ? "on" : ""}">${v.title}</button>`).join("")}</div>
     <div class="top"><span class="count">Записано <b>${n}</b> из ${items.length}</span><span class="q">${uploading ? "отправляю…" : "все отправлены"}</span></div>
     <div class="bar"><i style="width:${(n / items.length * 100).toFixed(1)}%"></i></div>
     <div class="group">${it.g} · №${i + 1}</div>
@@ -103,9 +113,11 @@ function render() {
     <div class="meter"><i></i></div>
     <div class="row2"><button class="small" data-a="play" ${lastBlob || done.has(it.id) ? "" : "disabled"}>▶ Послушать</button><button class="small" data-a="skip">К незаписанной</button></div>
     <p class="tips">Читай тепло и неспешно, как своим детям. Пауза полсекунды до и после фразы — лишнее я обрежу. Ошибся — просто перезапиши.</p>`;
-  app.querySelector(".text").textContent = it.t;
+  const tx = app.querySelector(".text"); tx.textContent = it.t;
+  if (list === "ar") { tx.classList.add("ar"); el2(tx, it.hint ? `буква ${it.hint} · ${it.g}` : it.g); }
+  app.querySelectorAll(".lists button").forEach(b => b.onclick = () => { if (rec) return; try { localStorage.setItem("zapis_list", b.dataset.l); } catch (e) {} location.reload(); });
   app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => act(b.dataset.a));
-  try { localStorage.setItem("zapis_i", i); } catch (e) {}
+  try { localStorage.setItem("zapis_i_" + list, i); } catch (e) {}
 }
 
 async function act(a) {

@@ -1,4 +1,8 @@
 "use strict";
+/* Корень игры: вторая игра (alifba/) лежит во вложенной папке и берёт озвучку и API из корня */
+const ROOT = window.GAME_ROOT || "";
+/* Тексты, которые у каждой игры свои */
+const GAME = Object.assign({ title: "Аяты вокруг нас", url: "рахмат.рус/igra", bag: "Мои сокровища", bagHint: "Сокровища даются за пройденные главы", award: "Новое сокровище в сумке" }, window.GAME_TEXT || {});
 /* ============ ОСНОВА ИГРЫ: сцена, голос, звуки, подписи, вопросы, аяты, награды ============ */
 const $ = s => document.querySelector(s);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -162,7 +166,7 @@ const Voice = {
   },
   async manifest() {
     const sp = this.sp;
-    const get = async s => { try { const r = await fetch("voice/" + s + "/manifest.json", { cache: "no-cache" }); if (r.ok) return new Set(await r.json()); } catch (e) {} return new Set(); };
+    const get = async s => { try { const r = await fetch(ROOT + "voice/" + s + "/manifest.json", { cache: "no-cache" }); if (r.ok) return new Set(await r.json()); } catch (e) {} return new Set(); };
     const [have, base] = await Promise.all([get(sp), sp === BASE_VOICE ? null : get(BASE_VOICE)]);
     if (sp === this.sp) { this.have = have; this.base = base || have; }      // пока грузилось, голос могли сменить
   },
@@ -204,7 +208,7 @@ const Voice = {
   async buffer(sp, id) {
     const key = sp + "/" + id;
     if (this.cache.has(key)) { const b = this.cache.get(key); this.cache.delete(key); this.cache.set(key, b); return b; }
-    const r = await fetch("voice/" + key + ".mp3"); if (!r.ok) throw new Error("нет файла");
+    const r = await fetch(ROOT + "voice/" + key + ".mp3"); if (!r.ok) throw new Error("нет файла");
     const b = await Snd.ac.decodeAudioData(await r.arrayBuffer());
     this.cache.set(key, b);
     while (this.cache.size > 16) this.cache.delete(this.cache.keys().next().value);
@@ -212,7 +216,7 @@ const Voice = {
   },
   /* Заранее скачать реплики главы, чтобы голос начинался сразу (браузер сохранит файлы в кэше) */
   prefetch(prefix) {
-    Object.keys(window.LINES).filter(k => k.startsWith(prefix) && this.src(k)).forEach(k => { fetch("voice/" + this.src(k) + "/" + k + ".mp3").catch(() => {}); });
+    Object.keys(window.LINES).filter(k => k.startsWith(prefix) && this.src(k)).forEach(k => { fetch(ROOT + "voice/" + this.src(k) + "/" + k + ".mp3").catch(() => {}); });
   },
   /* Промис завершается, когда реплика договорена. named: сначала позвать ребёнка по имени */
   speak(id, named) {
@@ -256,7 +260,7 @@ const Me = {
      (у нового голоса имён может быть меньше — тогда имя только в подписи, голоса не смешиваются) */
   voiced: new Map(), vsp: null,
   load() {
-    const get = s => fetch("voice/" + s + "/names.json").then(r => r.ok ? r.json() : null).catch(() => null);
+    const get = s => fetch(ROOT + "voice/" + s + "/names.json").then(r => r.ok ? r.json() : null).catch(() => null);
     if (this.vsp !== Voice.sp) {
       this.vsp = Voice.sp; const sp = Voice.sp;
       this.voicedReady = get(sp).then(a => { if (this.vsp === sp) this.voiced = new Map((a || []).map(([n, id]) => [normName(n), id])); });
@@ -275,7 +279,7 @@ const Me = {
   async set(n) {
     Save.d.name = n; Save.save(); await this.load();
     /* имени нет среди озвученных — сообщаем серверу, его озвучат в следующий раз (передаётся только имя) */
-    if (n && !this.known(n)) fetch("api/name", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: n }) }).catch(() => {});
+    if (n && !this.known(n)) fetch(ROOT + "api/name", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: n }) }).catch(() => {});
   },
   /* Произнести одно имя (ребёнок слышит, что игра его узнала) */
   async hello(n) {
@@ -292,7 +296,8 @@ const callName = named => named && Me.name ? Me.name + "! " : "";
 let capLine = null;
 function replayCap() {
   if (!capLine || cap.classList.contains("hidden")) return;
-  unlockAudio(); const p = Voice.speak(capLine.id, capLine.named);
+  unlockAudio(); const ar = capLine.ar;
+  const p = Voice.speak(capLine.id, capLine.named).then(() => ar && typeof AR !== "undefined" ? AR.say(ar) : null);   // в «Алиф-Ба» к реплике прилагается арабский звук
   if (autoNext.rearm) autoNext.rearm(p);
 }
 /* Ребёнок не нажал «Дальше»: через 3 с после конца реплики игра идёт дальше сама — на кнопке заполняется полоска.
@@ -328,7 +333,8 @@ async function say(id, opt = {}) {
   await sleep(500);
   const b = button(opt.btn || "Дальше");
   p.then(() => b.classList.add("glow"));
-  autoNext(b, p, L(id));
+  if (opt.noAuto) setTimeout(() => b.isConnected && b.click(), opt.noAuto);   // свободная игра: без 3-секундного автонажатия, но с потолком
+  else autoNext(b, p, L(id));
   await clicked(b);
   Voice.stop(); capBtns.innerHTML = "";
 }
@@ -342,8 +348,8 @@ function choice(qid, opts, okId) {
     showCap(qid);
     let picked = false, misses = 0, pending = null;
     const btns = opts.map(o => {
-      const ic = o.ar ? "الله" : `<svg viewBox="0 0 48 48" aria-hidden="true">${o.icon || ""}</svg>`;
-      const b = button(`<span class="oi${o.ar ? " ar" : ""}">${ic}</span><span>${L(o.id).replace(/\.$/, "")}</span>`, "opt");
+      const ic = o.glyph || (o.ar ? "الله" : `<svg viewBox="0 0 48 48" aria-hidden="true">${o.icon || ""}</svg>`);   // glyph — арабская буква вместо картинки
+      const b = button(`<span class="oi${o.ar || o.glyph ? " ar" : ""}">${ic}</span><span>${L(o.id).replace(/\.$/, "")}</span>`, "opt");
       b.onclick = async () => {
         if (b.disabled || picked) return;
         btns.forEach(x => x.classList.remove("reading"));
@@ -493,9 +499,16 @@ async function toast(html, ms = 2200) {
   await sleep(ms); t.classList.remove("on"); await sleep(350); t.remove();
 }
 const Save = {
-  key: "ayaty_vokrug_nas_v1",
+  key: window.SAVE_KEY || "ayaty_vokrug_nas_v1",
   d: { done: {}, items: [] },
-  load() { try { const x = JSON.parse(localStorage.getItem(this.key) || "null"); if (x) this.d = Object.assign(this.d, x); } catch (e) {} },
+  load() {
+    try { const x = JSON.parse(localStorage.getItem(this.key) || "null"); if (x) this.d = Object.assign(this.d, x); } catch (e) {}
+    /* имя ребёнка общее для всех наших игр: ввели в одной — другая уже знает */
+    if (this.d.name === undefined) for (const k of ["ayaty_vokrug_nas_v1", "alifba_v1"]) {
+      if (k === this.key) continue;
+      try { const o = JSON.parse(localStorage.getItem(k) || "null"); if (o && o.name !== undefined) { this.d.name = o.name; break; } } catch (e) {}
+    }
+  },
   save() { try { localStorage.setItem(this.key, JSON.stringify(this.d)); } catch (e) {} },
   reset() { this.d = { done: {}, items: [], name: this.d.name }; this.save(); }
 };
@@ -507,7 +520,7 @@ async function award(itemId) {
   const it = ITEMS.find(i => i.id === itemId);
   if (!Save.d.items.includes(itemId)) { Save.d.items.push(itemId); Save.save(); }
   celebrate(); updateBag(true);
-  await toast(`<svg class="item" viewBox="0 0 100 100" aria-hidden="true">${it.svg}</svg><b>${it.name}</b><i>Новое сокровище в сумке</i>`, 2400);
+  await toast(`<svg class="item" viewBox="0 0 100 100" aria-hidden="true">${it.svg}</svg><b>${it.name}</b><i>${it.award || GAME.award}</i>`, 2400);
 }
 async function starsToast(n) {
   if (n === 3) celebrate(); else Snd.sparkle();
@@ -620,7 +633,7 @@ function nameSheet() {
 function voiceName() { return (VOICES.find(v => v.id === Voice.sp) || VOICES[0]).name; }
 function bagSheet() {
   const html = ITEMS.map(i => `<div class="${Save.d.items.includes(i.id) ? "" : "lk"}"><svg viewBox="0 0 100 100" aria-hidden="true">${i.svg}</svg>${i.name}</div>`).join("");
-  const ov = sheet(`<h2>Мои сокровища</h2><div class="bag">${html}</div><p class="small">Сокровища даются за пройденные главы</p>`).withX(() => ov.close());
+  const ov = sheet(`<h2>${GAME.bag}</h2><div class="bag">${html}</div><p class="small">${GAME.bagHint}</p>`).withX(() => ov.close());
 }
 
 /* ============ TELEGRAM ============ */

@@ -297,7 +297,7 @@ const server = http.createServer((req, res) => {
 
 async function handle(req, res) {
   const url = new URL(req.url, 'http://x');
-  const p = url.pathname;
+  let p = url.pathname;
 
   if (p === '/healthz') return send(res, 200, { ok: true });
   if (p === '/robots.txt') return send(res, 200, 'User-agent: *\nDisallow: /\n', 'text/plain; charset=utf-8');
@@ -324,6 +324,9 @@ async function handle(req, res) {
 
   // детская игра «Аяты вокруг нас» (исходники: github.com/vseum/kids_game): статика из web/igra/
   if (p === '/igra') { res.writeHead(301, { Location: '/igra/' }); return res.end(); }
+  // «Алиф-Ба» (арабские буквы) — своя ссылка рахмат.рус/arabic, файлы лежат рядом с первой игрой: igra/alifba/
+  if (p === '/arabic') { res.writeHead(301, { Location: '/arabic/' }); return res.end(); }
+  if (p.startsWith('/arabic/')) p = '/igra/alifba/' + p.slice('/arabic/'.length);
   if (p === '/igra/api/name' && req.method === 'POST') {
     const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim(), now = Date.now();
     const h = igraHits.get(ip), fresh = h && now - h[1] < 3600000;
@@ -369,7 +372,8 @@ async function handle(req, res) {
   if (p.startsWith('/igra/api/') && await igraPay.handle(req, res, p, url)) return;
   const ig = p.match(/^\/igra\/((?:[\w-]+\/)*[\w.-]*)$/);
   if (ig && req.method === 'GET') {
-    const rel = ig[1] || 'index.html', type = IGRA_TYPES[path.extname(rel)];
+    let rel = ig[1] || 'index.html'; if (rel.endsWith('/')) rel += 'index.html';   // /arabic/ → igra/alifba/index.html
+    const type = IGRA_TYPES[path.extname(rel)];
     if (!type) return send(res, 404, 'Not found', 'text/plain; charset=utf-8');
     if (rel.endsWith('.mp3')) {   // озвучка: много файлов, в память не кладём, браузер кэширует на неделю
       try { const buf = fs.readFileSync(path.join(__dirname, 'igra', rel)); res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'public, max-age=604800' }); return res.end(buf); }

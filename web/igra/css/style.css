@@ -156,6 +156,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; background: 
 .sbtns { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .chip { margin-top: 2px; padding: 8px 16px; border-radius: 18px; color: rgba(255,255,255,.75); font-weight: 800; font-size: 15px; background: rgba(255,255,255,.08); }
 .chip b { color: var(--gold); }
+a.chip { display: inline-block; text-decoration: none; font-size: 14px; }
 .vlist { display: flex; flex-direction: column; gap: 8px; }
 .vrow { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 18px; background: #fff; box-shadow: 0 3px 0 #E6D7B5; }
 .vrow.on { box-shadow: 0 3px 0 #E6D7B5, 0 0 0 3px var(--gold); }

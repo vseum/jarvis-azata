@@ -47,6 +47,32 @@
   .tips { font-size: 13.5px; color: var(--muted); line-height: 1.45; margin-top: 12px; text-align: center; }
   .msg { margin: auto; text-align: center; font-size: 18px; line-height: 1.5; padding: 20px; }
   .q { font-size: 12.5px; color: var(--muted); }
+  .lists button.gear { flex: none; padding: 8px 12px; color: var(--ink); }
+  .meter { position: relative; }
+  .meter b { position: absolute; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.35); }
+  /* настройки записи */
+  .set { position: fixed; inset: 0; z-index: 20; background: rgba(5,18,26,.7); display: flex; align-items: flex-end; justify-content: center; }
+  .set .box { width: 100%; max-width: 560px; max-height: 92%; overflow-y: auto; background: #12364A; border-radius: 22px 22px 0 0; padding: 0 18px calc(env(safe-area-inset-bottom, 0px) + 18px); }
+  .set .hd { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; background: #12364A; padding: 14px 0 8px; font-weight: 900; font-size: 18px; }
+  .set .x { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.1); font-size: 20px; font-weight: 900; }
+  .set h4 { margin: 16px 0 8px; font-size: 13px; letter-spacing: .4px; text-transform: uppercase; color: var(--gold); }
+  .set select { width: 100%; padding: 12px; border-radius: 12px; border: 0; background: rgba(255,255,255,.1); color: var(--ink); font: 700 15px "Nunito", sans-serif; }
+  .set select option { color: #000; }
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modes button { padding: 12px 10px; border-radius: 14px; background: rgba(255,255,255,.07); text-align: left; font-weight: 800; font-size: 14.5px; line-height: 1.3; }
+  .modes button small { display: block; font-weight: 700; font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+  .modes button.on { background: rgba(245,196,81,.16); box-shadow: inset 0 0 0 2px rgba(245,196,81,.6); }
+  .tg { display: flex; align-items: flex-start; gap: 12px; padding: 9px 0; font-size: 15px; font-weight: 700; line-height: 1.35; }
+  .tg input { flex: none; width: 22px; height: 22px; margin: 1px 0 0; accent-color: var(--gold); }
+  .tg small { display: block; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+  .rng { display: flex; align-items: center; gap: 12px; font-weight: 800; }
+  .rng input { flex: 1; accent-color: var(--gold); }
+  .rng output { min-width: 62px; text-align: right; color: var(--gold); }
+  .set .meter { margin: 10px 0 4px; height: 12px; border-radius: 6px; }
+  .set .mhint { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+  .test { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .test .small { flex: 1 1 auto; }
+  .set .note { font-size: 12.5px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
 </style>
 </head>
 <body>
@@ -71,7 +97,7 @@ const DB = (() => {
 /* два раздела: реплики игр (по-русски) и арабские звуки «Алиф-Ба» (буквы, слоги, слова) */
 const LISTS = { game: { file: "zapis.json", title: "Реплики игр" }, ar: { file: "alifba/ar_items.json", title: "Арабские звуки" } };
 let list = "game"; try { list = localStorage.getItem("zapis_list") || "game"; } catch (e) {} if (!LISTS[list]) list = "game";
-let items = [], done = new Set(), i = 0, rec = null, stream = null, chunks = [], t0 = 0, timer = null, lastBlob = null, uploading = 0;
+let items = [], done = new Set(), i = 0, rec = null, stream = null, t0 = 0, lastBlob = null, uploading = 0;
 const mime = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
 
 async function upload(id, blob) {
@@ -103,16 +129,16 @@ function render() {
   const it = items[i]; if (!it) return;
   const n = items.filter(x => done.has(x.id)).length;
   app.innerHTML = `
-    <div class="lists">${Object.entries(LISTS).map(([k, v]) => `<button data-l="${k}" class="${k === list ? "on" : ""}">${v.title}</button>`).join("")}</div>
+    <div class="lists">${Object.entries(LISTS).map(([k, v]) => `<button data-l="${k}" class="${k === list ? "on" : ""}">${v.title}</button>`).join("")}<button class="gear" data-a="set" title="${esc(micName())}">🎙 Звук</button></div>
     <div class="top"><span class="count">Записано <b>${n}</b> из ${items.length}</span><span class="q">${uploading ? "отправляю…" : "все отправлены"}</span></div>
     <div class="bar"><i style="width:${(n / items.length * 100).toFixed(1)}%"></i></div>
     <div class="group">${it.g} · №${i + 1}</div>
     <div class="card${done.has(it.id) ? " done" : ""}"><div class="text"></div></div>
     <div class="state${rec ? " recording" : done.has(it.id) ? " ok" : ""}">${rec ? "Идёт запись… нажми, когда закончишь" : done.has(it.id) ? "✓ Записано — можно перезаписать" : "Нажми красную кнопку и читай"}</div>
     <div class="mainrow"><button class="nav" data-a="prev" aria-label="Назад">‹</button><button class="rec${rec ? " on" : ""}" data-a="rec" aria-label="Запись"></button><button class="nav" data-a="next" aria-label="Дальше">›</button></div>
-    <div class="meter"><i></i></div>
+    <div class="meter"><b style="left:71%"></b><b style="left:94%"></b><i></i></div>
     <div class="row2"><button class="small" data-a="play" ${lastBlob || done.has(it.id) ? "" : "disabled"}>▶ Послушать</button><button class="small" data-a="skip">К незаписанной</button></div>
-    <p class="tips">Читай тепло и неспешно, как своим детям. Пауза полсекунды до и после фразы — лишнее я обрежу. Ошибся — просто перезапиши.</p>`;
+    <p class="tips">Читай тепло и неспешно, как своим детям. Пауза полсекунды до и после фразы — лишнее обрежется. Ошибся — просто перезапиши. Сейчас пишет: ${esc(micName())} — сменить и настроить звук: 🎙 сверху.</p>`;
   const tx = app.querySelector(".text"); tx.textContent = it.t;
   if (list === "ar") { tx.classList.add("ar"); el2(tx, it.hint ? `буква ${it.hint} · ${it.g}` : it.g); }
   app.querySelectorAll(".lists button").forEach(b => b.onclick = () => { if (rec) return; try { localStorage.setItem("zapis_list", b.dataset.l); } catch (e) {} location.reload(); });
@@ -123,42 +149,192 @@ function render() {
 async function act(a) {
   if (a === "rec") return rec ? stop() : record();
   if (rec) return;
+  if (a === "set") return settings();
   if (a === "prev") { i = Math.max(0, i - 1); lastBlob = null; render(); }
   if (a === "next") { i = Math.min(items.length - 1, i + 1); lastBlob = null; render(); }
   if (a === "skip") { const k = items.findIndex((x, j) => j > i && !done.has(x.id)); i = k >= 0 ? k : items.findIndex(x => !done.has(x.id)); if (i < 0) i = 0; lastBlob = null; render(); }
   if (a === "play") { const v = lastBlob || (await DB.get(items[i].id) || {}).blob; if (v) new Audio(URL.createObjectURL(v)).play(); else alert("Эта реплика записана на другом устройстве"); }
 }
 
-let wake = null, meterRaf = 0;
-async function record() {
-  try {
-    if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1 } });
-  } catch (e) { alert("Нет доступа к микрофону. Разреши его в настройках браузера."); return; }
-  try { wake = await navigator.wakeLock.request("screen"); } catch (e) {}
-  chunks = []; rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 128000 } : {});
-  rec.ondataavailable = e => e.data.size && chunks.push(e.data);
-  rec.start(); t0 = Date.now(); render(); meter();
+/* ===== Микрофон, обработка, запись =====
+   Звук идёт: микрофон → усиление → (индикатор + запись). После «стоп» запись декодируется и обрабатывается
+   (фильтр гула 80 Гц → компрессор → гейт пауз → обрезка тишины → нормализация) и уходит на сервер как WAV.
+   Если браузер не смог декодировать запись — уходит как есть. */
+const CFG_DEF = { dev: "", devName: "", mode: "studio", ns: false, ec: false, agc: false, gain: 0, hp: true, comp: true, gate: false, trim: true, norm: true };
+let CFG = { ...CFG_DEF }; try { Object.assign(CFG, JSON.parse(localStorage.getItem("zapis_cfg") || "{}")); } catch (e) {}
+const saveCfg = () => { try { localStorage.setItem("zapis_cfg", JSON.stringify(CFG)); } catch (e) {} };
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const micName = () => (CFG.devName || "Микрофон").replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/i, "").slice(0, 28);
+const dB = v => Math.pow(10, v / 20);
+let ac = null, src = null, gainN = null, an = null, dest = null, wake = null, meterRaf = 0, meterOn = 0;
+
+async function getStream() {
+  if (stream) return stream;
+  const audio = { echoCancellation: CFG.ec, noiseSuppression: CFG.ns, autoGainControl: CFG.agc, channelCount: 1 };
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: CFG.dev ? { ...audio, deviceId: { exact: CFG.dev } } : audio }); }
+  catch (e) { if (!CFG.dev) throw e; CFG.dev = ""; CFG.devName = ""; saveCfg(); stream = await navigator.mediaDevices.getUserMedia({ audio }); }   // выбранный микрофон отключили — берём любой
+  const tr = stream.getAudioTracks()[0]; if (tr) { CFG.devName = tr.label || CFG.devName; saveCfg(); }
+  ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === "suspended") await ac.resume();
+  src = ac.createMediaStreamSource(stream); gainN = ac.createGain(); gainN.gain.value = dB(CFG.gain);
+  an = ac.createAnalyser(); an.fftSize = 2048; dest = ac.createMediaStreamDestination();
+  src.connect(gainN); gainN.connect(an); gainN.connect(dest);
+  return stream;
 }
-function meter() {
-  const ac = meter.ac || (meter.ac = new (window.AudioContext || window.webkitAudioContext)());
-  const an = meter.an || (meter.an = ac.createAnalyser()); if (!meter.src) { meter.src = ac.createMediaStreamSource(stream); meter.src.connect(an); }
-  const buf = new Float32Array(an.fftSize);
-  const tick = () => { if (!rec) return; an.getFloatTimeDomainData(buf); let p = 0; for (const v of buf) p = Math.max(p, Math.abs(v)); const m = $(".meter i"); if (m) { m.style.width = Math.min(100, p * 140) + "%"; m.style.background = p > 0.95 ? "#E5484D" : "#46B97A"; } meterRaf = requestAnimationFrame(tick); };
+function dropStream() { if (rec) return; if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; try { src && src.disconnect(); gainN && gainN.disconnect(); } catch (e) {} src = gainN = an = dest = null; }
+
+/* индикатор громкости: полоска во всех .meter; метки — −6 дБ (хорошо) и −1 дБ (перегруз) */
+function meterStart() {
+  meterOn++; if (meterOn > 1) return;
+  const buf = new Float32Array(2048); let hold = 0, holdT = 0;
+  const tick = () => {
+    if (!meterOn) return;
+    let p = 0; if (an) { an.getFloatTimeDomainData(buf); for (const v of buf) p = Math.max(p, Math.abs(v)); }
+    if (p >= hold || performance.now() - holdT > 900) { hold = p; holdT = performance.now(); }
+    const w = Math.min(100, Math.sqrt(p) * 100), col = hold > 0.89 ? "#E5484D" : hold > 0.5 ? "#F5C451" : "#46B97A";
+    document.querySelectorAll(".meter i").forEach(m => { m.style.width = w + "%"; m.style.background = col; });
+    meterRaf = requestAnimationFrame(tick);
+  };
   tick();
 }
-function stop() {
-  const r = rec, it = items[i]; rec = null; cancelAnimationFrame(meterRaf);
-  r.onstop = async () => {
-    const blob = new Blob(chunks, { type: r.mimeType || mime }); lastBlob = blob;
-    if (Date.now() - t0 < 600) { render(); return; }               // случайное касание — не сохраняем
-    await DB.put(it.id, { blob, sent: false, at: Date.now() }).catch(() => {});
-    upload(it.id, blob);
-    // сразу к следующей незаписанной: так быстрее, а к этой можно вернуться стрелкой
-    const k = items.findIndex((x, j) => j > i && !done.has(x.id) && x.id !== it.id);
-    if (k >= 0) { i = k; lastBlob = null; }
-    render();
+function meterStop() { meterOn = Math.max(0, meterOn - 1); if (!meterOn) { cancelAnimationFrame(meterRaf); document.querySelectorAll(".meter i").forEach(m => m.style.width = 0); } }
+
+function newRecorder() {
+  const r = new MediaRecorder(dest.stream, mime ? { mimeType: mime, audioBitsPerSecond: 160000 } : {}), parts = [];
+  r.ondataavailable = e => e.data.size && parts.push(e.data);
+  r.done = new Promise(ok => { r.onstop = () => ok(new Blob(parts, { type: r.mimeType || mime })); });
+  return r;
+}
+
+async function record() {
+  try { await getStream(); } catch (e) { alert("Нет доступа к микрофону. Разреши его в настройках браузера."); return; }
+  try { wake = await navigator.wakeLock.request("screen"); } catch (e) {}
+  rec = newRecorder(); rec.start(); t0 = Date.now(); render(); meterStart();
+}
+async function stop() {
+  const r = rec, it = items[i]; rec = null; meterStop();
+  if (wake) { wake.release().catch(() => {}); wake = null; }
+  r.stop(); const raw = await r.done;
+  if (Date.now() - t0 < 600) { render(); return; }               // случайное касание — не сохраняем
+  render(); const st = $(".state"); if (st) st.textContent = "Обрабатываю звук…";
+  const blob = await enhance(raw).catch(() => raw); lastBlob = blob;
+  await DB.put(it.id, { blob, raw, sent: false, at: Date.now() }).catch(() => {});
+  upload(it.id, blob);
+  // сразу к следующей незаписанной: так быстрее, а к этой можно вернуться стрелкой
+  const k = items.findIndex((x, j) => j > i && !done.has(x.id) && x.id !== it.id);
+  if (k >= 0) { i = k; lastBlob = null; }
+  render();
+}
+
+/* обработка записи → WAV 16 бит, 44,1 кГц, моно */
+async function enhance(blob) {
+  ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+  const ab = await blob.arrayBuffer();
+  const buf = await new Promise((ok, no) => { const p = ac.decodeAudioData(ab, ok, no); if (p && p.catch) p.catch(no); });
+  const sr = 44100, off = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, Math.ceil(buf.duration * sr), sr);
+  const s = off.createBufferSource(); s.buffer = buf; let node = s;
+  if (CFG.hp) { const f = off.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 80; f.Q.value = 0.7; node.connect(f); node = f; }
+  if (CFG.comp) { const c = off.createDynamicsCompressor(); c.threshold.value = -26; c.knee.value = 10; c.ratio.value = 3; c.attack.value = 0.004; c.release.value = 0.18; node.connect(c); node = c; }
+  node.connect(off.destination); s.start();
+  let x = (await off.startRendering()).getChannelData(0);
+  const fr = Math.round(sr * 0.01), nF = Math.floor(x.length / fr), rms = new Float32Array(nF);
+  for (let f = 0; f < nF; f++) { let a = 0; for (let k = f * fr; k < (f + 1) * fr; k++) a += x[k] * x[k]; rms[f] = Math.sqrt(a / fr); }
+  const sorted = Array.from(rms).sort((a, b) => a - b), floor = sorted[Math.floor(nF * 0.1)] || 0, loud = sorted[Math.floor(nF * 0.95)] || 0;
+  const thr = Math.max(floor * 2.5, loud * 0.06, 0.0008);           // порог «речь / фон»
+  if (CFG.gate && nF > 10) {                                          // фон в паузах тише на 18 дБ, переходы плавные
+    const g = new Float32Array(nF); let hold = 0;
+    for (let f = 0; f < nF; f++) { if (rms[f] > thr) hold = 12; g[f] = hold-- > 0 ? 1 : 0.125; }
+    let cur = g[0];
+    for (let f = 0; f < nF; f++) for (let k = f * fr; k < (f + 1) * fr; k++) { cur += (g[f] - cur) * (g[f] > cur ? 0.02 : 0.0015); x[k] *= cur; }
+  }
+  if (CFG.trim && nF > 10) {                                          // тишина по краям: оставляем 0,15 с
+    let a = 0, b = nF - 1; while (a < nF && rms[a] < thr) a++; while (b > a && rms[b] < thr) b--;
+    if (b > a) x = x.slice(Math.max(0, (a - 15) * fr), Math.min(x.length, (b + 16) * fr));
+    const fade = Math.min(x.length >> 2, Math.round(sr * 0.01)); for (let k = 0; k < fade; k++) { x[k] *= k / fade; x[x.length - 1 - k] *= k / fade; }
+  }
+  if (CFG.norm) {                                                     // громкость речи ≈ −18 дБ RMS, пики не выше −1 дБ
+    let a = 0, n = 0, pk = 0;
+    for (let f = 0; f < Math.floor(x.length / fr); f++) { let q = 0; for (let k = f * fr; k < (f + 1) * fr; k++) { q += x[k] * x[k]; pk = Math.max(pk, Math.abs(x[k])); } q = Math.sqrt(q / fr); if (q > thr) { a += q * q; n++; } }
+    const r = n ? Math.sqrt(a / n) : 0, g = r ? Math.min(dB(-18) / r, dB(-1) / (pk || 1)) : 1;
+    for (let k = 0; k < x.length; k++) x[k] *= g;
+  }
+  return wav(x, sr);
+}
+function wav(x, sr) {
+  const b = new ArrayBuffer(44 + x.length * 2), v = new DataView(b), w = (o, t) => { for (let k = 0; k < t.length; k++) v.setUint8(o + k, t.charCodeAt(k)); };
+  w(0, "RIFF"); v.setUint32(4, 36 + x.length * 2, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, x.length * 2, true);
+  for (let k = 0; k < x.length; k++) v.setInt16(44 + k * 2, Math.max(-1, Math.min(1, x[k])) * 0x7FFF, true);
+  return new Blob([b], { type: "audio/wav" });
+}
+
+/* ===== Окно «Микрофон и звук» ===== */
+const MODES = {
+  studio: { t: "Хороший микрофон", d: "Rode, Zoom, петличка. Браузер звук не трогает", ns: false, ec: false, agc: false },
+  phone: { t: "Телефон или ноутбук", d: "Встроенный микрофон. Браузер давит шум и эхо", ns: true, ec: true, agc: false } };
+let player = null;
+const playBlob = b => { if (player) player.pause(); player = new Audio(URL.createObjectURL(b)); player.play().catch(() => {}); };
+async function settings() {
+  if (document.querySelector(".set")) return;
+  let devs = [];
+  const box = document.createElement("div"); box.className = "set";
+  const draw = () => {
+    const tg = (k, t, d) => `<label class="tg"><input type="checkbox" data-k="${k}" ${CFG[k] ? "checked" : ""}><span>${t}<small>${d}</small></span></label>`;
+    box.innerHTML = `<div class="box">
+      <div class="hd"><span>Микрофон и звук</span><button class="x" data-x aria-label="Закрыть">✕</button></div>
+      <h4>Микрофон</h4>
+      <select data-dev>${devs.length ? devs.map(d => `<option value="${esc(d.deviceId)}" ${d.deviceId === CFG.dev || (!CFG.dev && d.deviceId === "default") ? "selected" : ""}>${esc(d.label || "Микрофон " + (devs.indexOf(d) + 1))}</option>`).join("") : `<option>${esc(micName())}</option>`}</select>
+      <p class="note">Подключил Zoom или USB-микрофон — он появится в списке. Не видно — нажми «Проверка» ниже и открой окно заново.</p>
+      <h4>Какой микрофон</h4>
+      <div class="modes">${Object.entries(MODES).map(([k, m]) => `<button data-m="${k}" class="${CFG.mode === k ? "on" : ""}">${m.t}<small>${m.d}</small></button>`).join("")}</div>
+      <h4>Громкость входа</h4>
+      <div class="rng"><input type="range" min="-12" max="24" step="1" value="${CFG.gain}" data-gain><output>${CFG.gain > 0 ? "+" : ""}${CFG.gain} дБ</output></div>
+      <div class="meter"><b style="left:71%"></b><b style="left:94%"></b><i></i></div>
+      <p class="mhint">Скажи фразу обычным голосом: полоска должна доходить до жёлтого (первая метка), но не до красного. Красное — перегруз, звук хрипит: убавь.</p>
+      <h4>Обработка записи</h4>
+      ${tg("hp", "Убрать гул", "Срезает низкий гул: холодильник, кондиционер, стук по столу (фильтр 80 Гц)")}
+      ${tg("comp", "Выровнять голос", "Тихие слова громче, громкие тише — звучит ровно, как на радио (компрессор)")}
+      ${tg("norm", "Одинаковая громкость", "Все записи на одном уровне громкости")}
+      ${tg("trim", "Обрезать тишину", "Убирает паузы в начале и в конце, оставляет 0,15 с")}
+      ${tg("gate", "Приглушить фон в паузах", "Между словами фон тише. Включай, если в комнате шумно")}
+      <h4>Браузер (для встроенного микрофона)</h4>
+      ${tg("ns", "Шумоподавление", "Хорошо для телефона, портит звук хорошего микрофона")}
+      ${tg("ec", "Эхоподавление", "Нужно, только если рядом что-то играет из колонок")}
+      ${tg("agc", "Автоусиление", "Само крутит громкость — голос «плавает». Лучше выключить")}
+      <h4>Проверка</h4>
+      <div class="test"><button class="small" data-t="rec">● Записать 4 секунды</button><button class="small" data-t="raw" disabled>▶ Как есть</button><button class="small" data-t="pro" disabled>▶ С обработкой</button></div>
+      <p class="note" data-tn>Запиши фразу и сравни звук до и после обработки.</p>
+    </div>`;
   };
-  r.stop(); if (wake) { wake.release().catch(() => {}); wake = null; }
+  const listDevs = async () => { try { devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "audioinput"); } catch (e) { devs = []; } };
+  const restart = async () => { dropStream(); try { await getStream(); } catch (e) {} await listDevs(); draw(); };
+  let test = null;
+  box.addEventListener("click", async e => {
+    const t = e.target.closest("button"); if (e.target === box || (t && t.dataset.x !== undefined)) { close(); return; }
+    if (!t) return;
+    if (t.dataset.m) { const m = MODES[t.dataset.m]; Object.assign(CFG, { mode: t.dataset.m, ns: m.ns, ec: m.ec, agc: m.agc }); saveCfg(); await restart(); }
+    if (t.dataset.t === "rec" && !test) {
+      try { await getStream(); } catch (e) { alert("Нет доступа к микрофону. Разреши его в настройках браузера."); return; }
+      await listDevs(); const r = newRecorder(); r.start(); test = {};
+      t.textContent = "● Идёт запись…"; let left = 4; const nt = box.querySelector("[data-tn]");
+      const iv = setInterval(() => { left--; if (nt) nt.textContent = left > 0 ? `Говори… ${left}` : "Обрабатываю…"; }, 1000);
+      setTimeout(async () => { clearInterval(iv); r.stop(); test.raw = await r.done; test.pro = await enhance(test.raw).catch(() => null);
+        draw(); box.querySelector('[data-t="raw"]').disabled = false; box.querySelector('[data-t="pro"]').disabled = !test.pro;
+        box.querySelector("[data-tn]").textContent = test.pro ? "Послушай оба варианта. В игру уходит вариант с обработкой." : "Этот браузер не смог обработать звук — запись уйдёт как есть.";
+        const tst = test; test = null; box._test = tst; }, 4000);
+    }
+    if (t.dataset.t === "raw" && box._test) playBlob(box._test.raw);
+    if (t.dataset.t === "pro" && box._test && box._test.pro) playBlob(box._test.pro);
+  });
+  box.addEventListener("change", async e => {
+    const el = e.target;
+    if (el.dataset.dev !== undefined) { const d = devs.find(x => x.deviceId === el.value); CFG.dev = el.value === "default" ? "" : el.value; CFG.devName = d ? d.label : ""; saveCfg(); await restart(); }
+    if (el.dataset.k) { CFG[el.dataset.k] = el.checked; saveCfg(); if (["ns", "ec", "agc"].includes(el.dataset.k)) await restart(); }
+  });
+  box.addEventListener("input", e => { if (e.target.dataset.gain === undefined) return; CFG.gain = +e.target.value; saveCfg(); if (gainN) gainN.gain.value = dB(CFG.gain); e.target.nextElementSibling.textContent = (CFG.gain > 0 ? "+" : "") + CFG.gain + " дБ"; });
+  function close() { meterStop(); box.remove(); if (player) player.pause(); render(); }
+  await listDevs(); draw(); document.body.appendChild(box);
+  try { await getStream(); await listDevs(); draw(); } catch (e) {}
+  meterStart();
 }
 start();
 </script>

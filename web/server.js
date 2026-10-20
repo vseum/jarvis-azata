@@ -351,9 +351,9 @@ async function handle(req, res) {
     }
     const m = p.match(/^\/igra\/api\/rec\/([\w-]{1,48})$/);
     if (m && req.method === 'POST') {
-      const type = String(req.headers['content-type'] || ''), ext = /mp4|aac|m4a/.test(type) ? 'm4a' : /ogg/.test(type) ? 'ogg' : 'webm';
+      const type = String(req.headers['content-type'] || ''), ext = /wav/.test(type) ? 'wav' : /mp4|aac|m4a/.test(type) ? 'm4a' : /ogg/.test(type) ? 'ogg' : 'webm';   // wav — суфлёр уже обработал звук
       const body = await new Promise((ok, no) => { const parts = []; let n = 0;
-        req.on('data', c => { n += c.length; if (n > 4194304) { no(new Error('too large')); req.destroy(); } else parts.push(c); });
+        req.on('data', c => { n += c.length; if (n > 8388608) { no(new Error('too large')); req.destroy(); } else parts.push(c); });
         req.on('end', () => ok(Buffer.concat(parts))); req.on('error', no); });
       if (body.length < 1000) return send(res, 400, { error: 'пустая запись' });
       // по одной записи за раз: параллельные записи в одну ветку GitHub конфликтуют
@@ -363,6 +363,10 @@ async function handle(req, res) {
         const put = await gh('PUT', `/repos/${GH_REPO}/contents/${fp}`, { message: 'суфлёр: ' + m[1], branch: GH_BRANCH,
           content: body.toString('base64'), ...(cur.status === 200 ? { sha: cur.json.sha } : {}) });
         if (put.status !== 200 && put.status !== 201) throw new Error('HTTP ' + put.status);
+        for (const e of ['wav', 'm4a', 'ogg', 'webm']) if (e !== ext) {   // перезапись в другом формате — старый файл убираем, чтобы не было двух вариантов
+          const old = await gh('GET', `/repos/${GH_REPO}/contents/igra/rec/${m[1]}.${e}?ref=${GH_BRANCH}`);
+          if (old.status === 200) await gh('DELETE', `/repos/${GH_REPO}/contents/igra/rec/${m[1]}.${e}`, { message: 'суфлёр: замена ' + m[1], branch: GH_BRANCH, sha: old.json.sha });
+        }
       });
       try { await recQueue; return send(res, 200, { ok: true }); }
       catch (e) { recQueue = Promise.resolve(); console.error('rec upload:', e.message); return send(res, 502, { error: 'не сохранилось, повторите' }); }

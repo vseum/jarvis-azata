@@ -22,11 +22,14 @@
   .lists { display: flex; gap: 6px; margin-bottom: 10px; }
   .lists button { flex: 1; padding: 8px 6px; border-radius: 12px; background: rgba(255,255,255,.06); color: var(--muted); font-weight: 800; font-size: 13.5px; }
   .lists button.on { background: rgba(245,196,81,.18); color: var(--gold); }
-  .text.ar { font-family: "Amiri", serif; font-size: clamp(56px, 18vw, 96px); line-height: 1.5; direction: rtl; }
+  .text.ar { font-family: "Amiri", serif; font-size: clamp(44px, 14vw, 84px); line-height: 1.35; direction: rtl; }
+  .read { display: block; margin-top: 4px; font-family: "Nunito", sans-serif; font-size: 22px; font-weight: 800; color: var(--ink); direction: ltr; line-height: 1.3; }
+  .read b { color: var(--gold); }
   .hint { display: block; margin-top: 6px; font-family: "Nunito", sans-serif; font-size: 16px; font-weight: 700; color: var(--muted); direction: ltr; }
   .text { margin: auto; font-size: clamp(22px, 6.2vw, 30px); line-height: 1.38; font-weight: 800; }   /* margin:auto — по центру, но длинный текст прокручивается с начала */
   @media (max-height: 700px) {
     .text { font-size: 21px; } .card { padding: 14px; margin: 6px 0 10px; } .tips { display: none; }
+    .text.ar { font-size: 44px; line-height: 1.25; } .read { font-size: 18px; } .hint { font-size: 13.5px; margin-top: 3px; }
     .rec { width: 78px; height: 78px; } .nav { width: 48px; height: 48px; } .meter { margin-top: 10px; } .row2 { margin-top: 10px; } .state { margin-bottom: 6px; }
   }
   .card.done { box-shadow: inset 0 0 0 2px rgba(70,185,122,.55); }
@@ -140,7 +143,13 @@ function render() {
     <div class="row2"><button class="small" data-a="play" ${lastBlob || done.has(it.id) ? "" : "disabled"}>▶ Послушать</button><button class="small" data-a="skip">К незаписанной</button></div>
     <p class="tips">Читай тепло и неспешно, как своим детям. Пауза полсекунды до и после фразы — лишнее обрежется. Ошибся — просто перезапиши. Сейчас пишет: ${esc(micName())} — сменить и настроить звук: 🎙 сверху.</p>`;
   const tx = app.querySelector(".text"); tx.textContent = it.t;
-  if (list === "ar") { tx.classList.add("ar"); el2(tx, it.hint ? `буква ${it.hint} · ${it.g}` : it.g); }
+  if (list === "ar") {
+    tx.classList.add("ar");
+    // шрифт мусхафа рисует одиночную ي без точек (так в Коране) — слог с Йа показываем шрифтом с точками, чтобы не спутать с ى
+    if (it.t.replace(/[^\u0620-\u064A]/g, "").length <= 3 && /ي[\u064B-\u0652]*$/.test(it.t)) tx.style.fontFamily = '"Amiri Letters", "Amiri", serif';
+    if (it.read) { const r = document.createElement("span"); r.className = "read"; r.innerHTML = "Читай: «<b></b>»"; r.querySelector("b").textContent = it.read; tx.appendChild(r); }
+    el2(tx, it.tip || it.g);
+  }
   app.querySelectorAll(".lists button").forEach(b => b.onclick = () => { if (rec) return; try { localStorage.setItem("zapis_list", b.dataset.l); } catch (e) {} location.reload(); });
   app.querySelectorAll("[data-a]").forEach(b => b.onclick = () => act(b.dataset.a));
   try { localStorage.setItem("zapis_i_" + list, i); } catch (e) {}

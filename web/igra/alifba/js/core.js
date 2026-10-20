@@ -52,6 +52,18 @@ const AR = {
 };
 AR.load();
 
+/* Буква Йа с точками. Шрифт мусхафа рисует одиночную и конечную ي без точек (так в Коране), в азбуке это путает.
+   Короткие надписи (буква, слог) с такой Йа переводим на Amiri; слова и аяты остаются шрифтом мусхафа */
+const YA_ISO = /ي[\u064B-\u0652\u0670]*(?![\u064B-\u0652\u0670]*[\u0620-\u064A\u200D\u0640])/;
+function yaFix(root) {
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) {
+    const t = n.nodeValue, base = t.replace(/[^\u0620-\u064A]/g, "");
+    if (base.length && base.length <= 3 && YA_ISO.test(t) && n.parentElement) n.parentElement.style.fontFamily = '"Amiri Letters", "Amiri", serif';
+  }
+}
+new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(nd => nd.nodeType === 1 ? yaFix(nd) : nd.nodeType === 3 && nd.parentElement && yaFix(nd.parentElement)))).observe(document.body, { childList: true, subtree: true });
+
 /* Реплика рассказчика, а за ней арабский звук (дважды — лучше запоминается). Кнопка «Дальше», автонажатие как у say */
 async function sayAr(id, arId, opt = {}) {
   showCap(id, opt.note, opt.named); capLine.ar = arId;
@@ -153,13 +165,14 @@ function alIdle(ms, fn) {
 /* Обвести букву: палец «прокрашивает» её золотом; готово на 70%. host — элемент-холст */
 function alTrace(host, text, idleMs = 18000) {
   return new Promise(async res => {
-    try { await Promise.race([document.fonts.load('700 120px "Amiri"', text), sleep(2500)]); } catch (e) {}
+    try { await Promise.race([Promise.all([document.fonts.load('700 120px "Amiri"', text), document.fonts.load('700 120px "Amiri Letters"', text)]), sleep(2500)]); } catch (e) {}
     const w = host.clientWidth, h = host.clientHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
     const mk = () => { const c = document.createElement("canvas"); c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); const x = c.getContext("2d"); x.scale(dpr, dpr); return [c, x]; };
     const [cv, ctx] = mk(); cv.style.cssText = `width:${w}px;height:${h}px;display:block;touch-action:none`; host.appendChild(cv);
     const [gold, gx] = mk();
     let fs = h * 0.72;
-    const setF = x => { x.font = `700 ${fs}px Amiri, "Times New Roman", serif`; x.direction = "rtl"; x.textAlign = "center"; x.textBaseline = "alphabetic"; };
+    const fam = YA_ISO.test(text) ? '"Amiri Letters"' : "Amiri";
+    const setF = x => { x.font = `700 ${fs}px ${fam}, "Times New Roman", serif`; x.direction = "rtl"; x.textAlign = "center"; x.textBaseline = "alphabetic"; };
     setF(gx); const tw = gx.measureText(text).width; if (tw > w * 0.8) { fs *= w * 0.8 / tw; setF(gx); }
     const m = gx.measureText(text), asc = m.actualBoundingBoxAscent || fs * 0.7, desc = m.actualBoundingBoxDescent || fs * 0.25;
     const by = h / 2 + (asc - desc) / 2;

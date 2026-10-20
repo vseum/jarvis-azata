@@ -287,6 +287,8 @@ function readBody(req) {
 
 // подписка игры (ЮKassa): эндпоинты /igra/api/pay/*, /igra/api/me, /igra/api/autopay/* — см. igra-pay.js
 const igraPay = require('./igra-pay')({ send });
+const igraVoice = require('./igra-voice')({ gh, GH_REPO, GH_BRANCH, GH_TOKEN });   // записи суфлёра → в игре сразу
+const recJob = fn => { recQueue = recQueue.catch(() => {}).then(fn); return recQueue; };
 
 const server = http.createServer((req, res) => {
   handle(req, res).catch(e => {
@@ -346,6 +348,7 @@ async function handle(req, res) {
     if (require('crypto').createHash('sha256').update(tok).digest('hex') !== REC_HASH) return send(res, 401, { error: 'нужна ссылка суфлёра' });
     if (!GH_TOKEN) return send(res, 503, { error: 'нет GITHUB_TOKEN' });
     if (p === '/igra/api/rec/list' && req.method === 'GET') {
+      const known = igraVoice.recorded(); if (known) return send(res, 200, { done: known });
       const r = await gh('GET', `/repos/${GH_REPO}/contents/igra/rec?ref=${GH_BRANCH}`);
       return send(res, 200, { done: r.status === 200 ? r.json.map(f => f.name.replace(/\.\w+$/, '')) : [] });
     }
@@ -357,7 +360,7 @@ async function handle(req, res) {
         req.on('end', () => ok(Buffer.concat(parts))); req.on('error', no); });
       if (body.length < 1000) return send(res, 400, { error: 'пустая запись' });
       // по одной записи за раз: параллельные записи в одну ветку GitHub конфликтуют
-      recQueue = recQueue.then(async () => {
+      const job = recJob(async () => {
         const fp = `igra/rec/${m[1]}.${ext}`;
         const cur = await gh('GET', `/repos/${GH_REPO}/contents/${fp}?ref=${GH_BRANCH}`);
         const put = await gh('PUT', `/repos/${GH_REPO}/contents/${fp}`, { message: 'суфлёр: ' + m[1], branch: GH_BRANCH,
@@ -367,20 +370,22 @@ async function handle(req, res) {
           const old = await gh('GET', `/repos/${GH_REPO}/contents/igra/rec/${m[1]}.${e}?ref=${GH_BRANCH}`);
           if (old.status === 200) await gh('DELETE', `/repos/${GH_REPO}/contents/igra/rec/${m[1]}.${e}`, { message: 'суфлёр: замена ' + m[1], branch: GH_BRANCH, sha: old.json.sha });
         }
+        await igraVoice.publish(m[1], ext, body).catch(e => console.error('voice', m[1], e.message));   // mp3 — и запись уже звучит в игре
       });
-      try { await recQueue; return send(res, 200, { ok: true }); }
-      catch (e) { recQueue = Promise.resolve(); console.error('rec upload:', e.message); return send(res, 502, { error: 'не сохранилось, повторите' }); }
+      try { await job; return send(res, 200, { ok: true }); }
+      catch (e) { console.error('rec upload:', e.message); return send(res, 502, { error: 'не сохранилось, повторите' }); }
     }
     return send(res, 404, { error: 'not found' });
   }
   if (p.startsWith('/igra/api/') && await igraPay.handle(req, res, p, url)) return;
+  if (p.startsWith('/igra/voice/') && await igraVoice.serve(req, res, p)) return;
   const ig = p.match(/^\/igra\/((?:[\w-]+\/)*[\w.-]*)$/);
   if (ig && req.method === 'GET') {
     let rel = ig[1] || 'index.html'; if (rel.endsWith('/')) rel += 'index.html';   // /arabic/ → igra/alifba/index.html
     const type = IGRA_TYPES[path.extname(rel)];
     if (!type) return send(res, 404, 'Not found', 'text/plain; charset=utf-8');
     if (rel.endsWith('.mp3')) {   // озвучка: много файлов, в память не кладём, браузер кэширует на неделю
-      try { const buf = fs.readFileSync(path.join(__dirname, 'igra', rel)); res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'public, max-age=604800' }); return res.end(buf); }
+      try { const buf = fs.readFileSync(path.join(__dirname, 'igra', rel)); res.writeHead(200, { 'Content-Type': type, 'Cache-Control': rel.startsWith('voice/ar/') ? 'public, max-age=3600' : 'public, max-age=604800' }); return res.end(buf); }   // арабские звуки сменятся живыми записями — кэш короткий
       catch (e) { return send(res, 404, 'Not found', 'text/plain; charset=utf-8'); }
     }
     let f = igraFiles.get(rel);
@@ -518,6 +523,7 @@ async function start() {
   }
   if (!KEY) console.warn('TRACKER_KEY not set: anyone with the address can read and write');
   server.listen(PORT, '0.0.0.0', () => console.log('listening on ' + PORT));
+  igraVoice.init(recJob);
   // при деплое старый контейнер может досохранить последние отметки уже после нашего старта — перечитываем
   if (GH_TOKEN) for (const t of [30000, 120000]) setTimeout(() => { syncing = syncing.then(() => readRemote()).catch(e => console.error('re-read failed:', e.message)); }, t).unref();
 }

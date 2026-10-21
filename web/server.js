@@ -329,6 +329,9 @@ async function handle(req, res) {
   // «Алиф-Ба» (арабские буквы) — своя ссылка рахмат.рус/arabic, файлы лежат рядом с первой игрой: igra/alifba/
   if (p === '/arabic') { res.writeHead(301, { Location: '/arabic/' }); return res.end(); }
   if (p.startsWith('/arabic/')) p = '/igra/alifba/' + p.slice('/arabic/'.length);
+  // «Фонарик и аят» — демо игры на заучивание суры: рахмат.рус/fonar → igra/fonar/
+  if (p === '/fonar') { res.writeHead(301, { Location: '/fonar/' }); return res.end(); }
+  if (p.startsWith('/fonar/')) p = '/igra/fonar/' + p.slice('/fonar/'.length);
   if (p === '/igra/api/name' && req.method === 'POST') {
     const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim(), now = Date.now();
     const h = igraHits.get(ip), fresh = h && now - h[1] < 3600000;

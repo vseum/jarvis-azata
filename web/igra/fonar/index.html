@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0B1630">
+<title>Фонарик и аят</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="/igra/fonts/fonts.css">
+<style>
+/* Ночная пустыня одним экраном: холст во всю площадь, поверх — тонкий интерфейс. Единый тёмный мир (без светлой темы) */
+:root {
+  --night: #0B1630; --dusk: #1B2D57; --ember: #F2B65A; --glow: #FFE3A3; --ink: #F6EEDC; --muted: rgba(246, 238, 220, .62);
+  --panel: rgba(9, 18, 40, .55); --line: rgba(255, 227, 163, .28);
+  --ar: "Amiri", "Geeza Pro", "Times New Roman", serif; --ui: "Nunito", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { margin: 0; background: var(--night); color: var(--ink); font-family: var(--ui); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+[hidden] { display: none !important; }
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.hud { position: fixed; left: 0; right: 0; top: 0; padding: calc(env(safe-area-inset-top, 0px) + 12px) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+.ayah { direction: rtl; font-family: var(--ar); font-size: clamp(26px, 6.4vw, 40px); line-height: 1.5; padding: 2px 18px 6px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; gap: .35em; max-width: 100%; flex-wrap: wrap; justify-content: center; }
+.ayah span { color: rgba(246, 238, 220, .28); transition: color .35s, text-shadow .35s; }
+.ayah span.on { color: var(--glow); text-shadow: 0 0 14px rgba(255, 210, 120, .75); }
+.ayah span.next { color: rgba(246, 238, 220, .55); }
+.meta { font-size: 13px; font-weight: 800; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; }
+.lights { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); display: flex; gap: 6px; pointer-events: none; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 10px var(--ember); transition: opacity .3s; }
+.lights i.off { opacity: .18; box-shadow: none; }
+.screen { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px)); background: radial-gradient(ellipse at 50% 60%, rgba(11, 22, 48, .2), rgba(11, 22, 48, .78)); text-align: center; }
+.card { display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 420px; }
+.card h1 { margin: 0; font-size: clamp(34px, 9vw, 52px); line-height: 1.05; font-weight: 900; text-wrap: balance; color: var(--ink); }
+.card h1 b { color: var(--ember); }
+.card p { margin: 0; font-size: 17px; line-height: 1.45; color: var(--muted); text-wrap: balance; }
+.card .ar { font-family: var(--ar); font-size: 30px; color: var(--glow); direction: rtl; }
+.btn { font: 900 20px var(--ui); color: #2A1A05; background: linear-gradient(#FFD98A, #F2B65A); border: 0; border-radius: 999px; padding: 16px 40px; box-shadow: 0 6px 0 #B9802A, 0 12px 30px rgba(242, 182, 90, .35); cursor: pointer; }
+.btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #B9802A; }
+.btn:focus-visible { outline: 3px solid var(--glow); outline-offset: 4px; }
+.hint { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); text-align: center; font-size: 15px; font-weight: 800; color: var(--muted); pointer-events: none; transition: opacity .6s; }
+</style>
+
+</head>
+<body>
+<canvas id="game" aria-label="Фонарик летит над ночной пустыней и собирает слова аята"></canvas>
+<div class="hud"><div class="meta" id="meta">Сура аль-Ихлас · аят 1</div><div class="ayah" id="ayah"></div></div>
+<div class="lights" id="lights"><i></i><i></i><i></i></div>
+<div class="hint" id="hint">Держи палец — фонарик поднимается. Собирай слова по порядку, справа налево</div>
+<div class="screen" id="start">
+  <div class="card">
+    <div class="ar">قُلْ هُوَ اللَّهُ أَحَدٌ</div>
+    <h1>Фонарик <b>и аят</b></h1>
+    <p>Лети над ночной пустыней и собирай слова суры аль-Ихлас по порядку.</p>
+    <button class="btn" id="go">Играть</button>
+  </div>
+</div>
+<div class="screen" id="done" hidden>
+  <div class="card">
+    <div class="ar">سُبْحَانَ اللَّهِ</div>
+    <h1>Сура <b>собрана!</b></h1>
+    <p>Все четыре аята суры аль-Ихлас. Скажи их вслух ещё раз.</p>
+    <button class="btn" id="again">Ещё раз</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* Демо динамики: фонарик (без лица — у нас нет живых существ и «лиц» у предметов), параллакс пустыни, свет и частицы.
+   Всё рисуется кодом на холсте; звук — короткие синтезированные звоночки, без музыки. */
+const AYAT = [
+  ["قُلْ", "هُوَ", "اللَّهُ", "أَحَدٌ"],
+  ["اللَّهُ", "الصَّمَدُ"],
+  ["لَمْ", "يَلِدْ", "وَلَمْ", "يُولَدْ"],
+  ["وَلَمْ", "يَكُن", "لَّهُ", "كُفُوًا", "أَحَدٌ"],
+];
+const cv = document.getElementById("game"), cx = cv.getContext("2d");
+const $ = id => document.getElementById(id);
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let W = 0, H = 0, DPR = 1;
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+/* ---------- звук: тихие звоночки на Web Audio ---------- */
+let ac = null;
+function chime(f = 880, d = .5, g = .12) {
+  if (!ac) return;
+  const t = ac.currentTime, o = ac.createOscillator(), o2 = ac.createOscillator(), v = ac.createGain();
+  o.type = "sine"; o2.type = "triangle"; o.frequency.value = f; o2.frequency.value = f * 2.01;
+  v.gain.setValueAtTime(0, t); v.gain.linearRampToValueAtTime(g, t + .01); v.gain.exponentialRampToValueAtTime(.0001, t + d);
+  o.connect(v); o2.connect(v); v.connect(ac.destination); o.start(t); o2.start(t); o.stop(t + d); o2.stop(t + d);
+}
+function thud() { if (!ac) return; const t = ac.currentTime, o = ac.createOscillator(), v = ac.createGain(); o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(60, t + .2); v.gain.setValueAtTime(.18, t); v.gain.exponentialRampToValueAtTime(.0001, t + .25); o.connect(v); v.connect(ac.destination); o.start(t); o.stop(t + .26); }
+
+/* ---------- декорации: заранее нарисованные слои для параллакса ---------- */
+let stars = [], layers = [], dust = [];
+function makeDunes(color, base, amp, seed, mosque) {
+  // холст — только полоса, где есть рисунок (от верхушек минаретов/дюн до низа экрана): меньше пикселей на кадр
+  const top = Math.max(0, Math.floor(base - amp * 1.6 - (mosque ? Math.min(W, H) * .0025 * 180 : 0)));
+  const w = Math.ceil(W * 2), h = H - top, c = document.createElement("canvas"); c.width = w * DPR; c.height = h * DPR;
+  const g = c.getContext("2d"); g.scale(DPR, DPR); g.translate(0, -top);
+  if (mosque) drawMosques(g, w, base, mosque);
+  g.fillStyle = color; g.beginPath(); g.moveTo(0, H);
+  for (let x = 0; x <= w; x += 8) {
+    const k = x / w * Math.PI * 2;   // ровно два периода по ширине — слой бесшовно повторяется
+    g.lineTo(x, base - Math.sin(k * 2 + seed) * amp - Math.sin(k * 5 + seed * 2) * amp * .35 - Math.sin(k * 9 + seed) * amp * .12);
+  }
+  g.lineTo(w, H); g.closePath(); g.fill();
+  return { c, w, top, h };
+}
+function drawMosques(g, w, base, col) {
+  for (let i = 0; i < 2; i++) {
+    const x0 = w * (.22 + i * .5), s = Math.min(W, H) * .0025;
+    g.fillStyle = col;
+    g.beginPath(); g.ellipse(x0, base - 70 * s, 34 * s, 38 * s, 0, Math.PI, 0); g.fill();             // купол
+    g.fillRect(x0 - 46 * s, base - 72 * s, 92 * s, 80 * s);                                            // зал
+    for (const dx of [-62, 62]) {                                                                       // минареты
+      g.fillRect(x0 + dx * s - 5 * s, base - 150 * s, 10 * s, 160 * s);
+      g.beginPath(); g.moveTo(x0 + dx * s - 7 * s, base - 150 * s); g.lineTo(x0 + dx * s, base - 175 * s); g.lineTo(x0 + dx * s + 7 * s, base - 150 * s); g.fill();
+    }
+    g.beginPath(); g.moveTo(x0, base - 108 * s); g.lineTo(x0, base - 122 * s); g.lineWidth = 2 * s; g.strokeStyle = col; g.stroke();
+    g.fillStyle = "rgba(255, 214, 140, .85)";                                                           // тёплые окна
+    for (let k = -2; k <= 2; k++) { g.beginPath(); g.roundRect(x0 + k * 16 * s - 4 * s, base - 46 * s, 8 * s, 14 * s, [4 * s, 4 * s, 0, 0]); g.fill(); }
+  }
+}
+let skyC = null, GLOW = {};
+function glowSprite(rgb) {   // мягкое свечение один раз в маленький холст; дальше только drawImage
+  const n = 128, c = document.createElement("canvas"); c.width = c.height = n; const g = c.getContext("2d");
+  const gr = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2); gr.addColorStop(0, `rgba(${rgb},1)`); gr.addColorStop(.35, `rgba(${rgb},.35)`); gr.addColorStop(1, `rgba(${rgb},0)`);
+  g.fillStyle = gr; g.fillRect(0, 0, n, n); return c;
+}
+function buildSky() {
+  const c = document.createElement("canvas"); c.width = W * DPR; c.height = H * DPR; const g = c.getContext("2d"); g.scale(DPR, DPR);
+  const gr = g.createLinearGradient(0, 0, 0, H);
+  gr.addColorStop(0, "#081129"); gr.addColorStop(.55, "#1B2D57"); gr.addColorStop(.8, "#5A3E5E"); gr.addColorStop(1, "#C27A4E");
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  const mx = W * .8, my = H * .17, mr = Math.min(W, H) * .055;
+  const halo = g.createRadialGradient(mx, my, mr * .5, mx, my, mr * 4); halo.addColorStop(0, "rgba(255,226,160,.35)"); halo.addColorStop(1, "rgba(255,226,160,0)");
+  g.fillStyle = halo; g.fillRect(mx - mr * 4, my - mr * 4, mr * 8, mr * 8);
+  const m = document.createElement("canvas"); m.width = m.height = Math.ceil(mr * 2 + 4); const mg = m.getContext("2d");   // полумесяц: диск минус сдвинутый диск
+  mg.fillStyle = "#FFE29A"; mg.beginPath(); mg.arc(mr + 2, mr + 2, mr, 0, 6.28); mg.fill();
+  mg.globalCompositeOperation = "destination-out"; mg.beginPath(); mg.arc(mr + 2 + mr * .45, mr + 2 - mr * .22, mr * .88, 0, 6.28); mg.fill();
+  g.drawImage(m, mx - mr - 2, my - mr - 2);
+  return c;
+}
+function buildScene() {
+  skyC = buildSky(); GLOW = { warm: glowSprite("255,214,140"), cool: glowSprite("170,190,255") };
+  stars = Array.from({ length: reduce ? 60 : 140 }, () => ({ x: Math.random(), y: Math.random() * .62, r: rnd(.4, 1.6), p: rnd(0, 6.28), s: rnd(.02, .08) }));
+  dust = Array.from({ length: reduce ? 10 : 34 }, () => ({ x: rnd(0, W), y: rnd(H * .3, H), r: rnd(.6, 1.8), v: rnd(10, 30), a: rnd(.15, .45) }));
+  layers = [
+    { ...makeDunes("#20315C", H * .78, H * .05, 1.3, "#1A2850"), speed: .12 },
+    { ...makeDunes("#2B2F55", H * .86, H * .045, 2.7), speed: .3 },
+    { ...makeDunes("#3A2E4B", H * .94, H * .04, 4.1), speed: .6 },
+  ];
+}
+
+/* ---------- игра ---------- */
+const S = { run: false, ay: 0, got: 0, lives: 3, t: 0, dist: 0, speed: 0, items: [], rocks: [], sparks: [], trail: [], shake: 0, flash: 0, nextItem: 0, nextRock: 0, done: false };
+const L = { x: 0, y: 0, vy: 0, hold: false, flick: 0, hurt: 0, k: 1 };   // k — масштаб фонарика под экран
+
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR; cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  L.x = W * .28; L.k = Math.max(1, Math.min(1.9, Math.min(W, H) / 330)); if (!S.run) L.y = H * .5;
+  buildScene();
+}
+function renderAyah() {
+  const ws = AYAT[S.ay];
+  $("ayah").innerHTML = ws.map((w, i) => `<span class="${i < S.got ? "on" : i === S.got ? "next" : ""}">${w}</span>`).join("");
+  $("meta").textContent = `Сура аль-Ихлас · аят ${S.ay + 1} из 4`;
+  [...$("lights").children].forEach((e, i) => e.classList.toggle("off", i >= S.lives));
+}
+function reset() {
+  Object.assign(S, { run: true, ay: 0, got: 0, lives: 3, t: 0, dist: 0, speed: W * .22, items: [], rocks: [], sparks: [], trail: [], shake: 0, flash: 0, nextItem: .6, nextRock: 2.2, done: false });
+  Object.assign(L, { y: H * .5, vy: 0, hold: false, hurt: 0 });
+  renderAyah(); $("hint").style.opacity = 1; setTimeout(() => $("hint").style.opacity = 0, 4500);
+}
+
+/* слова появляются по одному; среди них — нужное, остальные из этого же аята (ошибся — слово отлетает) */
+function spawnItem() {
+  const ws = AYAT[S.ay], want = Math.random() < .62;
+  const word = want ? ws[S.got] : ws[Math.floor(Math.random() * ws.length)];
+  S.items.push({ word, x: W + 60, y: rnd(H * .3, H * .74), r: Math.max(34, Math.min(W, H) * .07), ph: rnd(0, 6.28), alive: true, bounce: 0 });
+}
+function spawnRock() {   // каменные арки: проход между верхней и нижней скалой
+  const gap = Math.max(H * .34, 200), cy = rnd(H * .32 + gap / 2, H * .82 - gap / 2), w = Math.max(54, W * .07);
+  S.rocks.push({ x: W + w, w, top: cy - gap / 2, bot: cy + gap / 2, hit: false });
+}
+function burst(x, y, n, col, sp = 140) {
+  for (let i = 0; i < (reduce ? n / 3 : n); i++) { const a = rnd(0, 6.28), v = rnd(sp * .3, sp); S.sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rnd(.5, 1.1), max: 1.1, r: rnd(1.2, 3), col }); }
+}
+
+function step(dt) {
+  S.t += dt; L.flick += dt;
+  if (S.run) {
+    S.speed = Math.min(W * .34, S.speed + dt * W * .006); S.dist += S.speed * dt;
+    L.vy += (L.hold ? -H * 1.5 : H * .95) * dt; L.vy = Math.max(-H * .55, Math.min(H * .6, L.vy)); L.y += L.vy * dt;
+    if (L.y < H * .2) { L.y = H * .2; L.vy = 0; } if (L.y > H * .9) { L.y = H * .9; L.vy *= -.3; }
+    S.nextItem -= dt; if (S.nextItem <= 0) { spawnItem(); S.nextItem = rnd(1.1, 1.7); }
+    S.nextRock -= dt; if (S.nextRock <= 0) { spawnRock(); S.nextRock = rnd(2.4, 3.4); }
+    for (const it of S.items) {
+      it.x -= S.speed * dt; it.ph += dt * 2;
+      if (it.bounce) { it.x += it.bounce * dt; it.bounce *= .92; }
+      if (it.alive && Math.hypot(it.x - L.x, it.y - L.y) < it.r + 18 * L.k) {
+        if (it.word === AYAT[S.ay][S.got] && !it.bounce) {
+          it.alive = false; S.got++; chime(660 + S.got * 110, .7); burst(it.x, it.y, 40, "255,214,140", 220); S.flash = .35;
+          if (S.got >= AYAT[S.ay].length) { chime(1320, 1.2, .1); setTimeout(() => chime(1760, 1.4, .08), 140); burst(L.x, L.y, 90, "255,240,200", 320);
+            S.ay++; S.got = 0; if (S.ay >= AYAT.length) { finish(); } else { S.items = S.items.filter(i => !i.alive); } }
+          renderAyah();
+        } else if (!it.bounce) { it.bounce = S.speed * 1.4; thud(); }
+      }
+    }
+    S.items = S.items.filter(i => i.alive && i.x > -80);
+    for (const r of S.rocks) {
+      r.x -= S.speed * dt;
+      if (!r.hit && Math.abs(r.x - L.x) < r.w / 2 + 14 && (L.y - 16 * L.k < r.top || L.y + 16 * L.k > r.bot)) {
+        r.hit = true; S.lives = Math.max(0, S.lives - 1); L.hurt = .8; S.shake = .35; thud(); burst(L.x, L.y, 26, "180,200,255", 160);
+        L.vy = L.y < (r.top + r.bot) / 2 ? H * .4 : -H * .4; renderAyah();
+        if (S.lives === 0) { S.lives = 3; setTimeout(renderAyah, 600); }   // малышам без «проигрыша»: огоньки просто зажигаются снова
+      }
+    }
+    S.rocks = S.rocks.filter(r => r.x > -r.w);
+  }
+  L.hurt = Math.max(0, L.hurt - dt); S.shake = Math.max(0, S.shake - dt); S.flash = Math.max(0, S.flash - dt);
+  if (S.run && !reduce && Math.random() < .9) S.trail.push({ x: L.x - 8 * L.k, y: L.y + 22 * L.k, vx: -S.speed * .25 + rnd(-10, 10), vy: rnd(10, 40), life: .9, max: .9, r: rnd(1, 2.4) });
+  for (const p of [...S.sparks, ...S.trail]) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 60 * dt; p.life -= dt; }
+  S.sparks = S.sparks.filter(p => p.life > 0); S.trail = S.trail.filter(p => p.life > 0);
+  for (const d of dust) { d.x -= (d.v + (S.run ? S.speed * .15 : 4)) * dt; if (d.x < -4) { d.x = W + 4; d.y = rnd(H * .3, H); } }
+}
+
+function finish() { S.run = false; S.done = true; setTimeout(() => { $("done").hidden = false; $("again").focus(); }, 900); }
+
+/* ---------- рисование ---------- */
+function drawSky() {
+  cx.drawImage(skyC, 0, 0, W, H);
+  for (const s of stars) { const a = .45 + Math.sin(S.t * 2 + s.p) * .35; cx.globalAlpha = Math.max(.08, a); cx.fillStyle = "#FFF6DD";
+    const x = ((s.x * W - S.dist * s.s) % W + W) % W; cx.beginPath(); cx.arc(x, s.y * H, s.r, 0, 6.28); cx.fill(); }
+  cx.globalAlpha = 1;
+}
+function drawLayer(l) {   // копируем только видимый кусок полосы (и хвост с начала, когда слой «заворачивает»)
+  const off = (S.dist * l.speed) % l.w, a = Math.min(W, l.w - off);
+  cx.drawImage(l.c, off * DPR, 0, a * DPR, l.h * DPR, 0, l.top, a, l.h);
+  if (a < W) cx.drawImage(l.c, 0, 0, (W - a) * DPR, l.h * DPR, a, l.top, W - a, l.h);
+}
+function drawRock(r) {
+  const g = cx.createLinearGradient(r.x - r.w / 2, 0, r.x + r.w / 2, 0); g.addColorStop(0, "#3E2E48"); g.addColorStop(.45, "#7A5A62"); g.addColorStop(.7, "#5E4553"); g.addColorStop(1, "#33263F");
+  cx.fillStyle = g;
+  cx.beginPath(); cx.roundRect(r.x - r.w / 2, -20, r.w, r.top + 20, [0, 0, r.w / 2, r.w / 2]); cx.fill();
+  cx.beginPath(); cx.roundRect(r.x - r.w / 2, r.bot, r.w, H - r.bot + 20, [r.w / 2, r.w / 2, 0, 0]); cx.fill();
+  cx.strokeStyle = "rgba(20,12,30,.28)"; cx.lineWidth = 1.5;   // слои песчаника
+  for (let yy = 24; yy < H; yy += 26) { if (yy > r.top - r.w * .4 && yy < r.bot + r.w * .4) continue; const wob = Math.sin(yy * .13 + r.w) * 3;
+    cx.beginPath(); cx.moveTo(r.x - r.w / 2 + 4, yy + wob); cx.quadraticCurveTo(r.x, yy - 4 + wob, r.x + r.w / 2 - 4, yy + wob); cx.stroke(); }
+  cx.strokeStyle = "rgba(255,214,140,.22)"; cx.lineWidth = 2;   // кромка, освещённая луной
+  cx.beginPath(); cx.moveTo(r.x + r.w / 2 - 3, 0); cx.lineTo(r.x + r.w / 2 - 3, r.top - r.w / 2); cx.moveTo(r.x + r.w / 2 - 3, r.bot + r.w / 2); cx.lineTo(r.x + r.w / 2 - 3, H); cx.stroke();
+}
+function drawItem(it) {
+  const y = it.y + Math.sin(it.ph) * 6, isNext = it.word === AYAT[S.ay][S.got] && !it.bounce;
+  cx.globalAlpha = isNext ? .75 : .4; cx.drawImage(isNext ? GLOW.warm : GLOW.cool, it.x - it.r * 2, y - it.r * 2, it.r * 4, it.r * 4); cx.globalAlpha = 1;
+  cx.fillStyle = isNext ? "rgba(255,246,222,.95)" : "rgba(220,228,255,.85)"; cx.beginPath(); cx.arc(it.x, y, it.r, 0, 6.28); cx.fill();
+  cx.strokeStyle = isNext ? "#F2B65A" : "rgba(150,165,220,.9)"; cx.lineWidth = 3; cx.stroke();
+  cx.fillStyle = "#1F3A5A"; cx.font = `700 ${it.r * .78}px Amiri, serif`; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.direction = "rtl";
+  cx.fillText(it.word, it.x, y + it.r * .08);
+}
+function drawLantern() {
+  const x = L.x, y = L.y, tilt = Math.max(-.25, Math.min(.25, L.vy / (H * 2))), f = .85 + Math.sin(L.flick * 13) * .06 + Math.sin(L.flick * 7.3) * .05;
+  const R = 130 * f * L.k;
+  cx.globalAlpha = .8 * f; cx.drawImage(GLOW.warm, x - R, y + 4 - R, R * 2, R * 2); cx.globalAlpha = 1;
+  cx.save(); cx.translate(x, y); cx.rotate(tilt); cx.scale(L.k, L.k); if (L.hurt) cx.globalAlpha = .55 + Math.sin(L.hurt * 40) * .45;
+  cx.strokeStyle = "#E7C27A"; cx.lineWidth = 2; cx.beginPath(); cx.arc(0, -30, 7, Math.PI, 0); cx.stroke();          // кольцо
+  cx.fillStyle = "#C9973F"; cx.beginPath(); cx.moveTo(-16, -16); cx.lineTo(0, -28); cx.lineTo(16, -16); cx.closePath(); cx.fill();   // крышка
+  const glass = cx.createLinearGradient(0, -16, 0, 22); glass.addColorStop(0, "rgba(255,240,200,.95)"); glass.addColorStop(1, "rgba(255,190,90,.95)");
+  cx.fillStyle = glass; cx.beginPath(); cx.moveTo(-14, -16); cx.quadraticCurveTo(-20, 3, -11, 22); cx.lineTo(11, 22); cx.quadraticCurveTo(20, 3, 14, -16); cx.closePath(); cx.fill();
+  cx.strokeStyle = "#B07D2E"; cx.lineWidth = 2; cx.stroke();
+  cx.beginPath(); cx.moveTo(0, -16); cx.lineTo(0, 22); cx.moveTo(-15, 3); cx.lineTo(15, 3); cx.strokeStyle = "rgba(176,125,46,.55)"; cx.stroke();   // переплёт
+  const flame = cx.createRadialGradient(0, 4, 1, 0, 4, 9 * f); flame.addColorStop(0, "#FFFFFF"); flame.addColorStop(1, "rgba(255,200,90,0)");
+  cx.fillStyle = flame; cx.beginPath(); cx.ellipse(0, 4, 6 * f, 9 * f, 0, 0, 6.28); cx.fill();
+  cx.fillStyle = "#C9973F"; cx.fillRect(-12, 22, 24, 5);                                                                 // донце
+  cx.restore();
+}
+function drawParticles(list) {
+  for (const p of list) { const a = Math.max(0, p.life / p.max); cx.fillStyle = p.col ? `rgba(${p.col},${a})` : `rgba(255,214,140,${a * .8})`; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 6.28); cx.fill(); }
+}
+function frame() {
+  cx.save();
+  if (S.shake) cx.translate(rnd(-1, 1) * S.shake * 14, rnd(-1, 1) * S.shake * 14);
+  drawSky(); drawLayer(layers[0]); drawLayer(layers[1]);
+  for (const d of dust) { cx.fillStyle = `rgba(255,230,190,${d.a})`; cx.beginPath(); cx.arc(d.x, d.y, d.r, 0, 6.28); cx.fill(); }
+  for (const r of S.rocks) drawRock(r);
+  for (const it of S.items) drawItem(it);
+  drawParticles(S.trail); drawLantern(); drawParticles(S.sparks);
+  drawLayer(layers[2]);
+  if (S.flash) { cx.fillStyle = `rgba(255,226,160,${S.flash * .35})`; cx.fillRect(0, 0, W, H); }
+  cx.restore();
+}
+let last = performance.now();
+function loop(now) { const dt = Math.min(.033, (now - last) / 1000); last = now; step(dt); frame(); requestAnimationFrame(loop); }
+
+/* ---------- управление: держишь — летишь вверх ---------- */
+const down = e => { if (e.target.closest && e.target.closest("button")) return; L.hold = true; e.preventDefault && e.preventDefault(); };
+const up = () => { L.hold = false; };
+addEventListener("pointerdown", down, { passive: false }); addEventListener("pointerup", up); addEventListener("pointercancel", up);
+addEventListener("keydown", e => { if (e.code === "Space" || e.code === "ArrowUp") { L.hold = true; e.preventDefault(); } });
+addEventListener("keyup", e => { if (e.code === "Space" || e.code === "ArrowUp") L.hold = false; });
+function begin() { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) {} $("start").hidden = true; $("done").hidden = true; reset(); chime(880, .6); }
+$("go").onclick = begin; $("again").onclick = begin;
+addEventListener("resize", resize);
+resize(); renderAyah();
+(document.fonts && document.fonts.load ? document.fonts.load('700 40px "Amiri"', "قُلْ") : Promise.resolve()).finally(() => requestAnimationFrame(loop));
+</script>
+
+</body>
+</html>

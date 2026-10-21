@@ -20,7 +20,7 @@ body { margin: 0; background: var(--night); color: var(--ink); font-family: var(
 [hidden] { display: none !important; }
 #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 .hud { position: fixed; left: 0; right: 0; top: 0; padding: calc(env(safe-area-inset-top, 0px) + 12px) max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
-.ayah { direction: rtl; font-family: var(--ar); font-size: clamp(26px, 6.4vw, 40px); line-height: 1.5; padding: 2px 18px 6px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; gap: .35em; max-width: 100%; flex-wrap: wrap; justify-content: center; }
+.ayah { pointer-events: auto; direction: rtl; font-family: var(--ar); font-size: clamp(26px, 6.4vw, 40px); line-height: 1.5; padding: 2px 18px 6px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; gap: .35em; max-width: 100%; flex-wrap: wrap; justify-content: center; }
 .ayah span { color: rgba(246, 238, 220, .28); transition: color .35s, text-shadow .35s; }
 .ayah span.on { color: var(--glow); text-shadow: 0 0 14px rgba(255, 210, 120, .75); }
 .ayah span.next { color: rgba(246, 238, 220, .55); }
@@ -35,6 +35,12 @@ body { margin: 0; background: var(--night); color: var(--ink); font-family: var(
 .card p { margin: 0; font-size: 17px; line-height: 1.45; color: var(--muted); text-wrap: balance; }
 .card .ar { font-family: var(--ar); font-size: 30px; color: var(--glow); direction: rtl; }
 .btn { font: 900 20px var(--ui); color: #2A1A05; background: linear-gradient(#FFD98A, #F2B65A); border: 0; border-radius: 999px; padding: 16px 40px; box-shadow: 0 6px 0 #B9802A, 0 12px 30px rgba(242, 182, 90, .35); cursor: pointer; }
+.btn.glass { color: var(--ink); background: rgba(255,255,255,.1); box-shadow: inset 0 0 0 1.5px var(--line); font-size: 17px; padding: 13px 26px; }
+.ayah .big { font-size: 1.5em; color: var(--glow); text-shadow: 0 0 16px rgba(255,210,120,.7); line-height: 1.25; }
+.ayah.letter { font-family: "Amiri Letters", var(--ar); }
+.ayah .dots { align-self: center; display: flex; gap: 6px; direction: ltr; }
+.ayah .dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(246,238,220,.22); }
+.ayah .dots i.on { background: var(--ember); box-shadow: 0 0 8px var(--ember); }
 .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #B9802A; }
 .btn:focus-visible { outline: 3px solid var(--glow); outline-offset: 4px; }
 .hint { position: fixed; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); text-align: center; font-size: 15px; font-weight: 800; color: var(--muted); pointer-events: none; transition: opacity .6s; }
@@ -45,21 +51,23 @@ body { margin: 0; background: var(--night); color: var(--ink); font-family: var(
 <canvas id="game" aria-label="Фонарик летит над ночной пустыней и собирает слова аята"></canvas>
 <div class="hud"><div class="meta" id="meta">Сура аль-Ихлас · аят 1</div><div class="ayah" id="ayah"></div></div>
 <div class="lights" id="lights"><i></i><i></i><i></i></div>
-<div class="hint" id="hint">Держи палец — фонарик поднимается. Собирай слова по порядку, справа налево</div>
+<div class="hint" id="hint">Держи палец — фонарик поднимается. Лови только то, что светится наверху</div>
 <div class="screen" id="start">
   <div class="card">
-    <div class="ar">قُلْ هُوَ اللَّهُ أَحَدٌ</div>
-    <h1>Фонарик <b>и аят</b></h1>
-    <p>Лети над ночной пустыней и собирай слова суры аль-Ихлас по порядку.</p>
-    <button class="btn" id="go">Играть</button>
+    <div class="ar">أَ رَ زَ مَ</div>
+    <h1>Фонарик <b>и буквы</b></h1>
+    <p>Лети над ночной пустыней и лови буквы, слоги и слова. Уроки идут по порядку «Муаллим сани».</p>
+    <button class="btn" id="go">Учусь читать</button>
+    <button class="btn glass" id="goAyah">Уже читаю: собрать аят</button>
   </div>
 </div>
 <div class="screen" id="done" hidden>
   <div class="card">
-    <div class="ar">سُبْحَانَ اللَّهِ</div>
-    <h1>Сура <b>собрана!</b></h1>
-    <p>Все четыре аята суры аль-Ихлас. Скажи их вслух ещё раз.</p>
+    <div class="ar" id="doneAr">سُبْحَانَ اللَّهِ</div>
+    <h1 id="doneH">Сура <b>собрана!</b></h1>
+    <p id="doneP">Все четыре аята суры аль-Ихлас. Скажи их вслух ещё раз.</p>
     <button class="btn" id="again">Ещё раз</button>
+    <button class="btn glass" id="home">В начало</button>
   </div>
 </div>
 
@@ -73,6 +81,34 @@ const AYAT = [
   ["لَمْ", "يَلِدْ", "وَلَمْ", "يُولَدْ"],
   ["وَلَمْ", "يَكُن", "لَّهُ", "كُفُوًا", "أَحَدٌ"],
 ];
+/* Уроки по порядку «Муаллим сани» (Ахмад-Хади Максуди): буквы не по алфавиту, и сразу — слоги и настоящие слова
+   только из уже знакомых букв. Тексты и слова свои; звуки букв и слогов — voice/ar игры (живая запись, где она есть) */
+const LT = { alif: ["ا", "Алиф"], ra: ["ر", "Ро"], zay: ["ز", "Зай"], mim: ["م", "Мим"], ta: ["ت", "Та"], nun: ["ن", "Нун"],
+             ya: ["ي", "Йа"], ba: ["ب", "Ба"], dhal: ["ذ", "Заль"], dal: ["د", "Даль"], tha: ["ث", "Са"], waw: ["و", "Уау"] };
+const letter = (id, ...others) => ({ t: LT[id][0], ru: `буква ${LT[id][1]}`, snd: `ar_name_${id}`, need: 3, pool: [id, ...others].map(o => LT[o][0]) });
+const H_ = { a: "\u064E", i: "\u0650", u: "\u064F" }, VOW = { a: "а", i: "и", u: "у" };
+const sylT = (id, h) => (id === "alif" ? (h === "i" ? "إ" : "أ") : LT[id][0]) + H_[h];
+const syl = (id, h) => ({ t: sylT(id, h), ru: `слог «${id === "alif" ? "" : LT[id][1][0].toLowerCase()}${VOW[h]}»`, snd: `ar_${id}_${h}`, need: 2, pool: ["a", "i", "u"].map(x => sylT(id, x)) });
+const sk = (id, ...others) => ({ t: "أَ" + LT[id][0] + "\u0652", ru: `сукун: «а${LT[id][1][0].toLowerCase()}»`, snd: `ar_${id}_sk`, need: 2,
+                                 pool: [id, ...others].map(o => "أَ" + LT[o][0] + "\u0652") });
+const word = (t, ru, pool) => ({ t, ru, snd: null, need: 2, pool: [t, ...pool] });
+const LESSONS = [
+  { title: "Урок 1 · Алиф", letters: "ا", stages: [letter("alif", "ra", "zay", "dal"), syl("alif", "a"), syl("alif", "i"), syl("alif", "u")] },
+  { title: "Урок 2 · Ро, Зай, Мим", letters: "ر ز م", stages: [letter("ra", "zay", "dal", "waw"), letter("zay", "ra", "dhal", "nun"), letter("mim", "waw", "ra", "zay"),
+      syl("ra", "a"), syl("zay", "i"), syl("mim", "u"), sk("ra", "zay", "mim"),
+      word("أَمَرَ", "амара — повелел", ["رَمَزَ", "زَمْزَمُ"]), word("زَمْزَمُ", "замзам — источник Замзам", ["أَمَرَ", "مَرْمَرٌ"])] },
+  { title: "Урок 3 · Та, Нун", letters: "ت ن", stages: [letter("ta", "nun", "ba", "tha"), letter("nun", "ta", "ba", "zay"),
+      syl("ta", "a"), syl("nun", "i"), sk("nun", "ta", "mim"),
+      word("تَمْرٌ", "тамр — финики", ["زَمَنٌ", "أَنْتَ"]), word("أَنْتَ", "анта — ты", ["تَمْرٌ", "مِنْ"]), word("زَمَنٌ", "заман — время", ["أَمْنٌ", "تَمْرٌ"])] },
+  { title: "Урок 4 · Йа, Ба", letters: "ي ب", stages: [letter("ya", "ba", "ta", "nun"), letter("ba", "ta", "nun", "ya"),
+      syl("ya", "a"), syl("ba", "u"), sk("ya", "ba", "mim"),
+      word("بَيْتٌ", "байт — дом", ["بِنْتٌ", "زَيْتٌ"]), word("أَبٌ", "аб — отец", ["أَنْتَ", "بَيْتٌ"]), word("زَيْتٌ", "зайт — масло", ["بَيْتٌ", "تَمْرٌ"])] },
+];
+let MODE = "lesson", LES = 0, ST = 0;
+const stage = () => LESSONS[LES].stages[ST];
+const want = () => MODE === "ayah" ? AYAT[S.ay][S.got] : stage().t;
+let voice = null;
+function sayAr(id) { if (!id) return; try { if (voice) voice.pause(); voice = new Audio(`/igra/voice/ar/${id}.mp3`); voice.play().catch(() => {}); } catch (e) {} }
 const cv = document.getElementById("game"), cx = cv.getContext("2d");
 const $ = id => document.getElementById(id);
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -163,6 +199,15 @@ function resize() {
   buildScene();
 }
 function renderAyah() {
+  if (MODE === "lesson") {
+    const st = stage();
+    $("ayah").classList.toggle("letter", st.t.replace(/[^\u0620-\u064A]/g, "").length <= 3);
+    $("ayah").innerHTML = `<span class="big">${st.t}</span><span class="dots">${Array.from({ length: st.need }, (_, i) => `<i class="${i < S.got ? "on" : ""}"></i>`).join("")}</span>`;
+    $("meta").textContent = `${LESSONS[LES].title} · ${st.ru}`;
+    [...$("lights").children].forEach((e, i) => e.classList.toggle("off", i >= S.lives));
+    return;
+  }
+  $("ayah").classList.remove("letter");
   const ws = AYAT[S.ay];
   $("ayah").innerHTML = ws.map((w, i) => `<span class="${i < S.got ? "on" : i === S.got ? "next" : ""}">${w}</span>`).join("");
   $("meta").textContent = `Сура аль-Ихлас · аят ${S.ay + 1} из 4`;
@@ -171,13 +216,13 @@ function renderAyah() {
 function reset() {
   Object.assign(S, { run: true, ay: 0, got: 0, lives: 3, t: 0, dist: 0, speed: W * .22, items: [], rocks: [], sparks: [], trail: [], shake: 0, flash: 0, nextItem: .6, nextRock: 2.2, done: false });
   Object.assign(L, { y: H * .5, vy: 0, hold: false, hurt: 0 });
-  renderAyah(); $("hint").style.opacity = 1; setTimeout(() => $("hint").style.opacity = 0, 4500);
+  ST = 0; renderAyah(); if (MODE === "lesson") setTimeout(() => sayAr(stage().snd), 400); $("hint").style.opacity = 1; setTimeout(() => $("hint").style.opacity = 0, 4500);
 }
 
 /* слова появляются по одному; среди них — нужное, остальные из этого же аята (ошибся — слово отлетает) */
 function spawnItem() {
-  const ws = AYAT[S.ay], want = Math.random() < .62;
-  const word = want ? ws[S.got] : ws[Math.floor(Math.random() * ws.length)];
+  const ws = MODE === "ayah" ? AYAT[S.ay] : stage().pool, w = want();
+  const word = Math.random() < .55 ? w : ws[Math.floor(Math.random() * ws.length)];
   S.items.push({ word, x: W + 60, y: rnd(H * .3, H * .74), r: Math.max(34, Math.min(W, H) * .07), ph: rnd(0, 6.28), alive: true, bounce: 0 });
 }
 function spawnRock() {   // каменные арки: проход между верхней и нижней скалой
@@ -200,8 +245,9 @@ function step(dt) {
       it.x -= S.speed * dt; it.ph += dt * 2;
       if (it.bounce) { it.x += it.bounce * dt; it.bounce *= .92; }
       if (it.alive && Math.hypot(it.x - L.x, it.y - L.y) < it.r + 18 * L.k) {
-        if (it.word === AYAT[S.ay][S.got] && !it.bounce) {
+        if (it.word === want() && !it.bounce) {
           it.alive = false; S.got++; chime(660 + S.got * 110, .7); burst(it.x, it.y, 40, "255,214,140", 220); S.flash = .35;
+          if (MODE === "lesson") { lessonCatch(); continue; }
           if (S.got >= AYAT[S.ay].length) { chime(1320, 1.2, .1); setTimeout(() => chime(1760, 1.4, .08), 140); burst(L.x, L.y, 90, "255,240,200", 320);
             S.ay++; S.got = 0; if (S.ay >= AYAT.length) { finish(); } else { S.items = S.items.filter(i => !i.alive); } }
           renderAyah();
@@ -226,6 +272,23 @@ function step(dt) {
   for (const d of dust) { d.x -= (d.v + (S.run ? S.speed * .15 : 4)) * dt; if (d.x < -4) { d.x = W + 4; d.y = rnd(H * .3, H); } }
 }
 
+function lessonCatch() {
+  const st = stage();
+  if (S.got < st.need) { renderAyah(); return; }
+  chime(1320, 1.2, .1); setTimeout(() => chime(1760, 1.4, .08), 140); burst(L.x, L.y, 90, "255,240,200", 320);
+  S.got = 0; ST++; S.items = S.items.filter(i => !i.alive);
+  if (ST >= LESSONS[LES].stages.length) { ST--; return finishLesson(); }
+  renderAyah(); setTimeout(() => sayAr(stage().snd), 500);
+}
+function finishLesson() {
+  const last = LES >= LESSONS.length - 1;
+  $("doneAr").textContent = LESSONS[LES].letters; $("doneAr").style.fontFamily = '"Amiri Letters", var(--ar)';
+  $("doneH").innerHTML = `${LESSONS[LES].title.split(" · ")[0]} <b>пройден!</b>`;
+  $("doneP").textContent = last ? "Это все уроки демо. Дальше будут новые буквы по «Муаллим сани»." : "Ма ша Аллах! Ты знаешь эти буквы и уже читаешь слова из них.";
+  $("again").textContent = last ? "Повторить урок" : "Следующий урок";
+  $("again").dataset.next = last ? "" : "1";
+  finish();
+}
 function finish() { S.run = false; S.done = true; setTimeout(() => { $("done").hidden = false; $("again").focus(); }, 900); }
 
 /* ---------- рисование ---------- */
@@ -252,11 +315,11 @@ function drawRock(r) {
   cx.beginPath(); cx.moveTo(r.x + r.w / 2 - 3, 0); cx.lineTo(r.x + r.w / 2 - 3, r.top - r.w / 2); cx.moveTo(r.x + r.w / 2 - 3, r.bot + r.w / 2); cx.lineTo(r.x + r.w / 2 - 3, H); cx.stroke();
 }
 function drawItem(it) {
-  const y = it.y + Math.sin(it.ph) * 6, isNext = it.word === AYAT[S.ay][S.got] && !it.bounce;
+  const y = it.y + Math.sin(it.ph) * 6, isNext = it.word === want() && !it.bounce;
   cx.globalAlpha = isNext ? .75 : .4; cx.drawImage(isNext ? GLOW.warm : GLOW.cool, it.x - it.r * 2, y - it.r * 2, it.r * 4, it.r * 4); cx.globalAlpha = 1;
   cx.fillStyle = isNext ? "rgba(255,246,222,.95)" : "rgba(220,228,255,.85)"; cx.beginPath(); cx.arc(it.x, y, it.r, 0, 6.28); cx.fill();
   cx.strokeStyle = isNext ? "#F2B65A" : "rgba(150,165,220,.9)"; cx.lineWidth = 3; cx.stroke();
-  cx.fillStyle = "#1F3A5A"; cx.font = `700 ${it.r * .78}px Amiri, serif`; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.direction = "rtl";
+  cx.fillStyle = "#1F3A5A"; cx.font = `700 ${it.r * (it.word.length <= 3 ? .95 : .78)}px ${MODE === "lesson" && it.word.replace(/[^\u0620-\u064A]/g, "").length <= 3 ? '"Amiri Letters", ' : ""}Amiri, serif`; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.direction = "rtl";
   cx.fillText(it.word, it.x, y + it.r * .08);
 }
 function drawLantern() {
@@ -300,7 +363,11 @@ addEventListener("pointerdown", down, { passive: false }); addEventListener("poi
 addEventListener("keydown", e => { if (e.code === "Space" || e.code === "ArrowUp") { L.hold = true; e.preventDefault(); } });
 addEventListener("keyup", e => { if (e.code === "Space" || e.code === "ArrowUp") L.hold = false; });
 function begin() { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch (e) {} $("start").hidden = true; $("done").hidden = true; reset(); chime(880, .6); }
-$("go").onclick = begin; $("again").onclick = begin;
+$("go").onclick = () => { MODE = "lesson"; LES = 0; begin(); };
+$("goAyah").onclick = () => { MODE = "ayah"; begin(); };
+$("again").onclick = () => { if (MODE === "lesson" && $("again").dataset.next) LES = Math.min(LESSONS.length - 1, LES + 1); begin(); };
+$("home").onclick = () => { $("done").hidden = true; $("start").hidden = false; };
+$("ayah").addEventListener("pointerdown", () => MODE === "lesson" && sayAr(stage().snd));   // нажал на образец — послушай ещё раз
 addEventListener("resize", resize);
 resize(); renderAyah();
 (document.fonts && document.fonts.load ? document.fonts.load('700 40px "Amiri"', "قُلْ") : Promise.resolve()).finally(() => requestAnimationFrame(loop));

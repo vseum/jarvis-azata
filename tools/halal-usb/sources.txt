@@ -1,23 +1,41 @@
-# Источники для флешки брата.
+# Источники для флешки брата. Подборка «новичок», собрана поиском по YouTube 05.11.2026.
 # Формат строки:  папка | порядок | лимит | флаги | ссылка
-#   папка   — имя папки на флешке (01_..., 02_... — префикс задаёт порядок в общем плейлисте)
-#   порядок — date (по дате загрузки, от старых к новым; для канала целиком)
-#             list (как в плейлисте YouTube; для серии уроков — лучший вариант)
-#   лимит   — сколько видео взять максимум (0 = все)
-#   флаги   — через запятую: lecture | nature | mute (без звука вообще) | ru-subs (русские субтитры .srt)
-#             - (прочерк) если флагов нет
-# Строки с # — комментарии. Ссылки ниже — ЗАГЛУШКИ: вставь реальные ссылки на плейлисты.
-# Лучше давать ссылку на ПЛЕЙЛИСТ серии (курс по порядку), а не на канал целиком.
+#   папка   — «устаз/курс». Устазы идут в общем плейлисте по кругу, курсы одного устаза — друг за другом.
+#   порядок — list (как в плейлисте) | date (по дате, от старых) | video (одиночное видео, порядок = строка файла)
+#   лимит   — максимум видео (0 = все)
+#   флаги   — lecture | nature | mute (без звука) | ru-subs (русские субтитры .srt) | - (нет)
+# Логика курса новичка: основы веры → жизнь Пророка ﷺ → истории пророков → нрав и хадисы → таухид глубже.
 
-# ===== Уроки =====
-01_Ринат_Абу_Мухаммад     | list | 0  | lecture          | https://www.youtube.com/playlist?list=ВСТАВЬ
-02_Абу_Ясин_Маликов       | list | 0  | lecture          | https://www.youtube.com/playlist?list=ВСТАВЬ
-03_Ислам_Стерлитамак      | date | 0  | lecture          | https://www.youtube.com/@ВСТАВЬ/videos
-04_Усман_аль-Хамис        | list | 0  | lecture,ru-subs  | https://www.youtube.com/playlist?list=ВСТАВЬ_с_русским_переводом
-05_Абдурраззак_аль-Бадр   | list | 0  | lecture,ru-subs  | https://www.youtube.com/playlist?list=ВСТАВЬ_с_русским_переводом
+# ===== Ринат Абу Мухаммад (канал «К Исламу» и перезаливы) =====
+01_Ринат_Абу_Мухаммад/1_Три_основы        | list | 0 | lecture | https://www.youtube.com/playlist?list=PLFYmX2vP7w9DpjykKGcYHaaKqoH9hPYPE
+01_Ринат_Абу_Мухаммад/2_Сира              | list | 0 | lecture | https://www.youtube.com/playlist?list=PLRFJeQnBC-ymqYjYb6OnoxeGxJQdoxyFO
+01_Ринат_Абу_Мухаммад/3_Имена_Аллаха      | list | 0 | lecture | https://www.youtube.com/playlist?list=PL9cwuGLWINCgoxwfh4Rr1s1y1CEi8oNoj
 
-# ===== Природа (перемежается с уроками) =====
-# Брать ролики «nature sounds only / no music» (только звуки природы) — там нет ни музыки, ни людей.
-# Обычные документалки (BBC и т.п.) — только с флагом mute: музыка там почти везде.
-90_Природа                | list | 40 | nature           | https://www.youtube.com/playlist?list=ВСТАВЬ
-91_Природа_без_звука      | list | 20 | nature,mute      | https://www.youtube.com/playlist?list=ВСТАВЬ
+# ===== Абу Ясин Руслан Маликов (канал «Исламские уроки») =====
+02_Абу_Ясин_Маликов/1_Лексикон_мусульманина | list | 0 | lecture | https://www.youtube.com/playlist?list=PLK_aw3CMJI1K1p-_n-mcB6qocgDMEJO3E
+02_Абу_Ясин_Маликов/2_Понимать_намаз        | list | 0 | lecture | https://www.youtube.com/playlist?list=PLK_aw3CMJI1JOC2iwDw-KMr4FO9fgHJ3W
+02_Абу_Ясин_Маликов/3_Истории_пророков      | list | 0 | lecture | https://www.youtube.com/playlist?list=PLK_aw3CMJI1KDCMDDHGN4n01vvMg3Uzc3
+02_Абу_Ясин_Маликов/4_Сады_праведных        | list | 0 | lecture | https://www.youtube.com/playlist?list=PLK_aw3CMJI1I9vIuIUbnztcHvg2kZFum8
+02_Абу_Ясин_Маликов/5_День_воскрешения      | list | 0 | lecture | https://www.youtube.com/playlist?list=PLK_aw3CMJI1J10Yu6l0mgxLXcR_liIFfx
+
+# ===== Стерлитамак: канал «Уроки об Исламе», Мухаммад хазрат =====
+# [ГИПОТЕЗА] это и есть «Ислам Стерлитамак» — проверь, тот ли канал.
+03_Стерлитамак/1_Качества_Пророка          | list | 0 | lecture | https://www.youtube.com/playlist?list=PLqCdMlwn-g0EbbzGKD5W9UeTACgvGxoFn
+
+# ===== Усман аль-Хамис (русский перевод) =====
+04_Усман_аль-Хамис/1_Три_основы           | list | 0 | lecture | https://www.youtube.com/playlist?list=PLkXclqZSIOY0ebW3GUtZxBXFDkWojbViP
+04_Усман_аль-Хамис/2_40_хадисов_Навави    | list | 0 | lecture | https://www.youtube.com/playlist?list=PLkmRCRk6VWJjUiX61UQQvoPpqbj4Tvx7g
+
+# ===== Абдурраззак аль-Бадр (русский перевод) =====
+05_Абдурраззак_аль-Бадр/1_Китаб_ат-Таухид | list | 0 | lecture | https://www.youtube.com/playlist?list=PL1-KHjCPgRoUjowLlOXgLRrIQht7sVcec
+
+# ===== Природа: только звуки природы или без звука, без людей =====
+# Длинные ролики скрипт сам режет на куски по 20 мин и вставляет между уроками.
+90_Природа | video | 0 | nature | https://www.youtube.com/watch?v=rV_ERKtNyNA
+90_Природа | video | 0 | nature | https://www.youtube.com/watch?v=czCHvDY23fc
+90_Природа | video | 0 | nature | https://www.youtube.com/watch?v=liRbVmWEn-Y
+90_Природа | video | 0 | nature | https://www.youtube.com/watch?v=1t7g690boao
+90_Природа | video | 0 | nature | https://www.youtube.com/watch?v=wJIbhSYteK0
+90_Природа | video | 0 | nature | https://www.youtube.com/watch?v=6lZ3CookYNg
+90_Природа | video | 0 | nature | https://www.youtube.com/watch?v=EColTNIbOko
+90_Природа | video | 0 | nature | https://www.youtube.com/watch?v=5-d218HdpKg

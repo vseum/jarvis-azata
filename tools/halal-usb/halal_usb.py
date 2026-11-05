@@ -38,15 +38,36 @@ def parse_sources(path):
     return out
 
 
-def download(dest, sources):
+def split_long(folder, minutes):
+    """Длинные ролики природы (8–12 ч) режем на куски, чтобы они чередовались с уроками."""
+    for f in videos(folder):
+        if " - part" in f.stem:
+            continue
+        r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(f)],
+                           capture_output=True, text=True)
+        try:
+            dur = float(r.stdout.strip())
+        except ValueError:
+            continue
+        if dur <= minutes * 60 * 1.5:
+            continue
+        out = f.with_name(f"{f.stem} - part%03d{f.suffix}")
+        ok = subprocess.run(["ffmpeg", "-v", "error", "-i", str(f), "-map", "0", "-c", "copy", "-f", "segment",
+                             "-segment_time", str(minutes * 60), "-reset_timestamps", "1", str(out)]).returncode == 0
+        if ok:
+            f.unlink()
+            print(f"   нарезан: {f.name}")
+
+
+def download(dest, sources, cookies=None, split=20):
     if not shutil.which("yt-dlp"):
         sys.exit("Нет yt-dlp: pip install -U yt-dlp")
     archive = dest / ".downloaded.txt"
-    for s in sources:
+    for n, s in enumerate(sources, 1):
         if "ВСТАВЬ" in s["url"]:
             print(f"— пропуск {s['folder']}: ссылка-заглушка")
             continue
-        prefix = "%(playlist_index)04d" if s["order"] == "list" else "%(upload_date)s"
+        prefix = {"list": "%(playlist_index)04d", "date": "%(upload_date)s"}.get(s["order"], f"{n:04d}")  # video: по строке файла
         cmd = [
             "yt-dlp", s["url"],
             "-f", FMT_MUTE if "mute" in s["flags"] else FMT_AV,
@@ -57,6 +78,8 @@ def download(dest, sources):
             "--match-filter", "duration > 120 & !is_live",  # без шортсов и эфиров
             "--ignore-errors", "--no-overwrites", "--continue",
         ]
+        if cookies:
+            cmd += ["--cookies-from-browser", cookies]  # если YouTube просит «подтвердите, что вы не бот»
         if s["order"] == "date":
             cmd.append("--playlist-reverse")  # канал отдаёт новые сверху — берём от старых
         if s["limit"]:
@@ -66,10 +89,13 @@ def download(dest, sources):
             cmd += ["--write-subs", "--write-auto-subs", "--sub-langs", "ru.*", "--convert-subs", "srt"]
         print(f"\n=== {s['folder']}")
         subprocess.run(cmd)
+        if "nature" in s["flags"] and split:
+            split_long(dest / s["folder"], split)
 
 
 def videos(folder):
-    return sorted(p for p in folder.iterdir() if p.suffix.lower() in VIDEO_EXT) if folder.is_dir() else []
+    # рекурсивно: курсы одного устаза лежат подпапками 1_..., 2_... и идут друг за другом
+    return sorted(p for p in folder.rglob("*") if p.suffix.lower() in VIDEO_EXT) if folder.is_dir() else []
 
 
 def write_m3u(path, files, root):
@@ -81,13 +107,16 @@ def write_m3u(path, files, root):
 
 
 def playlist(dest, sources, every):
-    lectures = [videos(dest / s["folder"]) for s in sources if "lecture" in s["flags"]]
-    nature = [f for s in sources if "nature" in s["flags"] for f in videos(dest / s["folder"])]
+    # группа = устаз (первая часть пути папки); внутри — его курсы по порядку
+    groups = list(dict.fromkeys(s["folder"].split("/")[0] for s in sources if "lecture" in s["flags"]))
+    lectures = [videos(dest / g) for g in groups]
+    nature_dirs = list(dict.fromkeys(s["folder"].split("/")[0] for s in sources if "nature" in s["flags"]))
+    nature = [f for d in nature_dirs for f in videos(dest / d)]
 
-    for s in sources:
-        files = videos(dest / s["folder"])
+    for g in groups + nature_dirs:
+        files = videos(dest / g)
         if files:
-            write_m3u(dest / s["folder"] / "_по_порядку.m3u8", files, dest / s["folder"])
+            write_m3u(dest / g / "_по_порядку.m3u8", files, dest / g)
 
     # Устазы по кругу (урок А, урок Б, ... урок А2 ...), серия каждого — строго по порядку.
     rr = [f for group in itertools.zip_longest(*lectures) for f in group if f]
@@ -120,6 +149,8 @@ def main():
     ap.add_argument("dest", nargs="?", help="корень флешки или папка, которую потом скопируешь на флешку")
     ap.add_argument("--sources", default=str(HERE / "sources.txt"))
     ap.add_argument("--every", type=int, default=2, help="после скольких уроков вставлять ролик природы (0 = не вставлять)")
+    ap.add_argument("--cookies", help="браузер для cookies YouTube: chrome / firefox / edge / yandex")
+    ap.add_argument("--split", type=int, default=20, help="резать ролики природы на куски по N минут (0 = не резать)")
     a = ap.parse_args()
     if a.cmd == "plan":
         return plan()
@@ -129,7 +160,7 @@ def main():
     dest.mkdir(parents=True, exist_ok=True)
     sources = parse_sources(Path(a.sources))
     if a.cmd in ("download", "all"):
-        download(dest, sources)
+        download(dest, sources, a.cookies, a.split)
     if a.cmd in ("playlist", "all"):
         playlist(dest, sources, a.every)
 
